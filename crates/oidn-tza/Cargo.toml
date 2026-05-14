@@ -1,0 +1,21 @@
+[package]
+name          = "oidn-tza"
+version       = { workspace = true }
+edition       = { workspace = true }
+rust-version  = { workspace = true }
+license       = { workspace = true }
+authors       = { workspace = true }
+repository    = { workspace = true }
+homepage      = { workspace = true }
+readme        = { workspace = true }
+keywords      = ["denoising", "tza", "tensor-archive", "oidn"]
+categories    = ["parsing", "data-structures"]
+description   = "Parser for Intel OIDN's Tensor Archive (TZA) format"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+half      = { workspace = true }
+bytemuck  = { workspace = true }
+thiserror = { workspace = true }

@@ -1,0 +1,28 @@
+[package]
+name          = "oidn-cli"
+version       = { workspace = true }
+edition       = { workspace = true }
+rust-version  = { workspace = true }
+license       = { workspace = true }
+authors       = { workspace = true }
+repository    = { workspace = true }
+homepage      = { workspace = true }
+readme        = { workspace = true }
+keywords      = ["denoising", "raytracing", "cli", "wgpu", "oidn"]
+categories    = ["command-line-utilities", "graphics", "multimedia::images"]
+description   = "Command-line image denoiser using oidn-rs"
+
+[[bin]]
+name = "oidn-rs"
+path = "src/main.rs"
+
+[dependencies]
+oidn-tza  = { path = "../oidn-tza", version = "0.1.0" }
+oidn-rs   = { path = "../oidn-rs",  version = "0.1.0" }
+clap      = { workspace = true }
+exr       = { workspace = true }
+image     = { workspace = true }
+half      = { workspace = true }
+bytemuck  = { workspace = true }
+thiserror = { workspace = true }
+tracing   = { workspace = true }

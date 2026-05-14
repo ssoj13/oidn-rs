@@ -1,0 +1,224 @@
+//! Lightmap filter — port of `_ref/oidn/core/rtlightmap_filter.cpp`.
+//!
+//! Two modes:
+//! - HDR (default): Log transfer (`color.h::TransferFunction::Type::Log`),
+//!   network = `rtlightmap_hdr`.
+//! - Directional: Linear transfer with snorm normalisation (input values can
+//!   be negative), network = `rtlightmap_dir`. Used to denoise per-direction
+//!   irradiance gradients.
+
+use std::path::PathBuf;
+
+use burn::tensor::backend::Backend;
+use oidn_model::{Net, UNet, Variant, load_tza};
+
+use crate::{
+    color::TransferFunction,
+    error::OidnError,
+    filter::{Filter, Quality},
+    filters::unet_runner,
+    image::{Image, ImageMut, PixelFormat},
+    registry::ModelKey,
+    tile::{self, DEFAULT_MAX_TILE_SIZE, MIN_TILE_ALIGNMENT, RECEPTIVE_FIELD_BASE, TilePlan},
+};
+
+pub struct RtLightmapFilterBuilder<'b, B: Backend> {
+    device: &'b B::Device,
+    weights_dir: PathBuf,
+    directional: bool,
+    quality: Quality,
+    user_input_scale: Option<f32>,
+}
+
+impl<'b, B: Backend> RtLightmapFilterBuilder<'b, B> {
+    pub fn new(device: &'b B::Device, weights_dir: impl Into<PathBuf>) -> Self {
+        Self {
+            device,
+            weights_dir: weights_dir.into(),
+            directional: false,
+            quality: Quality::High,
+            user_input_scale: None,
+        }
+    }
+
+    /// In directional mode the lightmap stores signed per-axis irradiance
+    /// gradients; we use Linear transfer + snorm input handling instead of
+    /// Log (matches `RTLightmapFilter::setInt("directional", ...)` semantics).
+    pub fn directional(mut self, v: bool) -> Self { self.directional = v; self }
+    pub fn quality(mut self, q: Quality) -> Self { self.quality = q; self }
+    pub fn input_scale(mut self, s: Option<f32>) -> Self { self.user_input_scale = s; self }
+
+    pub fn build(self) -> RtLightmapFilter<'b, B> {
+        RtLightmapFilter {
+            device: self.device,
+            weights_dir: self.weights_dir,
+            directional: self.directional,
+            quality: self.quality,
+            user_input_scale: self.user_input_scale,
+            color: None,
+            output: None,
+            net: None,
+            plan: None,
+            model_key: None,
+            committed: false,
+        }
+    }
+}
+
+pub struct RtLightmapFilter<'b, B: Backend> {
+    device: &'b B::Device,
+    weights_dir: PathBuf,
+    directional: bool,
+    quality: Quality,
+    user_input_scale: Option<f32>,
+
+    color: Option<OwnedImage>,
+    output: Option<OwnedImageMut>,
+
+    net: Option<Net<B>>,
+    plan: Option<TilePlan>,
+    model_key: Option<ModelKey>,
+    committed: bool,
+}
+
+struct OwnedImage {
+    data: Vec<u8>,
+    width: usize,
+    height: usize,
+    row_stride: usize,
+    format: PixelFormat,
+}
+
+struct OwnedImageMut {
+    data: Vec<u8>,
+    width: usize,
+    height: usize,
+    row_stride: usize,
+    format: PixelFormat,
+}
+
+impl OwnedImage {
+    fn from(img: &Image<'_>) -> Self {
+        Self {
+            data: img.data.to_vec(),
+            width: img.width,
+            height: img.height,
+            row_stride: img.row_stride,
+            format: img.format,
+        }
+    }
+    fn view(&self) -> Image<'_> {
+        Image { data: &self.data, width: self.width, height: self.height,
+                row_stride: self.row_stride, format: self.format }
+    }
+}
+
+impl OwnedImageMut {
+    fn empty(width: usize, height: usize, format: PixelFormat) -> Self {
+        let row_stride = width * format.pixel_size();
+        Self { data: vec![0u8; row_stride * height], width, height, row_stride, format }
+    }
+    fn view_mut(&mut self) -> ImageMut<'_> {
+        ImageMut { data: &mut self.data, width: self.width, height: self.height,
+                   row_stride: self.row_stride, format: self.format }
+    }
+}
+
+impl<'b, B: Backend> RtLightmapFilter<'b, B> {
+    pub fn builder(device: &'b B::Device, weights_dir: impl Into<PathBuf>) -> RtLightmapFilterBuilder<'b, B> {
+        RtLightmapFilterBuilder::new(device, weights_dir)
+    }
+
+    pub fn set_color(&mut self, img: &Image<'_>) { self.color = Some(OwnedImage::from(img)); self.committed = false; }
+
+    pub fn allocate_output(&mut self, width: usize, height: usize, format: PixelFormat) {
+        self.output = Some(OwnedImageMut::empty(width, height, format));
+        self.committed = false;
+    }
+
+    pub fn take_output(&mut self) -> Option<(Vec<u8>, usize, usize, PixelFormat)> {
+        let o = self.output.take()?;
+        Some((o.data, o.width, o.height, o.format))
+    }
+
+    pub fn model_key(&self) -> Option<&ModelKey> { self.model_key.as_ref() }
+
+    fn select_model(&self) -> ModelKey {
+        // rtlightmap_filter.cpp:19-20 — directional → rtlightmap_dir, otherwise rtlightmap_hdr.
+        if self.directional { ModelKey::new("rtlightmap_dir") } else { ModelKey::new("rtlightmap_hdr") }
+    }
+}
+
+impl<'b, B: Backend> Filter for RtLightmapFilter<'b, B> {
+    fn commit(&mut self) -> Result<(), OidnError> {
+        if self.color.is_none() { return Err(OidnError::Unset("color")); }
+
+        let key = self.select_model();
+        let _ = self.quality; // single-variant filter — no quality routing
+        let path = self.weights_dir.join(key.filename());
+        self.model_key = Some(key);
+        let bytes = std::fs::read(&path).map_err(|e| {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                OidnError::MissingModel(path.clone())
+            } else {
+                OidnError::Io(e)
+            }
+        })?;
+        let tensors = oidn_tza::parse(&bytes)?;
+
+        // Lightmap models always take 3 colour channels → 3 channels out.
+        let unet = UNet::<B>::new(3, 3, Variant::Base, self.device);
+        let unet = load_tza(unet, &tensors, self.device)?;
+        self.net = Some(Net::Base(unet));
+
+        let out = self.output.as_ref().ok_or(OidnError::Unset("output"))?;
+        let plan = tile::plan(
+            out.width as i32,
+            out.height as i32,
+            RECEPTIVE_FIELD_BASE,
+            MIN_TILE_ALIGNMENT,
+            DEFAULT_MAX_TILE_SIZE,
+        );
+        self.plan = Some(plan);
+
+        let color = self.color.as_ref().unwrap();
+        if color.width != out.width || color.height != out.height {
+            return Err(OidnError::Inconsistent("color"));
+        }
+
+        self.committed = true;
+        Ok(())
+    }
+
+    fn execute(&mut self) -> Result<(), OidnError> {
+        if !self.committed { self.commit()?; }
+        let net   = self.net.as_ref().ok_or(OidnError::Unset("model"))?;
+        let plan  = self.plan.as_ref().ok_or(OidnError::Unset("plan"))?;
+        let output = self.output.as_mut().ok_or(OidnError::Unset("output"))?;
+
+        // rtlightmap_filter.cpp:24-30 — HDR uses Log, directional uses Linear.
+        // Directional is also treated as snorm (signed input range).
+        let (transfer, is_hdr) = if self.directional {
+            (TransferFunction::Linear, false)
+        } else {
+            (TransferFunction::Log, true)
+        };
+
+        let color = self.color.as_ref().map(|i| i.view());
+
+        let mut out_view = output.view_mut();
+        unet_runner::run(
+            net,
+            self.device,
+            plan,
+            color.as_ref(),
+            None,
+            None,
+            &mut out_view,
+            transfer,
+            is_hdr,
+            self.user_input_scale,
+            None,
+        )
+    }
+}

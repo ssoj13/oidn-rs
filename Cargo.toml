@@ -1,0 +1,46 @@
+[workspace]
+members  = ["crates/*"]
+resolver = "3"
+
+[workspace.package]
+version       = "0.1.0"
+edition       = "2024"
+rust-version  = "1.85"
+license       = "Apache-2.0"
+authors       = ["oidn-rs contributors"]
+repository    = "https://github.com/ssoj13/oidn-rs"
+homepage      = "https://github.com/ssoj13/oidn-rs"
+documentation = "https://docs.rs/oidn-rs"
+keywords      = ["denoising", "raytracing", "graphics", "wgpu", "burn"]
+categories    = ["graphics", "multimedia::images", "science"]
+readme        = "../../README.md"
+description   = "Pure Rust port of Intel Open Image Denoise on Burn + wgpu"
+
+[workspace.dependencies]
+# ML
+burn         = { version = "0.21", default-features = false, features = ["std", "ndarray"] }
+burn-wgpu    = { version = "0.21", default-features = false }
+
+# math / data
+half         = { version = "2", features = ["bytemuck"] }
+bytemuck     = { version = "1", features = ["derive"] }
+
+# infra
+thiserror    = "2"
+tracing      = "0.1"
+memmap2      = "0.9"
+
+# CLI-only
+clap         = { version = "4", features = ["derive"] }
+exr          = "1"
+image        = "0.25"
+
+# dev
+approx       = "0.5"
+
+[profile.release]
+opt-level = 3
+debug     = false
+
+[profile.dev]
+opt-level = 1

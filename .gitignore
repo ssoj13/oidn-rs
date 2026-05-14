@@ -1,0 +1,24 @@
+/target
+**/*.rs.bk
+Cargo.lock.bak
+.DS_Store
+.omc
+
+# `data/weights/*.tza` are tracked via Git LFS (see .gitattributes).
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Build artifacts
+*.exe
+*.pdb
+
+# OIDN release downloaded for golden tests
+/tools/_oidn_release/
+/tests/regression/scenes/*_ref.exr
+
+# Generated outputs
+*.denoised.exr
+out.exr

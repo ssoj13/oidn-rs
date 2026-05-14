@@ -1,0 +1,25 @@
+[package]
+name          = "oidn-model"
+version       = { workspace = true }
+edition       = { workspace = true }
+rust-version  = { workspace = true }
+license       = { workspace = true }
+authors       = { workspace = true }
+repository    = { workspace = true }
+homepage      = { workspace = true }
+readme        = { workspace = true }
+keywords      = ["denoising", "unet", "burn", "oidn", "deep-learning"]
+categories    = ["graphics", "science"]
+description   = "U-Net denoiser models (Burn Module) for Intel OIDN architectures"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+oidn-tza  = { path = "../oidn-tza", version = "0.1.0" }
+burn      = { workspace = true }
+half      = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+burn = { workspace = true, features = ["ndarray"] }
