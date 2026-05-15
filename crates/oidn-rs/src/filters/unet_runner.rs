@@ -54,6 +54,16 @@ pub fn run<B: Backend>(
 
     let w = output.width;
     let h = output.height;
+    log::debug!(
+        "unet_runner::run() {}x{} color={} albedo={} normal={} transfer={:?} hdr={} tiles={}",
+        w, h,
+        color_buf.is_some(), albedo_buf.is_some(), normal_buf.is_some(),
+        transfer_kind, hdr, plan.jobs.len()
+    );
+    if let Some(c) = color_buf.as_deref() {
+        let (cmin, cmax, cmean) = quick_stats(c);
+        log::debug!("unet input color stats: min={cmin:.4} max={cmax:.4} mean={cmean:.4}");
+    }
 
     // Build transfer state. For HDR without an explicit scale, run autoexposure
     // on the colour buffer (mirrors unet_filter.cpp:171-189).
@@ -66,6 +76,10 @@ pub fn run<B: Backend>(
         1.0
     };
     tf.set_input_scale(scale);
+    log::debug!(
+        "unet_runner: autoexposure scale={:.6} (hdr={}, user_scale={:?})",
+        scale, hdr, user_input_scale
+    );
 
     let in_channels = color.is_some() as usize * 3
         + albedo.is_some() as usize * 3
@@ -160,7 +174,23 @@ pub fn run<B: Backend>(
 
         // Pull data back to host. Output shape: [1, 3, tile_h, tile_w].
         let out_data = output_tensor.into_data();
-        let out_flat: Vec<f32> = out_data.convert::<f32>().to_vec().unwrap_or_default();
+        let out_flat: Vec<f32> = match out_data.convert::<f32>().to_vec::<f32>() {
+            Ok(v) => v,
+            Err(e) => {
+                log::error!("unet_runner: into_data().to_vec::<f32>() failed: {e:?}");
+                return Err(OidnError::Cancelled);
+            }
+        };
+        let expected_len = (in_c as usize) * tile_h * tile_w / (in_c as usize / 3.max(1)).max(1);
+        let (omin, omax, omean) = quick_stats(&out_flat);
+        log::debug!(
+            "unet tile {}/{}: forward output len={} (expected ≈{}) stats min={:.4} max={:.4} mean={:.4}",
+            tile_idx + 1, total_jobs, out_flat.len(), expected_len, omin, omax, omean
+        );
+        if out_flat.is_empty() {
+            log::error!("unet_runner: forward output is empty — Burn returned no data");
+            return Err(OidnError::Cancelled);
+        }
 
         // Crop output_src_in_tile and write into output_buf with inverse transfer.
         let stride_c = tile_h * tile_w;
@@ -195,8 +225,31 @@ pub fn run<B: Backend>(
         }
     }
 
+    let (omin_post, omax_post, omean_post) = quick_stats(&output_buf);
+    log::debug!(
+        "unet_runner output (after inverse transfer): min={omin_post:.4} max={omax_post:.4} mean={omean_post:.4}"
+    );
     output.write_rgb_f32(&output_buf);
     Ok(())
+}
+
+/// Quick min/max/mean over a flat f32 slice — used to trace tile-level
+/// forward inputs/outputs while diagnosing all-zero denoise.
+fn quick_stats(data: &[f32]) -> (f32, f32, f32) {
+    if data.is_empty() {
+        return (0.0, 0.0, 0.0);
+    }
+    let mut min = f32::INFINITY;
+    let mut max = f32::NEG_INFINITY;
+    let mut sum = 0.0f64;
+    for &v in data {
+        if v.is_finite() {
+            if v < min { min = v; }
+            if v > max { max = v; }
+            sum += v as f64;
+        }
+    }
+    (min, max, (sum / data.len() as f64) as f32)
 }
 
 /// Reflect-clamp `x` into `[lo, hi]`. For coordinates within the rectangle

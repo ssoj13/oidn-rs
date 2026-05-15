@@ -3676,6 +3676,7 @@ dependencies = [
  "burn-wgpu",
  "bytemuck",
  "half",
+ "log",
  "memmap2",
  "oidn-model",
  "oidn-tza",
