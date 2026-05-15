@@ -25,6 +25,7 @@ pub mod error;
 pub mod filter;
 pub mod filters;
 pub mod image;
+pub mod image_tensor;
 pub mod prelude;
 pub mod registry;
 pub mod tile;
