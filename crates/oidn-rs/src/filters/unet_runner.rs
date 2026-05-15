@@ -1,29 +1,39 @@
 //! UNet inference pipeline — generic over Burn `Backend`.
 //!
-//! Direct port of `_ref/oidn/core/unet_filter.cpp::execute` (without
-//! sub-device sharding). Per tile we:
+//! Phase I (I.2 + I.4) version: tile pack / unpack runs on the GPU via
+//! Burn ops. The per-tile, per-pixel CPU loop from the original port
+//! (visible in this file's history before commit `8ae2939`) is gone; the
+//! pipeline now does, per `run()`:
 //!
-//! 1. Pack the input rectangles (color + optional albedo + optional normal)
-//!    into a `[1, in_channels, tile_h, tile_w]` Burn tensor, applying the
-//!    HDR/sRGB transfer to the colour channels and any necessary normal
-//!    rescaling. Padding outside the source rectangle is handled by reflection
-//!    against the source content (matching `gpu_input_process.h`).
-//! 2. Forward through the U-Net.
-//! 3. Crop the output region (`output_src_in_tile`) and write it back to the
-//!    destination buffer with the inverse transfer applied.
+//! 1. Decode the input images (`Image::to_rgb_f32`) — still host work,
+//!    will be lifted by I.5 once the wgpu↔Burn buffer bridge lands.
+//! 2. Upload each source as a `[1, 3, H, W]` Burn tensor (one allocation
+//!    per input, reused across all tiles).
+//! 3. For each tile:
+//!    - slice the source rectangle out of the uploaded tensor,
+//!    - [`gpu_ops::reflect_pad_2d`] to the tile geometry,
+//!    - [`gpu_ops::apply_transfer_forward`] on the colour channel,
+//!    - albedo `clamp(0, 1)` / normal identity-or-clamp,
+//!    - `Tensor::cat` channels into `[1, in_c, tile_h, tile_w]`,
+//!    - `Net::forward`,
+//!    - [`gpu_ops::apply_transfer_inverse`] on the network output,
+//!    - `slice_assign` the cropped output region into a `[1, 3, H, W]`
+//!      accumulator tensor.
+//! 4. Pull the accumulator back to host once and write it into the
+//!    legacy `ImageMut`. I.5 will replace this with a tensor-out path.
 
-use burn::{
-    prelude::*,
-    tensor::TensorData,
-};
+use burn::prelude::Backend;
+use burn::tensor::Tensor;
 use oidn_model::Net;
 
 use crate::{
     autoexposure,
     color::{TransferFunction, TransferState},
     error::OidnError,
+    gpu_ops,
     image::{Image, ImageMut},
-    tile::{Rect, TileJob, TilePlan},
+    image_tensor,
+    tile::{Rect, TilePlan},
 };
 
 /// Callback called with a `[0.0, 1.0]` progress fraction after each tile.
@@ -46,8 +56,8 @@ pub fn run<B: Backend>(
     user_input_scale: Option<f32>,
     progress: Option<&mut ProgressFn<'_>>,
 ) -> Result<(), OidnError> {
-    // Decode inputs to flat HWC f32 buffers up-front. This is cheap relative
-    // to inference and keeps tile packing logic uniform.
+    // Decode inputs to flat HWC f32 buffers up-front. Stays on host until
+    // I.5 replaces `Image<'_>` callers with a tensor-native path.
     let color_buf = color.map(|img| img.to_rgb_f32());
     let albedo_buf = albedo.map(|img| img.to_rgb_f32());
     let normal_buf = normal.map(|img| img.to_rgb_f32());
@@ -65,8 +75,12 @@ pub fn run<B: Backend>(
         log::debug!("unet input color stats: min={cmin:.4} max={cmax:.4} mean={cmean:.4}");
     }
 
-    // Build transfer state. For HDR without an explicit scale, run autoexposure
-    // on the colour buffer (mirrors unet_filter.cpp:171-189).
+    // Autoexposure / transfer state — for HDR PU + Log we feed the colour
+    // buffer through `autoexposure::compute_scale` on the host. The
+    // tensor variant (`compute_scale_tensor`) exists but would force an
+    // extra upload here; we already have the host buffer, so use the
+    // cheap path. Either way the result is a single f32 scalar that ends
+    // up baked into the `TransferState`.
     let mut tf = TransferState::new(transfer_kind);
     let scale = if let Some(s) = user_input_scale {
         s
@@ -81,142 +95,97 @@ pub fn run<B: Backend>(
         scale, hdr, user_input_scale
     );
 
-    let in_channels = color.is_some() as usize * 3
-        + albedo.is_some() as usize * 3
-        + normal.is_some() as usize * 3;
-    let in_c = in_channels as i32;
+    // Stage source tensors once. Each is [1, 3, H, W] f32 on `device`.
+    let color_t = color_buf.as_ref().map(|buf| upload_hwc_as_chw_tensor::<B>(buf, w, h, device));
+    let albedo_t = albedo_buf.as_ref().map(|buf| upload_hwc_as_chw_tensor::<B>(buf, w, h, device));
+    let normal_t = normal_buf.as_ref().map(|buf| upload_hwc_as_chw_tensor::<B>(buf, w, h, device));
+
+    // Output accumulator: starts at zeros, slice_assign per tile.
+    let mut accum: Tensor<B, 4> = Tensor::zeros([1, 3, h, w], device);
+    // snorm: when only a normal input is set (no colour), the normal
+    // values are signed in `[-1, 1]` and should not be clamped to
+    // `[0, 1]`. Matches the `pack(..., snorm=true)` branch in the
+    // original CPU path.
     let snorm = normal.is_some() && color.is_none();
 
-    let mut output_buf: Vec<f32> = vec![0.0; w * h * 3];
     let mut progress = progress;
     let total_jobs = plan.jobs.len();
+    let tile_w = plan.tile_w as usize;
+    let tile_h = plan.tile_h as usize;
 
     for (tile_idx, job) in plan.jobs.iter().enumerate() {
-        let tile_h = plan.tile_h as usize;
-        let tile_w = plan.tile_w as usize;
+        // 1. Pull the source rectangle out of each input tensor and pad
+        //    to (tile_h, tile_w) via reflection. `align_offset_{x,y}` is
+        //    the leading padding amount on the left/top side; the
+        //    trailing side is whatever's left after the rectangle fits.
+        let src_x = job.input.x as usize;
+        let src_y = job.input.y as usize;
+        let src_w = job.input.w as usize;
+        let src_h = job.input.h as usize;
+        let pad_left = job.align_offset_x as usize;
+        let pad_top = job.align_offset_y as usize;
+        debug_assert!(pad_left + src_w <= tile_w);
+        debug_assert!(pad_top + src_h <= tile_h);
+        let pad_right = tile_w - src_w - pad_left;
+        let pad_bottom = tile_h - src_h - pad_top;
 
-        // Allocate flat NCHW input buffer for this tile (N=1 implicit).
-        let mut tile_input: Vec<f32> = vec![0.0; (in_c as usize) * tile_h * tile_w];
+        let mut channel_parts: Vec<Tensor<B, 4>> = Vec::with_capacity(3);
 
-        // Helper closure for packing one 3-channel image into a contiguous
-        // CHW slice of `tile_input`, applying transfer/normal correction.
-        let pack = |dst: &mut [f32],
-                    src: &[f32],
-                    job: &TileJob,
-                    apply_transfer: bool,
-                    snorm: bool| {
-            for ty in 0..tile_h {
-                for tx in 0..tile_w {
-                    // Translate tile-local (tx, ty) to image space.
-                    //
-                    // The actual image content for this tile occupies the
-                    // tile-buffer region `[align_offset, align_offset + input.w)`
-                    // along each axis. Outside that region we pad by reflecting
-                    // against the input rectangle (matches `gpu_input_process.h`).
-                    let raw_sx = job.input.x + tx as i32 - job.align_offset_x;
-                    let raw_sy = job.input.y + ty as i32 - job.align_offset_y;
-                    let sx = reflect_into(
-                        raw_sx,
-                        job.input.x,
-                        job.input.x + job.input.w - 1,
-                    );
-                    let sy = reflect_into(
-                        raw_sy,
-                        job.input.y,
-                        job.input.y + job.input.h - 1,
-                    );
-                    let i = (sy * w as i32 + sx) as usize * 3;
-                    let r = src[i];
-                    let g = src[i + 1];
-                    let b = src[i + 2];
+        if let Some(src) = color_t.as_ref() {
+            let rect = src
+                .clone()
+                .slice([0..1, 0..3, src_y..src_y + src_h, src_x..src_x + src_w]);
+            let padded = gpu_ops::reflect_pad_2d(rect, pad_top, pad_bottom, pad_left, pad_right);
+            channel_parts.push(gpu_ops::apply_transfer_forward(padded, &tf));
+        }
+        if let Some(src) = albedo_t.as_ref() {
+            let rect = src
+                .clone()
+                .slice([0..1, 0..3, src_y..src_y + src_h, src_x..src_x + src_w]);
+            let padded = gpu_ops::reflect_pad_2d(rect, pad_top, pad_bottom, pad_left, pad_right);
+            // Albedos are LDR reflectances; clamp the same way the CPU
+            // path did (`(r/g/b).clamp(0.0, 1.0)`).
+            channel_parts.push(padded.clamp(0.0, 1.0));
+        }
+        if let Some(src) = normal_t.as_ref() {
+            let rect = src
+                .clone()
+                .slice([0..1, 0..3, src_y..src_y + src_h, src_x..src_x + src_w]);
+            let padded = gpu_ops::reflect_pad_2d(rect, pad_top, pad_bottom, pad_left, pad_right);
+            channel_parts.push(if snorm { padded } else { padded.clamp(0.0, 1.0) });
+        }
 
-                    let (r, g, b) = if apply_transfer {
-                        (tf.forward(r), tf.forward(g), tf.forward(b))
-                    } else if snorm {
-                        // Normals shipped as [-1, 1] need no remap; albedos clamp [0,1].
-                        (r, g, b)
-                    } else {
-                        (r.clamp(0.0, 1.0), g.clamp(0.0, 1.0), b.clamp(0.0, 1.0))
-                    };
+        // 2. Concat along channel dim → [1, in_c, tile_h, tile_w].
+        let input_tensor: Tensor<B, 4> = Tensor::cat(channel_parts, 1);
 
-                    let stride_c = tile_h * tile_w;
-                    let off = ty * tile_w + tx;
-                    dst[off] = r;
-                    dst[stride_c + off] = g;
-                    dst[2 * stride_c + off] = b;
-                }
-            }
+        // 3. Forward (UNet or UNetLarge, dispatched by `Net`).
+        let output_tensor: Tensor<B, 4> = net.forward(input_tensor);
+
+        // 4. Inverse transfer + crop + slice_assign into the accumulator.
+        //    `Linear` has no inverse; the tensor passes through.
+        let post = if matches!(transfer_kind, TransferFunction::Linear) {
+            output_tensor
+        } else {
+            gpu_ops::apply_transfer_inverse(output_tensor, &tf)
         };
 
-        let mut channel_offset = 0;
-        let chw_size = tile_h * tile_w * 3;
-
-        if let Some(buf) = color_buf.as_deref() {
-            pack(&mut tile_input[channel_offset..channel_offset + chw_size], buf, job, true, false);
-            channel_offset += chw_size;
-        }
-        if let Some(buf) = albedo_buf.as_deref() {
-            pack(&mut tile_input[channel_offset..channel_offset + chw_size], buf, job, false, false);
-            channel_offset += chw_size;
-        }
-        if let Some(buf) = normal_buf.as_deref() {
-            pack(&mut tile_input[channel_offset..channel_offset + chw_size], buf, job, false, snorm);
-            channel_offset += chw_size;
-        }
-        debug_assert_eq!(channel_offset, in_c as usize * tile_h * tile_w);
-
-        // Build Burn input tensor [1, in_c, tile_h, tile_w].
-        let shape = [1, in_c as usize, tile_h, tile_w];
-        let input_tensor = Tensor::<B, 4>::from_data(TensorData::new(tile_input, shape), device);
-
-        // Forward pass — Net dispatches to UNet or UNetLarge internally.
-        let output_tensor = net.forward(input_tensor);
-
-        // Pull data back to host. Output shape: [1, 3, tile_h, tile_w].
-        let out_data = output_tensor.into_data();
-        let out_flat: Vec<f32> = match out_data.convert::<f32>().to_vec::<f32>() {
-            Ok(v) => v,
-            Err(e) => {
-                log::error!("unet_runner: into_data().to_vec::<f32>() failed: {e:?}");
-                return Err(OidnError::Cancelled);
-            }
-        };
-        let expected_len = (in_c as usize) * tile_h * tile_w / (in_c as usize / 3.max(1)).max(1);
-        let (omin, omax, omean) = quick_stats(&out_flat);
-        log::debug!(
-            "unet tile {}/{}: forward output len={} (expected ≈{}) stats min={:.4} max={:.4} mean={:.4}",
-            tile_idx + 1, total_jobs, out_flat.len(), expected_len, omin, omax, omean
-        );
-        if out_flat.is_empty() {
-            log::error!("unet_runner: forward output is empty — Burn returned no data");
-            return Err(OidnError::Cancelled);
-        }
-
-        // Crop output_src_in_tile and write into output_buf with inverse transfer.
-        let stride_c = tile_h * tile_w;
         let Rect { x: ox, y: oy, w: ow, h: oh } = job.output_src_in_tile;
         let Rect { x: dx, y: dy, w: _, h: _ } = job.output_dst;
-
-        for row in 0..oh as usize {
-            for col in 0..ow as usize {
-                let src_idx_row = (oy as usize + row) * tile_w + (ox as usize + col);
-                let r = out_flat[src_idx_row];
-                let g = out_flat[stride_c + src_idx_row];
-                let b = out_flat[2 * stride_c + src_idx_row];
-
-                let (r, g, b) = if matches!(transfer_kind, TransferFunction::Linear) {
-                    (r, g, b)
-                } else {
-                    (tf.inverse(r), tf.inverse(g), tf.inverse(b))
-                };
-
-                let dst_pixel = (dy as usize + row) * w + (dx as usize + col);
-                let base = dst_pixel * 3;
-                output_buf[base] = r;
-                output_buf[base + 1] = g;
-                output_buf[base + 2] = b;
-            }
-        }
+        let cropped = post.slice([
+            0..1,
+            0..3,
+            oy as usize..(oy + oh) as usize,
+            ox as usize..(ox + ow) as usize,
+        ]);
+        accum = accum.slice_assign(
+            [
+                0..1,
+                0..3,
+                dy as usize..(dy + oh) as usize,
+                dx as usize..(dx + ow) as usize,
+            ],
+            cropped,
+        );
 
         // Tile-granularity progress reporting + cooperative cancellation.
         if let Some(cb) = progress.as_deref_mut() {
@@ -225,16 +194,34 @@ pub fn run<B: Backend>(
         }
     }
 
-    let (omin_post, omax_post, omean_post) = quick_stats(&output_buf);
+    // 5. Pull the full accumulator back to host as HWC f32 once.
+    //    I.5 swaps this for a direct accumulator → wgpu::Buffer copy.
+    let (chw_vec, dims) = image_tensor::tensor_to_chw_vec(accum);
+    debug_assert_eq!(dims, [1, 3, h, w]);
+    let hwc_vec = image_tensor::chw_to_hwc(&chw_vec, 3, h, w);
+
+    let (omin_post, omax_post, omean_post) = quick_stats(&hwc_vec);
     log::debug!(
         "unet_runner output (after inverse transfer): min={omin_post:.4} max={omax_post:.4} mean={omean_post:.4}"
     );
-    output.write_rgb_f32(&output_buf);
+    output.write_rgb_f32(&hwc_vec);
     Ok(())
 }
 
-/// Quick min/max/mean over a flat f32 slice — used to trace tile-level
-/// forward inputs/outputs while diagnosing all-zero denoise.
+/// Stage a flat HWC `f32` slice as a `[1, 3, H, W]` Burn tensor on `device`.
+fn upload_hwc_as_chw_tensor<B: Backend>(
+    buf_hwc: &[f32],
+    width: usize,
+    height: usize,
+    device: &B::Device,
+) -> Tensor<B, 4> {
+    let chw = image_tensor::hwc_to_chw(buf_hwc, 3, height, width);
+    image_tensor::chw_vec_to_tensor::<B>(chw, 3, height, width, device)
+}
+
+/// Quick min/max/mean over a flat f32 slice — used to trace the host
+/// boundaries (decoded input + final output) during integration with
+/// `env_logger`.
 fn quick_stats(data: &[f32]) -> (f32, f32, f32) {
     if data.is_empty() {
         return (0.0, 0.0, 0.0);
@@ -250,19 +237,4 @@ fn quick_stats(data: &[f32]) -> (f32, f32, f32) {
         }
     }
     (min, max, (sum / data.len() as f64) as f32)
-}
-
-/// Reflect-clamp `x` into `[lo, hi]`. For coordinates within the rectangle
-/// this is the identity; outside, we mirror against the boundary so the
-/// padding pixels look like the image content (matching OIDN's input border
-/// handling).
-#[inline]
-fn reflect_into(x: i32, lo: i32, hi: i32) -> i32 {
-    if hi <= lo { return lo; }
-    let mut v = x;
-    while v < lo || v > hi {
-        if v < lo { v = 2 * lo - v; }
-        if v > hi { v = 2 * hi - v; }
-    }
-    v
 }

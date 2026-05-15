@@ -24,6 +24,7 @@ pub mod device;
 pub mod error;
 pub mod filter;
 pub mod filters;
+pub mod gpu_ops;
 pub mod image;
 pub mod image_tensor;
 pub mod prelude;
