@@ -26,12 +26,11 @@ etc. — those are paths inside the Intel repository, not local paths.
 
 ## Quickstart
 
-Trained Intel weights ship in this repo at `data/weights/*.tza`,
-tracked via [Git LFS](https://git-lfs.com/) (~48 MB across 24 model
-variants). Make sure LFS is installed before cloning:
+Trained Intel weights ship in this repo at `data/weights/*.tza` as regular
+git blobs (~48 MB across 24 model variants). A plain clone is enough — no
+Git LFS setup required.
 
 ```sh
-git lfs install            # one-time, system-wide
 git clone https://github.com/ssoj13/oidn-rs.git
 cd oidn-rs
 cargo build --release --workspace
@@ -49,10 +48,6 @@ cargo run -p oidn-cli --release -- denoise \
 # Benchmark on a synthetic scene
 cargo run -p oidn-cli --release -- bench --resolution 1024x1024 --iters 10
 ```
-
-If you already cloned without LFS installed, run `git lfs pull` after
-installing `git-lfs` to fetch the actual `.tza` payloads (otherwise
-they're 1 KB pointer files and tests skip).
 
 ## Library use
 
@@ -134,12 +129,12 @@ oidn-rs ships ~2000 LOC of Rust by **delegating all the GPU math to Burn**:
 
 ## Testing
 
-Most integration tests need `data/weights/*.tza` (LFS-tracked) to run
-real-weight scenarios — without them they skip silently with
-`eprintln!("skipping: weights not initialised")`.
+Most integration tests need `data/weights/*.tza` to run real-weight
+scenarios — without them they skip silently with
+`eprintln!("skipping: weights not initialised")`. A normal clone already
+contains the weights.
 
 ```sh
-git lfs pull                              # fetch .tza payloads if needed
 cargo test --workspace --release
 cargo clippy --workspace --all-targets -- -D warnings
 cargo doc --workspace --no-deps
