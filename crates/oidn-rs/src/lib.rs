@@ -30,6 +30,7 @@ pub mod image_tensor;
 pub mod prelude;
 pub mod registry;
 pub mod tile;
+pub mod weights;
 
 pub use device::WgpuDevice;
 pub use error::OidnError;
