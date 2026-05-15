@@ -1,26 +1,15 @@
 //! UNet inference pipeline — generic over Burn `Backend`.
 //!
-//! Phase I (I.2 + I.4) version: tile pack / unpack runs on the GPU via
-//! Burn ops. The per-tile, per-pixel CPU loop from the original port
-//! (visible in this file's history before commit `8ae2939`) is gone; the
-//! pipeline now does, per `run()`:
+//! Two entry points share a single tensor-native core:
 //!
-//! 1. Decode the input images (`Image::to_rgb_f32`) — still host work,
-//!    will be lifted by I.5 once the wgpu↔Burn buffer bridge lands.
-//! 2. Upload each source as a `[1, 3, H, W]` Burn tensor (one allocation
-//!    per input, reused across all tiles).
-//! 3. For each tile:
-//!    - slice the source rectangle out of the uploaded tensor,
-//!    - [`gpu_ops::reflect_pad_2d`] to the tile geometry,
-//!    - [`gpu_ops::apply_transfer_forward`] on the colour channel,
-//!    - albedo `clamp(0, 1)` / normal identity-or-clamp,
-//!    - `Tensor::cat` channels into `[1, in_c, tile_h, tile_w]`,
-//!    - `Net::forward`,
-//!    - [`gpu_ops::apply_transfer_inverse`] on the network output,
-//!    - `slice_assign` the cropped output region into a `[1, 3, H, W]`
-//!      accumulator tensor.
-//! 4. Pull the accumulator back to host once and write it into the
-//!    legacy `ImageMut`. I.5 will replace this with a tensor-out path.
+//! - [`run_tensors`] is the primary impl. Inputs and outputs are
+//!   `[1, 3, H, W]` (NCHW) Burn tensors that already live on the target
+//!   device. No host roundtrip anywhere — this is what the Phase I.5 +
+//!   I.6 squarebob bridge calls into.
+//! - [`run`] is the legacy `Image<'_>` ↔ `ImageMut<'_>` entry point used
+//!   by the CLI and tests. It does the host upload / download bookends
+//!   around `run_tensors` so callers that don't have a wgpu pipeline
+//!   keep working.
 
 use burn::prelude::Backend;
 use burn::tensor::Tensor;
@@ -40,52 +29,49 @@ use crate::{
 /// Returning `false` aborts execution with `OidnError::Cancelled`.
 pub type ProgressFn<'a> = dyn FnMut(f32) -> bool + 'a;
 
-/// One inference call: read tiles from the inputs, run the network, write
-/// tiles into `output`. The caller supplies the loaded `UNet` model.
+/// Tensor-native UNet forward pass. All inputs (`color`, `albedo`,
+/// `normal`) are `[1, 3, H, W]` (NCHW) `f32` tensors on `device`. The
+/// returned tensor has the same shape. No data crosses to host except
+/// the two scalars produced by HDR autoexposure (and only when both
+/// `hdr` is true and `user_input_scale` is `None`).
+///
+/// `output_w` / `output_h` must match the input tensor dimensions (and
+/// the tile plan's image size).
 #[allow(clippy::too_many_arguments)]
-pub fn run<B: Backend>(
+pub fn run_tensors<B: Backend>(
     net: &Net<B>,
     device: &B::Device,
     plan: &TilePlan,
-    color: Option<&Image<'_>>,
-    albedo: Option<&Image<'_>>,
-    normal: Option<&Image<'_>>,
-    output: &mut ImageMut<'_>,
+    color: Option<Tensor<B, 4>>,
+    albedo: Option<Tensor<B, 4>>,
+    normal: Option<Tensor<B, 4>>,
+    output_w: usize,
+    output_h: usize,
     transfer_kind: TransferFunction,
     hdr: bool,
     user_input_scale: Option<f32>,
-    progress: Option<&mut ProgressFn<'_>>,
-) -> Result<(), OidnError> {
-    // Decode inputs to flat HWC f32 buffers up-front. Stays on host until
-    // I.5 replaces `Image<'_>` callers with a tensor-native path.
-    let color_buf = color.map(|img| img.to_rgb_f32());
-    let albedo_buf = albedo.map(|img| img.to_rgb_f32());
-    let normal_buf = normal.map(|img| img.to_rgb_f32());
-
-    let w = output.width;
-    let h = output.height;
+    mut progress: Option<&mut ProgressFn<'_>>,
+) -> Result<Tensor<B, 4>, OidnError> {
+    let w = output_w;
+    let h = output_h;
     log::debug!(
-        "unet_runner::run() {}x{} color={} albedo={} normal={} transfer={:?} hdr={} tiles={}",
+        "unet_runner::run_tensors() {}x{} color={} albedo={} normal={} transfer={:?} hdr={} tiles={}",
         w, h,
-        color_buf.is_some(), albedo_buf.is_some(), normal_buf.is_some(),
+        color.is_some(), albedo.is_some(), normal.is_some(),
         transfer_kind, hdr, plan.jobs.len()
     );
-    if let Some(c) = color_buf.as_deref() {
-        let (cmin, cmax, cmean) = quick_stats(c);
-        log::debug!("unet input color stats: min={cmin:.4} max={cmax:.4} mean={cmean:.4}");
-    }
 
-    // Autoexposure / transfer state — for HDR PU + Log we feed the colour
-    // buffer through `autoexposure::compute_scale` on the host. The
-    // tensor variant (`compute_scale_tensor`) exists but would force an
-    // extra upload here; we already have the host buffer, so use the
-    // cheap path. Either way the result is a single f32 scalar that ends
-    // up baked into the `TransferState`.
+    // Autoexposure — when HDR and no user override, use the GPU variant
+    // so we don't have to drag the colour buffer back to host. Only two
+    // scalars (`sum_log` + `count`) end up readback.
     let mut tf = TransferState::new(transfer_kind);
     let scale = if let Some(s) = user_input_scale {
         s
     } else if hdr {
-        if let Some(c) = color_buf.as_deref() { autoexposure::compute_scale(c, w, h) } else { 1.0 }
+        match color.as_ref() {
+            Some(c) => autoexposure::compute_scale_tensor(c.clone()),
+            None => 1.0,
+        }
     } else {
         1.0
     };
@@ -95,20 +81,15 @@ pub fn run<B: Backend>(
         scale, hdr, user_input_scale
     );
 
-    // Stage source tensors once. Each is [1, 3, H, W] f32 on `device`.
-    let color_t = color_buf.as_ref().map(|buf| upload_hwc_as_chw_tensor::<B>(buf, w, h, device));
-    let albedo_t = albedo_buf.as_ref().map(|buf| upload_hwc_as_chw_tensor::<B>(buf, w, h, device));
-    let normal_t = normal_buf.as_ref().map(|buf| upload_hwc_as_chw_tensor::<B>(buf, w, h, device));
-
-    // Output accumulator: starts at zeros, slice_assign per tile.
-    let mut accum: Tensor<B, 4> = Tensor::zeros([1, 3, h, w], device);
     // snorm: when only a normal input is set (no colour), the normal
     // values are signed in `[-1, 1]` and should not be clamped to
     // `[0, 1]`. Matches the `pack(..., snorm=true)` branch in the
     // original CPU path.
     let snorm = normal.is_some() && color.is_none();
 
-    let mut progress = progress;
+    // Output accumulator: starts at zeros, slice_assign per tile.
+    let mut accum: Tensor<B, 4> = Tensor::zeros([1, 3, h, w], device);
+
     let total_jobs = plan.jobs.len();
     let tile_w = plan.tile_w as usize;
     let tile_h = plan.tile_h as usize;
@@ -131,23 +112,21 @@ pub fn run<B: Backend>(
 
         let mut channel_parts: Vec<Tensor<B, 4>> = Vec::with_capacity(3);
 
-        if let Some(src) = color_t.as_ref() {
+        if let Some(src) = color.as_ref() {
             let rect = src
                 .clone()
                 .slice([0..1, 0..3, src_y..src_y + src_h, src_x..src_x + src_w]);
             let padded = gpu_ops::reflect_pad_2d(rect, pad_top, pad_bottom, pad_left, pad_right);
             channel_parts.push(gpu_ops::apply_transfer_forward(padded, &tf));
         }
-        if let Some(src) = albedo_t.as_ref() {
+        if let Some(src) = albedo.as_ref() {
             let rect = src
                 .clone()
                 .slice([0..1, 0..3, src_y..src_y + src_h, src_x..src_x + src_w]);
             let padded = gpu_ops::reflect_pad_2d(rect, pad_top, pad_bottom, pad_left, pad_right);
-            // Albedos are LDR reflectances; clamp the same way the CPU
-            // path did (`(r/g/b).clamp(0.0, 1.0)`).
             channel_parts.push(padded.clamp(0.0, 1.0));
         }
-        if let Some(src) = normal_t.as_ref() {
+        if let Some(src) = normal.as_ref() {
             let rect = src
                 .clone()
                 .slice([0..1, 0..3, src_y..src_y + src_h, src_x..src_x + src_w]);
@@ -158,11 +137,10 @@ pub fn run<B: Backend>(
         // 2. Concat along channel dim → [1, in_c, tile_h, tile_w].
         let input_tensor: Tensor<B, 4> = Tensor::cat(channel_parts, 1);
 
-        // 3. Forward (UNet or UNetLarge, dispatched by `Net`).
+        // 3. Forward.
         let output_tensor: Tensor<B, 4> = net.forward(input_tensor);
 
-        // 4. Inverse transfer + crop + slice_assign into the accumulator.
-        //    `Linear` has no inverse; the tensor passes through.
+        // 4. Inverse transfer + crop + slice_assign.
         let post = if matches!(transfer_kind, TransferFunction::Linear) {
             output_tensor
         } else {
@@ -187,15 +165,61 @@ pub fn run<B: Backend>(
             cropped,
         );
 
-        // Tile-granularity progress reporting + cooperative cancellation.
         if let Some(cb) = progress.as_deref_mut() {
             let fraction = (tile_idx + 1) as f32 / total_jobs as f32;
             if !cb(fraction) { return Err(OidnError::Cancelled); }
         }
     }
 
-    // 5. Pull the full accumulator back to host as HWC f32 once.
-    //    I.5 swaps this for a direct accumulator → wgpu::Buffer copy.
+    Ok(accum)
+}
+
+/// Legacy `Image<'_>` entry point. Decodes inputs to HWC `f32`, uploads
+/// to NCHW tensors, runs [`run_tensors`], pulls the accumulator back to
+/// host, writes to `output`.
+///
+/// The CLI and the test fixtures still use this. Squarebob's hot path
+/// goes through [`run_tensors`] directly via the bridge in
+/// `pt-denoise-oidn` and the tensor-native API on
+/// [`RtFilter`](crate::filters::rt::RtFilter).
+#[allow(clippy::too_many_arguments)]
+pub fn run<B: Backend>(
+    net: &Net<B>,
+    device: &B::Device,
+    plan: &TilePlan,
+    color: Option<&Image<'_>>,
+    albedo: Option<&Image<'_>>,
+    normal: Option<&Image<'_>>,
+    output: &mut ImageMut<'_>,
+    transfer_kind: TransferFunction,
+    hdr: bool,
+    user_input_scale: Option<f32>,
+    progress: Option<&mut ProgressFn<'_>>,
+) -> Result<(), OidnError> {
+    let w = output.width;
+    let h = output.height;
+
+    let color_buf = color.map(|img| img.to_rgb_f32());
+    let albedo_buf = albedo.map(|img| img.to_rgb_f32());
+    let normal_buf = normal.map(|img| img.to_rgb_f32());
+
+    if let Some(c) = color_buf.as_deref() {
+        let (cmin, cmax, cmean) = quick_stats(c);
+        log::debug!("unet input color stats: min={cmin:.4} max={cmax:.4} mean={cmean:.4}");
+    }
+
+    let color_t = color_buf.as_deref().map(|buf| upload_hwc_as_chw_tensor::<B>(buf, w, h, device));
+    let albedo_t = albedo_buf.as_deref().map(|buf| upload_hwc_as_chw_tensor::<B>(buf, w, h, device));
+    let normal_t = normal_buf.as_deref().map(|buf| upload_hwc_as_chw_tensor::<B>(buf, w, h, device));
+
+    let accum = run_tensors(
+        net, device, plan,
+        color_t, albedo_t, normal_t,
+        w, h,
+        transfer_kind, hdr, user_input_scale,
+        progress,
+    )?;
+
     let (chw_vec, dims) = image_tensor::tensor_to_chw_vec(accum);
     debug_assert_eq!(dims, [1, 3, h, w]);
     let hwc_vec = image_tensor::chw_to_hwc(&chw_vec, 3, h, w);
@@ -219,9 +243,6 @@ fn upload_hwc_as_chw_tensor<B: Backend>(
     image_tensor::chw_vec_to_tensor::<B>(chw, 3, height, width, device)
 }
 
-/// Quick min/max/mean over a flat f32 slice — used to trace the host
-/// boundaries (decoded input + final output) during integration with
-/// `env_logger`.
 fn quick_stats(data: &[f32]) -> (f32, f32, f32) {
     if data.is_empty() {
         return (0.0, 0.0, 0.0);

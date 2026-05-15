@@ -7,6 +7,22 @@
 //! base / small `UNet` and the wider `UNetLarge`. Variant is detected from
 //! the model filename suffix (`_large` / `_small`) after quality-based
 //! candidate selection.
+//!
+//! ## Two parallel I/O modes
+//!
+//! - **Legacy `Image<'_>` mode.** [`Self::set_color`] / [`Self::set_albedo`]
+//!   / [`Self::set_normal`] take byte-backed images; [`Self::allocate_output`]
+//!   reserves a host-side buffer; [`Self::take_output`] returns those bytes.
+//!   Used by the CLI and the test fixtures.
+//! - **Tensor mode.** [`Self::set_color_tensor`] etc. take a Burn
+//!   `Tensor<B, 4>` (`[1, 3, H, W]` NCHW). [`Self::allocate_output_tensor`]
+//!   declares the output shape; [`Self::take_output_tensor`] returns the
+//!   denoised accumulator. Used by squarebob's wgpu bridge to keep pixels
+//!   on-device end-to-end.
+//!
+//! [`Filter::execute`] dispatches between the two paths based on which
+//! input slot is populated. Mixing modes within one `commit() / execute()`
+//! cycle is not supported — pick one set of setters per call.
 
 use std::path::PathBuf;
 
@@ -19,7 +35,6 @@ use crate::{
     filter::{Filter, Quality},
     filters::unet_runner::{self, ProgressFn},
     image::{Image, ImageMut, PixelFormat},
-    image_tensor,
     registry::{ModelKey, quality_candidates, select_rt},
     tile::{self, DEFAULT_MAX_TILE_SIZE, MIN_TILE_ALIGNMENT, RECEPTIVE_FIELD_BASE, TilePlan},
 };
@@ -94,6 +109,11 @@ impl<'b, B: Backend> RtFilterBuilder<'b, B> {
             albedo: None,
             normal: None,
             output: None,
+            color_tensor: None,
+            albedo_tensor: None,
+            normal_tensor: None,
+            output_tensor: None,
+            output_tensor_dims: None,
             net: None,
             plan: None,
             model_key: None,
@@ -116,22 +136,33 @@ pub struct RtFilter<'b, B: Backend> {
     user_weights: Option<Vec<u8>>,
     max_memory_mb: Option<i32>,
 
+    // --- Legacy Image<'_> path ---
     color: Option<OwnedImage>,
     albedo: Option<OwnedImage>,
     normal: Option<OwnedImage>,
     output: Option<OwnedImageMut>,
+
+    // --- Tensor path (zero host-roundtrip; Phase I.5/I.6) ---
+    color_tensor: Option<Tensor<B, 4>>,
+    albedo_tensor: Option<Tensor<B, 4>>,
+    normal_tensor: Option<Tensor<B, 4>>,
+    /// Populated by `execute()` in tensor mode; consumed by
+    /// [`Self::take_output_tensor`].
+    output_tensor: Option<Tensor<B, 4>>,
+    /// `(width, height)` declared by [`Self::allocate_output_tensor`].
+    /// Doubles as the tile-plan / shape source when the tensor path is
+    /// active.
+    output_tensor_dims: Option<(usize, usize)>,
 
     net: Option<Net<B>>,
     plan: Option<TilePlan>,
     model_key: Option<ModelKey>,
     progress: Option<Box<ProgressFn<'static>>>,
     committed: bool,
-    /// Output dims/format from the most recent successful `commit()`.
-    /// `allocate_output()` reuses the existing `committed` state when the
-    /// caller asks for the same shape again — keeps the cached UNet/plan
-    /// alive across `take_output()` + re-allocate cycles (e.g. the
-    /// `pt-denoise-oidn` periodic-fire loop).
-    last_committed_dims: Option<(usize, usize, crate::image::PixelFormat)>,
+    /// Output dims/format from the most recent successful `commit()` in
+    /// legacy mode. Tensor mode tracks its own dims via
+    /// `output_tensor_dims`; both feed [`Self::output_dims`].
+    last_committed_dims: Option<(usize, usize, PixelFormat)>,
 }
 
 /// Owned copy of an image's bytes plus geometry. Storing borrowed lifetimes
@@ -142,7 +173,7 @@ struct OwnedImage {
     width: usize,
     height: usize,
     row_stride: usize,
-    format: crate::image::PixelFormat,
+    format: PixelFormat,
 }
 
 struct OwnedImageMut {
@@ -150,7 +181,7 @@ struct OwnedImageMut {
     width: usize,
     height: usize,
     row_stride: usize,
-    format: crate::image::PixelFormat,
+    format: PixelFormat,
 }
 
 impl OwnedImage {
@@ -170,7 +201,7 @@ impl OwnedImage {
 }
 
 impl OwnedImageMut {
-    fn empty(width: usize, height: usize, format: crate::image::PixelFormat) -> Self {
+    fn empty(width: usize, height: usize, format: PixelFormat) -> Self {
         let row_stride = width * format.pixel_size();
         Self { data: vec![0u8; row_stride * height], width, height, row_stride, format }
     }
@@ -184,6 +215,8 @@ impl<'b, B: Backend> RtFilter<'b, B> {
     pub fn builder(device: &'b B::Device, weights_dir: impl Into<PathBuf>) -> RtFilterBuilder<'b, B> {
         RtFilterBuilder::new(device, weights_dir)
     }
+
+    // ----- Legacy Image-based inputs -----
 
     /// Replace the color image. Note: this does *not* invalidate the
     /// committed model/plan — when only pixel content changes (same
@@ -206,82 +239,83 @@ impl<'b, B: Backend> RtFilter<'b, B> {
         if needs_invalidate { self.committed = false; }
     }
 
+    // ----- Tensor-native inputs (zero host roundtrip) -----
+
     /// Tensor-native colour input. Shape `[1, 3, H, W]` (NCHW), `f32`.
-    ///
-    /// Equivalent to [`Self::set_color`] but accepts a Burn tensor
-    /// directly. In Phase I.1 the tensor is host-roundtripped (CHW → HWC
-    /// bytes) into the existing `OwnedImage` storage so the legacy CPU
-    /// `unet_runner` path stays byte-for-byte identical. Sub-tasks I.2 and
-    /// I.4 lift the roundtrip onto Burn ops; this signature is stable.
+    /// The tensor is stored by reference (Burn tensors are cheap to
+    /// `clone()`); no data crosses to host. `execute()` runs the
+    /// tensor-native pipeline when *any* `set_*_tensor` was used.
     pub fn set_color_tensor(&mut self, t: Tensor<B, 4>) {
-        self.color = Some(tensor_to_owned_image(t));
-        // Same invalidation rule as `set_color`: only force a re-commit
-        // when an input slot transitions from None → Some. Re-uploading the
-        // same shape every frame must not trash the cached UNet/plan.
-        if self.color.as_ref().map(|i| (i.width, i.height)) != self.last_committed_dims.map(|(w, h, _)| (w, h)) {
-            self.committed = false;
-        }
+        debug_assert_tensor_chw_3::<B>(&t, "set_color_tensor");
+        let needs_invalidate =
+            self.color_tensor.is_none() || tensor_dims_changed(&self.color_tensor, &t);
+        self.color_tensor = Some(t);
+        if needs_invalidate { self.committed = false; }
     }
 
     /// Tensor-native albedo input. See [`Self::set_color_tensor`].
     pub fn set_albedo_tensor(&mut self, t: Tensor<B, 4>) {
-        let needs_invalidate = self.albedo.is_none();
-        self.albedo = Some(tensor_to_owned_image(t));
+        debug_assert_tensor_chw_3::<B>(&t, "set_albedo_tensor");
+        let needs_invalidate =
+            self.albedo_tensor.is_none() || tensor_dims_changed(&self.albedo_tensor, &t);
+        self.albedo_tensor = Some(t);
         if needs_invalidate { self.committed = false; }
     }
 
     /// Tensor-native normal input. See [`Self::set_color_tensor`].
     pub fn set_normal_tensor(&mut self, t: Tensor<B, 4>) {
-        let needs_invalidate = self.normal.is_none();
-        self.normal = Some(tensor_to_owned_image(t));
+        debug_assert_tensor_chw_3::<B>(&t, "set_normal_tensor");
+        let needs_invalidate =
+            self.normal_tensor.is_none() || tensor_dims_changed(&self.normal_tensor, &t);
+        self.normal_tensor = Some(t);
         if needs_invalidate { self.committed = false; }
     }
 
     /// Take ownership of the denoised output as a `[1, 3, H, W]` (NCHW)
     /// `f32` Burn tensor.
     ///
-    /// Returns `None` if `execute()` has not been called yet or the output
-    /// slot was already consumed. The internal output storage is cleared
-    /// after this call — call [`Self::allocate_output`] again before the
-    /// next denoise.
-    ///
-    /// In Phase I.1 this reads the legacy HWC byte buffer and uploads it
-    /// to `device` via [`image_tensor::chw_vec_to_tensor`]. I.4 + I.5 will
-    /// short-circuit the host path entirely.
+    /// Returns `None` if `execute()` has not been called yet or the
+    /// output slot was already consumed. Re-invoking the filter at the
+    /// same shape requires a fresh [`Self::allocate_output_tensor`]
+    /// (idempotent — cached model and plan are reused when shape
+    /// matches).
     pub fn take_output_tensor(&mut self) -> Option<Tensor<B, 4>> {
-        let o = self.output.take()?;
-        let w = o.width;
-        let h = o.height;
-        // Decode bytes (any supported pixel format) into HWC f32 via the
-        // existing `Image::to_rgb_f32` helper. Format coercion (f16, 1/2
-        // channel broadcast) is handled there.
-        let img = Image {
-            data: &o.data,
-            width: w,
-            height: h,
-            row_stride: o.row_stride,
-            format: o.format,
-        };
-        let hwc = img.to_rgb_f32();
-        let chw = image_tensor::hwc_to_chw(&hwc, 3, h, w);
-        Some(image_tensor::chw_vec_to_tensor::<B>(chw, 3, h, w, self.device))
+        self.output_tensor.take()
     }
 
-    pub fn allocate_output(&mut self, width: usize, height: usize, format: crate::image::PixelFormat) {
+    // ----- Output allocation (legacy + tensor) -----
+
+    pub fn allocate_output(&mut self, width: usize, height: usize, format: PixelFormat) {
         // Skip `committed = false` when the requested output dims/format
         // match the previously-committed ones. `take_output()` leaves
         // `self.output = None` even when the renderer wants to denoise
         // again at the same dims — without this check we'd rebuild the
         // UNet and tile plan every single call.
-        let same_dims =
-            self.last_committed_dims == Some((width, height, format));
+        let same_dims = self.last_committed_dims == Some((width, height, format));
         self.output = Some(OwnedImageMut::empty(width, height, format));
+        // Clear any tensor-mode shape so the dispatcher picks the legacy
+        // path next time.
+        self.output_tensor_dims = None;
         if !same_dims {
             self.committed = false;
         }
     }
 
-    pub fn take_output(&mut self) -> Option<(Vec<u8>, usize, usize, crate::image::PixelFormat)> {
+    /// Declare the output shape for tensor-mode execution. No tensor is
+    /// allocated up-front — `execute()` builds the accumulator with
+    /// `Tensor::zeros([1, 3, h, w], device)` and hands it back via
+    /// [`Self::take_output_tensor`].
+    pub fn allocate_output_tensor(&mut self, width: usize, height: usize) {
+        let same_dims = self.output_tensor_dims == Some((width, height));
+        self.output_tensor_dims = Some((width, height));
+        // Drop the legacy buffer; we're going tensor.
+        self.output = None;
+        if !same_dims {
+            self.committed = false;
+        }
+    }
+
+    pub fn take_output(&mut self) -> Option<(Vec<u8>, usize, usize, PixelFormat)> {
         let o = self.output.take()?;
         Some((o.data, o.width, o.height, o.format))
     }
@@ -296,27 +330,36 @@ impl<'b, B: Backend> RtFilter<'b, B> {
     pub fn set_progress<F: FnMut(f32) -> bool + 'static>(&mut self, callback: F) {
         self.progress = Some(Box::new(callback));
     }
+
+    /// True when at least one tensor input slot is populated. Used by
+    /// [`Filter::execute`] to dispatch between the two pipelines.
+    fn tensor_mode(&self) -> bool {
+        self.color_tensor.is_some()
+            || self.albedo_tensor.is_some()
+            || self.normal_tensor.is_some()
+    }
+
+    /// `(width, height)` of the active output target, regardless of mode.
+    fn output_dims(&self) -> Option<(usize, usize)> {
+        if let Some(o) = &self.output {
+            Some((o.width, o.height))
+        } else {
+            self.output_tensor_dims
+        }
+    }
 }
 
-/// Materialise a Burn tensor (`[1, C, H, W]`, CHW) as an `OwnedImage`
-/// holding HWC f32 bytes. Used by the tensor-native input setters in
-/// Phase I.1; will be removed once I.2/I.5 eliminate the host roundtrip.
-fn tensor_to_owned_image<B: Backend>(t: Tensor<B, 4>) -> OwnedImage {
-    let (chw, dims) = image_tensor::tensor_to_chw_vec(t);
-    let c = dims[1];
-    let h = dims[2];
-    let w = dims[3];
-    debug_assert_eq!(dims[0], 1, "set_*_tensor expects batch size 1");
-    debug_assert_eq!(c, 3, "set_*_tensor expects 3 channels (broadcast 1/2ch upstream)");
-    let hwc = image_tensor::chw_to_hwc(&chw, c, h, w);
-    let bytes: Vec<u8> = bytemuck::cast_slice::<f32, u8>(&hwc).to_vec();
-    OwnedImage {
-        data: bytes,
-        width: w,
-        height: h,
-        row_stride: w * PixelFormat::Rgb32f.pixel_size(),
-        format: PixelFormat::Rgb32f,
+fn tensor_dims_changed<B: Backend>(slot: &Option<Tensor<B, 4>>, new: &Tensor<B, 4>) -> bool {
+    match slot {
+        None => true,
+        Some(existing) => existing.dims() != new.dims(),
     }
+}
+
+fn debug_assert_tensor_chw_3<B: Backend>(t: &Tensor<B, 4>, who: &'static str) {
+    let dims = t.dims();
+    debug_assert_eq!(dims[0], 1, "{who}: batch size must be 1, got {:?}", dims);
+    debug_assert_eq!(dims[1], 3, "{who}: must be 3-channel CHW, got {:?}", dims);
 }
 
 /// Pick the variant (UNet topology) from the resolved model filename stem.
@@ -329,21 +372,24 @@ fn variant_from_stem(stem: &str) -> Variant {
 
 impl<'b, B: Backend> Filter for RtFilter<'b, B> {
     fn commit(&mut self) -> Result<(), OidnError> {
-        let any_input = self.color.is_some() || self.albedo.is_some() || self.normal.is_some();
-        if !any_input { return Err(OidnError::Unset("color/albedo/normal")); }
+        let any_input_legacy = self.color.is_some() || self.albedo.is_some() || self.normal.is_some();
+        let any_input_tensor = self.tensor_mode();
+        if !any_input_legacy && !any_input_tensor {
+            return Err(OidnError::Unset("color/albedo/normal"));
+        }
 
         // User-supplied weights override the registry/quality lookup entirely.
         let (stem, bytes): (String, Vec<u8>) = if let Some(bytes) = self.user_weights.clone() {
             ("user".to_string(), bytes)
         } else {
+            // Channel-presence flags merge both modes: model selection only
+            // cares about which inputs are wired, not which API was used.
+            let has_color = self.color.is_some() || self.color_tensor.is_some();
+            let has_albedo = self.albedo.is_some() || self.albedo_tensor.is_some();
+            let has_normal = self.normal.is_some() || self.normal_tensor.is_some();
             let base_key = select_rt(
-                self.color.is_some(),
-                self.albedo.is_some(),
-                self.normal.is_some(),
-                self.hdr,
-                self.srgb,
-                self.directional,
-                self.clean_aux,
+                has_color, has_albedo, has_normal,
+                self.hdr, self.srgb, self.directional, self.clean_aux,
                 self.quality,
             ).ok_or(OidnError::UnsupportedFeatures)?;
 
@@ -369,9 +415,15 @@ impl<'b, B: Backend> Filter for RtFilter<'b, B> {
         self.model_key = Some(ModelKey::new(stem.clone()));
         let tensors = oidn_tza::parse(&bytes)?;
 
-        let in_channels = self.color.is_some() as usize * 3
-            + self.albedo.is_some() as usize * 3
-            + self.normal.is_some() as usize * 3;
+        // Channel count is taken from whichever side (legacy or tensor)
+        // is populated. Mixing both modes for the same slot is undefined;
+        // we treat any input slot as a present channel triple.
+        let has_color = self.color.is_some() || self.color_tensor.is_some();
+        let has_albedo = self.albedo.is_some() || self.albedo_tensor.is_some();
+        let has_normal = self.normal.is_some() || self.normal_tensor.is_some();
+        let in_channels = has_color as usize * 3
+            + has_albedo as usize * 3
+            + has_normal as usize * 3;
         let out_channels = 3;
 
         // Variant detection: when we're loading user weights, we can't trust
@@ -394,15 +446,10 @@ impl<'b, B: Backend> Filter for RtFilter<'b, B> {
         };
         self.net = Some(net);
 
-        let out = self.output.as_ref().ok_or(OidnError::Unset("output"))?;
+        let (out_w, out_h) = self.output_dims().ok_or(OidnError::Unset("output"))?;
         let max_tile_pixels = match self.max_memory_mb {
             None => DEFAULT_MAX_TILE_SIZE,
             Some(mb) => {
-                // Rough estimate of the dominant activation size, in bytes per
-                // pixel of tile area. UNet base ec5 = 96 ch; UNet large ec5 =
-                // 256 ch. Multiply by 4 (f32) and a safety factor of 4 to
-                // account for double-buffered scratch + skip-connection
-                // pool tensors held during decoder upsamples.
                 let bytes_per_pixel: i64 = match variant {
                     Variant::Large | Variant::XLarge => 256 * 4 * 4,
                     _ => 96 * 4 * 4,
@@ -413,55 +460,95 @@ impl<'b, B: Backend> Filter for RtFilter<'b, B> {
             }
         };
         let plan = tile::plan(
-            out.width as i32,
-            out.height as i32,
+            out_w as i32,
+            out_h as i32,
             RECEPTIVE_FIELD_BASE,
             MIN_TILE_ALIGNMENT,
             max_tile_pixels,
         );
         self.plan = Some(plan);
 
+        // Cross-check that every populated input matches the declared
+        // output geometry — applies to both modes.
         let check_dims = |w: usize, h: usize, name: &'static str| -> Result<(), OidnError> {
-            if w != out.width || h != out.height { Err(OidnError::Inconsistent(name)) } else { Ok(()) }
+            if w != out_w || h != out_h { Err(OidnError::Inconsistent(name)) } else { Ok(()) }
         };
         if let Some(c) = &self.color  { check_dims(c.width, c.height, "color")?; }
         if let Some(a) = &self.albedo { check_dims(a.width, a.height, "albedo")?; }
         if let Some(n) = &self.normal { check_dims(n.width, n.height, "normal")?; }
+        if let Some(t) = &self.color_tensor {
+            let d = t.dims();
+            check_dims(d[3], d[2], "color_tensor")?;
+        }
+        if let Some(t) = &self.albedo_tensor {
+            let d = t.dims();
+            check_dims(d[3], d[2], "albedo_tensor")?;
+        }
+        if let Some(t) = &self.normal_tensor {
+            let d = t.dims();
+            check_dims(d[3], d[2], "normal_tensor")?;
+        }
 
         self.committed = true;
-        self.last_committed_dims = Some((out.width, out.height, out.format));
+        // last_committed_dims is only meaningful for the legacy path
+        // (which queries it via `allocate_output`); tensor-mode dims
+        // live in `output_tensor_dims` and are cached identically.
+        if let Some(o) = &self.output {
+            self.last_committed_dims = Some((o.width, o.height, o.format));
+        }
         Ok(())
     }
 
     fn execute(&mut self) -> Result<(), OidnError> {
         if !self.committed { self.commit()?; }
-        let net   = self.net.as_ref().ok_or(OidnError::Unset("model"))?;
-        let plan  = self.plan.as_ref().ok_or(OidnError::Unset("plan"))?;
-        let output = self.output.as_mut().ok_or(OidnError::Unset("output"))?;
+        let net  = self.net.as_ref().ok_or(OidnError::Unset("model"))?;
+        let plan = self.plan.as_ref().ok_or(OidnError::Unset("plan"))?;
 
         let transfer = if self.directional { TransferFunction::Linear }
                        else if self.hdr     { TransferFunction::PU }
                        else if self.srgb    { TransferFunction::Linear }
                        else                 { TransferFunction::SRGB };
 
-        let color  = self.color.as_ref().map(|i| i.view());
-        let albedo = self.albedo.as_ref().map(|i| i.view());
-        let normal = self.normal.as_ref().map(|i| i.view());
+        if self.tensor_mode() {
+            let (out_w, out_h) = self.output_tensor_dims.ok_or(OidnError::Unset("output_tensor"))?;
+            let progress: Option<&mut ProgressFn<'_>> = self.progress.as_deref_mut();
+            let result = unet_runner::run_tensors(
+                net,
+                self.device,
+                plan,
+                self.color_tensor.clone(),
+                self.albedo_tensor.clone(),
+                self.normal_tensor.clone(),
+                out_w,
+                out_h,
+                transfer,
+                self.hdr,
+                self.user_input_scale,
+                progress,
+            )?;
+            self.output_tensor = Some(result);
+            Ok(())
+        } else {
+            let output = self.output.as_mut().ok_or(OidnError::Unset("output"))?;
+            let color  = self.color.as_ref().map(|i| i.view());
+            let albedo = self.albedo.as_ref().map(|i| i.view());
+            let normal = self.normal.as_ref().map(|i| i.view());
 
-        let mut out_view = output.view_mut();
-        let progress: Option<&mut ProgressFn<'_>> = self.progress.as_deref_mut();
-        unet_runner::run(
-            net,
-            self.device,
-            plan,
-            color.as_ref(),
-            albedo.as_ref(),
-            normal.as_ref(),
-            &mut out_view,
-            transfer,
-            self.hdr,
-            self.user_input_scale,
-            progress,
-        )
+            let mut out_view = output.view_mut();
+            let progress: Option<&mut ProgressFn<'_>> = self.progress.as_deref_mut();
+            unet_runner::run(
+                net,
+                self.device,
+                plan,
+                color.as_ref(),
+                albedo.as_ref(),
+                normal.as_ref(),
+                &mut out_view,
+                transfer,
+                self.hdr,
+                self.user_input_scale,
+                progress,
+            )
+        }
     }
 }
