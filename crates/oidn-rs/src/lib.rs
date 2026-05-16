@@ -35,7 +35,7 @@ pub mod weights;
 pub use device::WgpuDevice;
 pub use error::OidnError;
 pub use filter::{Filter, Quality};
-pub use filters::rt::RtFilter;
+pub use filters::rt::{CommittedRtFilter, RtFilter};
 pub use filters::rtlightmap::RtLightmapFilter;
 pub use image::{Image, ImageMut, PixelFormat};
 pub use registry::ModelKey;
