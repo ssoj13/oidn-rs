@@ -527,6 +527,19 @@ impl<'b, B: Backend> Filter for RtFilter<'b, B> {
                 progress,
             )?;
             self.output_tensor = Some(result);
+            // Release input tensor handles now that `run_tensors` has
+            // consumed (cloned) them. Keeping them on `self` across
+            // calls forces the caller's buffers to live until the next
+            // `set_*_tensor` reassignment. With CubeCL's lazy kernel
+            // submission, that retention overlaps the caller's buffer
+            // pool with our UNet reads — a classic read-after-free if
+            // the caller recycles the buffer before the GPU drains.
+            // Dropping refs here lets the caller (and the pool) treat
+            // the input buffers as "owned only as long as execute()
+            // ran" — the safe contract.
+            self.color_tensor = None;
+            self.albedo_tensor = None;
+            self.normal_tensor = None;
             Ok(())
         } else {
             let output = self.output.as_mut().ok_or(OidnError::Unset("output"))?;
