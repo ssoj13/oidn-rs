@@ -9,13 +9,23 @@ diagnostics, performance, or correctness.
 ## 2026-05-16 — RT normal AOV contract and tensor diagnostics
 
 ### Fixed
-- Fixed RT normal AOV packing in `filters::unet_runner`: normal inputs are
-  now preserved as signed `[-1, 1]` direction vectors whenever a normal
-  tensor/image is supplied.
-- Removed the previous implicit rule that only treated normals as signed
-  when no color input was present. That rule corrupted `Color + Albedo +
-  Normal` runs by clamping negative normal components to zero before the
-  U-Net saw them.
+- Fixed RT normal AOV preprocessing in `filters::unet_runner` to match the
+  reference C++ implementation. Auxiliary normal inputs now go through the
+  canonical `clamp(-1, 1)` → linear remap to `[0, 1]` (i.e.
+  `n * 0.5 + 0.5`) on every code path, regardless of whether `color` /
+  `albedo` are also supplied. This mirrors `getNormal()` in
+  `oidn/devices/gpu/gpu_input_process.h:77` and
+  `oidn/devices/cpu/cpu_input_process.isph:65-76`, which clamp and remap
+  unconditionally.
+- Reverts an earlier attempt to forward raw signed `[-1, 1]` normals,
+  which produced out-of-distribution inputs to the U-Net (which was
+  trained on the `[0, 1]`-remapped signal) and caused rainbow-coloured
+  artifacts along surface edges plus extreme HDR outliers after the
+  inverse PU transform.
+- Note on the `snorm` flag in the reference: it only gates *channel 0*
+  (the primary input for directional / normal-only filters such as
+  RTLightmap). It never touches the auxiliary normal feature in RT
+  Color+Albedo+Normal configurations.
 
 ### Added
 - Added DEBUG-level U-Net input-contract logging: color/albedo/normal

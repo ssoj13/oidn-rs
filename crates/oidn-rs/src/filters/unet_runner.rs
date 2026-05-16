@@ -94,16 +94,19 @@ pub fn run_tensors<B: Backend>(
         }
     }
 
-    // RT normal AOVs are signed direction vectors in `[-1, 1]` even when
-    // colour/albedo are also present. Albedo is the only auxiliary input we
-    // clamp to `[0, 1]`; clamping normals destroys half the direction field.
-    let normal_signed = normal.is_some();
+    // Auxiliary normal channel matches reference OIDN getNormal()
+    // (`devices/gpu/gpu_input_process.h:77`, `devices/cpu/cpu_input_process.isph:65-76`):
+    // unconditional clamp(-1, 1) then linear remap to [0, 1]. The `snorm`
+    // flag in the reference only gates channel 0 (the primary input for
+    // directional/normal-only filters); auxiliary normals are *always*
+    // fed to the network as unsigned [0, 1]. Both prior Rust rules (raw
+    // pass-through and clamp(0,1)) diverged from the network's training
+    // contract.
     log::debug!(
-        "unet_runner: input contract color={} albedo={} normal={} normal_signed={} tensor_stats={}",
+        "unet_runner: input contract color={} albedo={} normal={} tensor_stats={}",
         color.is_some(),
         albedo.is_some(),
         normal.is_some(),
-        normal_signed,
         trace_tensors,
     );
 
@@ -151,7 +154,9 @@ pub fn run_tensors<B: Backend>(
                 .clone()
                 .slice([0..1, 0..3, src_y..src_y + src_h, src_x..src_x + src_w]);
             let padded = gpu_ops::reflect_pad_2d(rect, pad_top, pad_bottom, pad_left, pad_right);
-            channel_parts.push(padded);
+            // Reference getNormal(): clamp(-1, 1) → *0.5 + 0.5.
+            let normalized = padded.clamp(-1.0, 1.0).mul_scalar(0.5_f32).add_scalar(0.5_f32);
+            channel_parts.push(normalized);
         }
 
         // 2. Concat along channel dim → [1, in_c, tile_h, tile_w].
