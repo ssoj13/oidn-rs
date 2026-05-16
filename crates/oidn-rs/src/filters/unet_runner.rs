@@ -81,11 +81,31 @@ pub fn run_tensors<B: Backend>(
         scale, hdr, user_input_scale
     );
 
-    // snorm: when only a normal input is set (no colour), the normal
-    // values are signed in `[-1, 1]` and should not be clamped to
-    // `[0, 1]`. Matches the `pack(..., snorm=true)` branch in the
-    // original CPU path.
-    let snorm = normal.is_some() && color.is_none();
+    let trace_tensors = tensor_diagnostics_enabled();
+    if trace_tensors {
+        if let Some(t) = color.as_ref() {
+            log_tensor_stats("unet input/color_chw", t);
+        }
+        if let Some(t) = albedo.as_ref() {
+            log_tensor_stats("unet input/albedo_chw", t);
+        }
+        if let Some(t) = normal.as_ref() {
+            log_tensor_stats("unet input/normal_chw", t);
+        }
+    }
+
+    // RT normal AOVs are signed direction vectors in `[-1, 1]` even when
+    // colour/albedo are also present. Albedo is the only auxiliary input we
+    // clamp to `[0, 1]`; clamping normals destroys half the direction field.
+    let normal_signed = normal.is_some();
+    log::debug!(
+        "unet_runner: input contract color={} albedo={} normal={} normal_signed={} tensor_stats={}",
+        color.is_some(),
+        albedo.is_some(),
+        normal.is_some(),
+        normal_signed,
+        trace_tensors,
+    );
 
     // Output accumulator: starts at zeros, slice_assign per tile.
     let mut accum: Tensor<B, 4> = Tensor::zeros([1, 3, h, w], device);
@@ -131,7 +151,7 @@ pub fn run_tensors<B: Backend>(
                 .clone()
                 .slice([0..1, 0..3, src_y..src_y + src_h, src_x..src_x + src_w]);
             let padded = gpu_ops::reflect_pad_2d(rect, pad_top, pad_bottom, pad_left, pad_right);
-            channel_parts.push(if snorm { padded } else { padded.clamp(0.0, 1.0) });
+            channel_parts.push(padded);
         }
 
         // 2. Concat along channel dim → [1, in_c, tile_h, tile_w].
@@ -169,6 +189,10 @@ pub fn run_tensors<B: Backend>(
             let fraction = (tile_idx + 1) as f32 / total_jobs as f32;
             if !cb(fraction) { return Err(OidnError::Cancelled); }
         }
+    }
+
+    if trace_tensors {
+        log_tensor_stats("unet output/accum_chw", &accum);
     }
 
     Ok(accum)
@@ -258,4 +282,96 @@ fn quick_stats(data: &[f32]) -> (f32, f32, f32) {
         }
     }
     (min, max, (sum / data.len() as f64) as f32)
+}
+
+fn tensor_diagnostics_enabled() -> bool {
+    if log::log_enabled!(log::Level::Trace) {
+        return true;
+    }
+    std::env::var("OIDN_TRACE_TENSORS")
+        .map(|v| matches!(v.as_str(), "1" | "true" | "TRUE" | "yes" | "YES" | "on" | "ON"))
+        .unwrap_or(false)
+}
+
+fn log_tensor_stats<B: Backend>(label: &str, tensor: &Tensor<B, 4>) {
+    let dims = tensor.dims();
+    match tensor.clone().into_data().convert::<f32>().to_vec::<f32>() {
+        Ok(data) => {
+            let stats = TensorStats::from_slice(&data);
+            log::trace!(
+                "OIDN tensor stats {label}: dims={:?} finite={} nan={} inf={} neg={} gt1={} min={:.6} max={:.6} mean={:.6}",
+                dims,
+                stats.finite,
+                stats.nan,
+                stats.inf,
+                stats.neg,
+                stats.gt_one,
+                stats.min,
+                stats.max,
+                stats.mean,
+            );
+        }
+        Err(err) => {
+            log::warn!("OIDN tensor stats {label}: dims={dims:?} readback failed: {err:?}");
+        }
+    }
+}
+
+struct TensorStats {
+    finite: usize,
+    nan: usize,
+    inf: usize,
+    neg: usize,
+    gt_one: usize,
+    min: f32,
+    max: f32,
+    mean: f32,
+}
+
+impl TensorStats {
+    fn from_slice(data: &[f32]) -> Self {
+        let mut finite = 0usize;
+        let mut nan = 0usize;
+        let mut inf = 0usize;
+        let mut neg = 0usize;
+        let mut gt_one = 0usize;
+        let mut min = f32::INFINITY;
+        let mut max = f32::NEG_INFINITY;
+        let mut sum = 0.0f64;
+
+        for &v in data {
+            if v.is_nan() {
+                nan += 1;
+            } else if v.is_infinite() {
+                inf += 1;
+            } else {
+                finite += 1;
+                if v < 0.0 {
+                    neg += 1;
+                }
+                if v > 1.0 {
+                    gt_one += 1;
+                }
+                min = min.min(v);
+                max = max.max(v);
+                sum += v as f64;
+            }
+        }
+
+        if finite == 0 {
+            min = 0.0;
+            max = 0.0;
+        }
+
+        Self {
+            finite,
+            nan,
+            inf,
+            neg,
+            gt_one,
+            min,
+            max,
+            mean: if finite == 0 { 0.0 } else { (sum / finite as f64) as f32 },
+        }
+    }
 }
