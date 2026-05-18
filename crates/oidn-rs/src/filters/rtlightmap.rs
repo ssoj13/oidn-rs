@@ -218,6 +218,7 @@ impl<'b, B: Backend> Filter for RtLightmapFilter<'b, B> {
             transfer,
             is_hdr,
             self.user_input_scale,
+            true, // nan_to_zero: match reference contract by default
             None,
         )
     }

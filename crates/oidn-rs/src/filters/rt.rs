@@ -50,6 +50,7 @@ pub struct RtFilterBuilder<'b, B: Backend> {
     user_input_scale: Option<f32>,
     user_weights: Option<Vec<u8>>,
     max_memory_mb: Option<i32>,
+    nan_to_zero: bool,
 }
 
 impl<'b, B: Backend> RtFilterBuilder<'b, B> {
@@ -65,6 +66,7 @@ impl<'b, B: Backend> RtFilterBuilder<'b, B> {
             user_input_scale: None,
             user_weights: None,
             max_memory_mb: None,
+            nan_to_zero: true,
         }
     }
 
@@ -111,6 +113,17 @@ impl<'b, B: Backend> RtFilterBuilder<'b, B> {
         self
     }
 
+    /// Enable replacement of non-finite (`NaN` / ±`Inf`) input samples
+    /// with `0` before clamp / transfer. Mirrors the reference C++
+    /// OIDN kernel contract (`nan_to_zero` at the head of every
+    /// `getInput` / `getAlbedo` / `getNormal` body). Default: `true`
+    /// — strongly recommended; disabling it lets bad path-tracer
+    /// samples poison the entire output through PU/exp expansion.
+    pub fn nan_to_zero(mut self, v: bool) -> Self {
+        self.nan_to_zero = v;
+        self
+    }
+
     pub fn build(self) -> RtFilter<'b, B> {
         RtFilter {
             device: self.device,
@@ -123,6 +136,7 @@ impl<'b, B: Backend> RtFilterBuilder<'b, B> {
             user_input_scale: self.user_input_scale,
             user_weights: self.user_weights,
             max_memory_mb: self.max_memory_mb,
+            nan_to_zero: self.nan_to_zero,
             color: None,
             albedo: None,
             normal: None,
@@ -153,6 +167,7 @@ pub struct RtFilter<'b, B: Backend> {
     user_input_scale: Option<f32>,
     user_weights: Option<Vec<u8>>,
     max_memory_mb: Option<i32>,
+    nan_to_zero: bool,
 
     // --- Legacy Image<'_> path ---
     color: Option<OwnedImage>,
@@ -193,6 +208,7 @@ pub struct CommittedRtFilter<'b, B: Backend> {
     hdr: bool,
     transfer: TransferFunction,
     user_input_scale: Option<f32>,
+    nan_to_zero: bool,
     has_color: bool,
     has_albedo: bool,
     has_normal: bool,
@@ -426,6 +442,7 @@ impl<'b, B: Backend> RtFilter<'b, B> {
             hdr: self.hdr,
             transfer: self.transfer_kind(),
             user_input_scale: self.user_input_scale,
+            nan_to_zero: self.nan_to_zero,
             has_color,
             has_albedo,
             has_normal,
@@ -435,6 +452,12 @@ impl<'b, B: Backend> RtFilter<'b, B> {
             plan: artifacts.plan,
             model_key: artifacts.model_key,
         })
+    }
+
+    /// Toggle NaN/Inf input sanitisation. See
+    /// [`RtFilterBuilder::nan_to_zero`] for rationale.
+    pub fn set_nan_to_zero(&mut self, v: bool) {
+        self.nan_to_zero = v;
     }
 
     /// Install a progress callback. Receives `[0.0, 1.0]` after each
@@ -607,6 +630,22 @@ impl<'b, B: Backend> CommittedRtFilter<'b, B> {
         (self.width, self.height)
     }
 
+    /// Toggle NaN/Inf input sanitisation at runtime. The flag is read
+    /// on every [`Self::execute_tensors`] call, so this can be
+    /// flipped between passes without rebuilding the committed model.
+    pub fn set_nan_to_zero(&mut self, v: bool) {
+        self.nan_to_zero = v;
+    }
+
+    /// Override the autoexposure input scale at runtime. `None`
+    /// reverts to OIDN's built-in autoexposure (recomputed each
+    /// pass); `Some(s)` clamps it to a fixed value — the recommended
+    /// path for physical-camera pipelines that own exposure
+    /// themselves.
+    pub fn set_input_scale(&mut self, scale: Option<f32>) {
+        self.user_input_scale = scale;
+    }
+
     /// Run one tensor-native denoise pass with fresh per-pass inputs.
     ///
     /// The input presence must match the layout used at commit time. The
@@ -649,8 +688,11 @@ impl<'b, B: Backend> CommittedRtFilter<'b, B> {
             self.width,
             self.height,
             self.transfer,
+            // NB: positional — see run_tensors signature.
+            //   hdr, user_input_scale, nan_to_zero, progress
             self.hdr,
             self.user_input_scale,
+            self.nan_to_zero,
             progress,
         )
     }
@@ -768,6 +810,7 @@ impl<'b, B: Backend> Filter for RtFilter<'b, B> {
                 transfer,
                 self.hdr,
                 self.user_input_scale,
+                self.nan_to_zero,
                 progress,
             )?;
             self.output_tensor = Some(result);
@@ -804,6 +847,7 @@ impl<'b, B: Backend> Filter for RtFilter<'b, B> {
                 transfer,
                 self.hdr,
                 self.user_input_scale,
+                self.nan_to_zero,
                 progress,
             )
         }

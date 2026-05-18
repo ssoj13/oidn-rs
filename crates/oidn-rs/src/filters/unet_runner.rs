@@ -50,8 +50,33 @@ pub fn run_tensors<B: Backend>(
     transfer_kind: TransferFunction,
     hdr: bool,
     user_input_scale: Option<f32>,
+    nan_to_zero: bool,
     mut progress: Option<&mut ProgressFn<'_>>,
 ) -> Result<Tensor<B, 4>, OidnError> {
+    // NaN/Inf protection matching reference C++ OIDN — every input
+    // kernel (`getInput` / `getAlbedo` / `getNormal` in
+    // `devices/cpu/cpu_input_process.isph`) starts with
+    // `nan_to_zero(value)` before clamp/remap. The Burn `clamp` op
+    // does not promise consistent NaN handling on every backend
+    // (WGSL `clamp` is implementation-defined for NaN), so we mirror
+    // the reference contract explicitly. Replaces any non-finite
+    // sample with 0 so the network sees in-distribution inputs.
+    let sanitize = |t: Tensor<B, 4>| -> Tensor<B, 4> {
+        if nan_to_zero {
+            let finite_mask = t.clone().is_finite();
+            // `mask_where` keeps `t` where mask is true (finite), 0
+            // elsewhere. We invert below by constructing a zeros
+            // replacement and using mask_where with NON-finite as the
+            // "replace" condition.
+            let zeros: Tensor<B, 4> = Tensor::zeros(t.dims(), &t.device());
+            t.mask_where(finite_mask.bool_not(), zeros)
+        } else {
+            t
+        }
+    };
+    let color = color.map(&sanitize);
+    let albedo = albedo.map(&sanitize);
+    let normal = normal.map(&sanitize);
     let w = output_w;
     let h = output_h;
     log::debug!(
@@ -223,6 +248,7 @@ pub fn run<B: Backend>(
     transfer_kind: TransferFunction,
     hdr: bool,
     user_input_scale: Option<f32>,
+    nan_to_zero: bool,
     progress: Option<&mut ProgressFn<'_>>,
 ) -> Result<(), OidnError> {
     let w = output.width;
@@ -246,6 +272,7 @@ pub fn run<B: Backend>(
         color_t, albedo_t, normal_t,
         w, h,
         transfer_kind, hdr, user_input_scale,
+        nan_to_zero,
         progress,
     )?;
 
