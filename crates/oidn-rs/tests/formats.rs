@@ -74,17 +74,19 @@ fn r_f32_broadcasts_to_rgb_and_collapses_on_write() {
 }
 
 #[test]
-fn rg_f32_zero_pads_blue_and_drops_blue_on_write() {
+fn rg_f32_replicates_green_into_blue_and_drops_blue_on_write() {
     let (w, h) = (2usize, 2usize);
     let src = vec![0.1, 0.2,   0.3, 0.4,   0.5, 0.6,   0.7, 0.8];
 
     let img = Image::from_rg_f32(&src, w, h);
     assert_eq!(img.format.channels(), 2);
     let rgb = img.to_rgb_f32();
+    // Matches `_ref/oidn/core/image_accessor.h::get3` for `C==2`:
+    // `vec3<T>(pixel[0], pixel[1], pixel[1])`.
     for x in 0..w * h {
         assert_eq!(rgb[x * 3],     src[x * 2]);
         assert_eq!(rgb[x * 3 + 1], src[x * 2 + 1]);
-        assert_eq!(rgb[x * 3 + 2], 0.0);
+        assert_eq!(rgb[x * 3 + 2], src[x * 2 + 1]);
     }
 
     let denoised_rgb = vec![

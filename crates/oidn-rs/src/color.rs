@@ -93,12 +93,12 @@ fn forward_one(kind: TransferFunction, y: f32, input_scale: f32) -> f32 {
 }
 
 // ---------- sRGB constants from color.h ----------
-const SRGB_A: f32 = 12.92;
-const SRGB_B: f32 = 1.055;
-const SRGB_C: f32 = 1.0 / 2.4;
-const SRGB_D: f32 = -0.055;
-const SRGB_Y0: f32 = 0.0031308;
-const SRGB_X0: f32 = 0.04045;
+pub(crate) const SRGB_A: f32 = 12.92;
+pub(crate) const SRGB_B: f32 = 1.055;
+pub(crate) const SRGB_C: f32 = 1.0 / 2.4;
+pub(crate) const SRGB_D: f32 = -0.055;
+pub(crate) const SRGB_Y0: f32 = 0.0031308;
+pub(crate) const SRGB_X0: f32 = 0.04045;
 
 #[inline]
 pub fn srgb_forward(y: f32) -> f32 {
@@ -111,17 +111,17 @@ pub fn srgb_inverse(x: f32) -> f32 {
 }
 
 // ---------- PU constants from color.h ----------
-const PU_A: f32 = 1.41283765e+03;
-const PU_B: f32 = 1.64593172e+00;
-const PU_C: f32 = 4.31384981e-01;
-const PU_D: f32 = -2.94139609e-03;
-const PU_E: f32 = 1.92653254e-01;
-const PU_F: f32 = 6.26026094e-03;
-const PU_G: f32 = 9.98620152e-01;
-const PU_Y0: f32 = 1.57945760e-06;
-const PU_Y1: f32 = 3.22087631e-02;
-const PU_X0: f32 = 2.23151711e-03;
-const PU_X1: f32 = 3.70974749e-01;
+pub(crate) const PU_A: f32 = 1.41283765e+03;
+pub(crate) const PU_B: f32 = 1.64593172e+00;
+pub(crate) const PU_C: f32 = 4.31384981e-01;
+pub(crate) const PU_D: f32 = -2.94139609e-03;
+pub(crate) const PU_E: f32 = 1.92653254e-01;
+pub(crate) const PU_F: f32 = 6.26026094e-03;
+pub(crate) const PU_G: f32 = 9.98620152e-01;
+pub(crate) const PU_Y0: f32 = 1.57945760e-06;
+pub(crate) const PU_Y1: f32 = 3.22087631e-02;
+pub(crate) const PU_X0: f32 = 2.23151711e-03;
+pub(crate) const PU_X1: f32 = 3.70974749e-01;
 
 #[inline]
 pub fn pu_forward(y: f32) -> f32 {

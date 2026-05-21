@@ -69,9 +69,8 @@ fn ceil_div(a: i32, b: i32) -> i32 { (a + b - 1) / b }
 /// Plan the tiling for an image of size `(W, H)` and a given receptive field.
 ///
 /// Mirrors the loop structure of `UNetFilter::init` (unet_filter.cpp:265-326)
-/// without the memory-budget probing — for v0.1 we either fit the whole image
-/// in one tile (when ≤ `DEFAULT_MAX_TILE_SIZE`) or shrink dimensions until it
-/// does.
+/// without the memory-budget probing — we either fit the whole image in one
+/// tile (when ≤ `DEFAULT_MAX_TILE_SIZE`) or shrink dimensions until it does.
 pub fn plan(
     width: i32,
     height: i32,

@@ -53,21 +53,14 @@ pub fn run_tensors<B: Backend>(
     nan_to_zero: bool,
     mut progress: Option<&mut ProgressFn<'_>>,
 ) -> Result<Tensor<B, 4>, OidnError> {
-    // NaN/Inf protection matching reference C++ OIDN — every input
-    // kernel (`getInput` / `getAlbedo` / `getNormal` in
-    // `devices/cpu/cpu_input_process.isph`) starts with
-    // `nan_to_zero(value)` before clamp/remap. The Burn `clamp` op
-    // does not promise consistent NaN handling on every backend
-    // (WGSL `clamp` is implementation-defined for NaN), so we mirror
-    // the reference contract explicitly. Replaces any non-finite
-    // sample with 0 so the network sees in-distribution inputs.
+    // Canonical sanitisation point: NaN/Inf -> 0 is applied here once on
+    // each whole input tensor. `preprocess_input` / `postprocess_color`
+    // also call `nan_to_zero` internally to match the reference's
+    // per-kernel contract, but for the colour path the upstream pass is
+    // what catches user-provided non-finite samples before tiling.
     let sanitize = |t: Tensor<B, 4>| -> Tensor<B, 4> {
         if nan_to_zero {
             let finite_mask = t.clone().is_finite();
-            // `mask_where` keeps `t` where mask is true (finite), 0
-            // elsewhere. We invert below by constructing a zeros
-            // replacement and using mask_where with NON-finite as the
-            // "replace" condition.
             let zeros: Tensor<B, 4> = Tensor::zeros(t.dims(), &t.device());
             t.mask_where(finite_mask.bool_not(), zeros)
         } else {
@@ -143,10 +136,13 @@ pub fn run_tensors<B: Backend>(
     let tile_h = plan.tile_h as usize;
 
     for (tile_idx, job) in plan.jobs.iter().enumerate() {
-        // 1. Pull the source rectangle out of each input tensor and pad
-        //    to (tile_h, tile_w) via reflection. `align_offset_{x,y}` is
-        //    the leading padding amount on the left/top side; the
-        //    trailing side is whatever's left after the rectangle fits.
+        // 1. Pull the source rectangle out of each input tensor and place
+        //    it into a tile-shaped zero buffer. `align_offset_{x,y}` is
+        //    the leading offset on the left/top side. The padded region
+        //    is filled with zeros to match the reference's input kernel
+        //    (`_ref/oidn/devices/cpu/cpu_input_process.isph:88-93,120-125`),
+        //    which writes zero outside the source rect rather than
+        //    reflecting boundary pixels.
         let src_x = job.input.x as usize;
         let src_y = job.input.y as usize;
         let src_w = job.input.w as usize;
@@ -155,30 +151,40 @@ pub fn run_tensors<B: Backend>(
         let pad_top = job.align_offset_y as usize;
         debug_assert!(pad_left + src_w <= tile_w);
         debug_assert!(pad_top + src_h <= tile_h);
-        let pad_right = tile_w - src_w - pad_left;
-        let pad_bottom = tile_h - src_h - pad_top;
+
+        let zero_pad = |src: &Tensor<B, 4>, channels: usize| -> Tensor<B, 4> {
+            let rect = src.clone().slice([
+                0..1,
+                0..channels,
+                src_y..src_y + src_h,
+                src_x..src_x + src_w,
+            ]);
+            let dst: Tensor<B, 4> = Tensor::zeros([1, channels, tile_h, tile_w], device);
+            dst.slice_assign(
+                [
+                    0..1,
+                    0..channels,
+                    pad_top..pad_top + src_h,
+                    pad_left..pad_left + src_w,
+                ],
+                rect,
+            )
+        };
 
         let mut channel_parts: Vec<Tensor<B, 4>> = Vec::with_capacity(3);
 
         if let Some(src) = color.as_ref() {
-            let rect = src
-                .clone()
-                .slice([0..1, 0..3, src_y..src_y + src_h, src_x..src_x + src_w]);
-            let padded = gpu_ops::reflect_pad_2d(rect, pad_top, pad_bottom, pad_left, pad_right);
-            channel_parts.push(gpu_ops::apply_transfer_forward(padded, &tf));
+            let padded = zero_pad(src, 3);
+            // hdr=false here is benign: the colour path is governed by
+            // the outer `hdr` flag; preserve it via the helper.
+            channel_parts.push(gpu_ops::preprocess_input(padded, scale, hdr, false, &tf));
         }
         if let Some(src) = albedo.as_ref() {
-            let rect = src
-                .clone()
-                .slice([0..1, 0..3, src_y..src_y + src_h, src_x..src_x + src_w]);
-            let padded = gpu_ops::reflect_pad_2d(rect, pad_top, pad_bottom, pad_left, pad_right);
+            let padded = zero_pad(src, 3);
             channel_parts.push(padded.clamp(0.0, 1.0));
         }
         if let Some(src) = normal.as_ref() {
-            let rect = src
-                .clone()
-                .slice([0..1, 0..3, src_y..src_y + src_h, src_x..src_x + src_w]);
-            let padded = gpu_ops::reflect_pad_2d(rect, pad_top, pad_bottom, pad_left, pad_right);
+            let padded = zero_pad(src, 3);
             // Reference getNormal(): clamp(-1, 1) → *0.5 + 0.5.
             let normalized = padded.clamp(-1.0, 1.0).mul_scalar(0.5_f32).add_scalar(0.5_f32);
             channel_parts.push(normalized);
@@ -190,12 +196,11 @@ pub fn run_tensors<B: Backend>(
         // 3. Forward.
         let output_tensor: Tensor<B, 4> = net.forward(input_tensor);
 
-        // 4. Inverse transfer + crop + slice_assign.
-        let post = if matches!(transfer_kind, TransferFunction::Linear) {
-            output_tensor
-        } else {
-            gpu_ops::apply_transfer_inverse(output_tensor, &tf)
-        };
+        // 4. Postprocess (nan_to_zero -> clamp -> inverse transfer ->
+        //    [ldr clamp] -> *output_scale) then crop + slice_assign.
+        //    Handles Linear correctly: the inverse curve is identity and
+        //    the surrounding clamp/scale still apply per reference.
+        let post = gpu_ops::postprocess_color(output_tensor, &tf, hdr, false, tf.output_scale);
 
         let Rect { x: ox, y: oy, w: ow, h: oh } = job.output_src_in_tile;
         let Rect { x: dx, y: dy, w: _, h: _ } = job.output_dst;

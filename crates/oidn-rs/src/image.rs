@@ -4,8 +4,9 @@
 //! that the RT/RTLightmap filters accept (`unet_filter.cpp:checkParams`):
 //! `Float`, `Half` (1-channel), `Float2`, `Half2` (2-channel), `Float3`,
 //! `Half3` (3-channel). The internal pipeline always operates on 3 channels;
-//! shorter formats broadcast (1ch → replicate, 2ch → zero-pad), and outputs
-//! collapse the same way on write-back.
+//! shorter formats broadcast (1ch → replicate to RGB, 2ch → replicate G into
+//! B per `image_accessor.h::get3`), and outputs collapse the same way on
+//! write-back.
 
 use half::f16;
 
@@ -114,7 +115,8 @@ impl<'a> Image<'a> {
     }
 
     /// Decode to a `Vec<f32>` in 3-channel HWC order, broadcasting 1ch to all
-    /// three channels and zero-padding 2ch on the blue channel.
+    /// three channels and replicating green into blue for 2ch
+    /// (matches `_ref/oidn/core/image_accessor.h::get3` for `C==2`).
     pub fn to_rgb_f32(&self) -> Vec<f32> {
         let n = self.width * self.height * 3;
         let mut out = vec![0.0f32; n];
@@ -146,7 +148,7 @@ impl<'a> Image<'a> {
                     2 => {
                         out[dst_off]     = src[src_off];
                         out[dst_off + 1] = src[src_off + 1];
-                        out[dst_off + 2] = 0.0;
+                        out[dst_off + 2] = src[src_off + 1];
                     }
                     3 => {
                         out[dst_off]     = src[src_off];

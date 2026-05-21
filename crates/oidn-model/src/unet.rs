@@ -128,7 +128,7 @@ impl<B: Backend> UNet<B> {
         let x = relu(self.dec_conv1a.forward(x));
         let x = relu(self.dec_conv1b.forward(x));
 
-        self.dec_conv0.forward(x)
+        relu(self.dec_conv0.forward(x))
     }
 }
 
