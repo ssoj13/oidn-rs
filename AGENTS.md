@@ -2,7 +2,6 @@
 
 This file documents the crates, dataflow and codepaths after the parity audit + fix sweep (2026-05-21). It is the bird's-eye map an LLM agent needs before touching the codebase.
 
-**Status (2026-05-21):** all 12 HIGH parity divergences from `plan1.md` are fixed and merged to `main`. `cargo test --workspace` is green; `cargo check --workspace --all-targets` is clean. The dataflow / topology diagrams below reflect the current (post-fix) state. For the historical audit see `bughunt/*.md`; for the consolidated fix plan see `plan1.md`.
 
 ---
 
@@ -250,8 +249,7 @@ UNetLarge differs by: doubled depth per stage (`enc_conv1a/1b`, `2a/2b`, …, `5
 
 ## Conventions for future agents
 
-1. Read `plan1.md` first to see the current open-issue inventory.
-2. Cite every claim with a `file:line` pair from both the Rust source and the C++ reference (`_ref/oidn` at `C:/projects/projects.rust.cg.offload/oidn`).
-3. Do not run tests or builds during audit work. Audit is a code-reading task; verification belongs in a separate pass.
-4. Write reports under `bughunt/<agent_name>_<area>.md` so the orchestrator can survive context compaction.
-5. Prefer parallelism: dispatch up to 8 agents simultaneously, each on a disjoint slice.
+1. Cite every claim with a `file:line` pair from both the Rust source and the C++ reference (`_ref/oidn` at `C:/projects/projects.rust.cg.offload/oidn`).
+2. Do not run tests or builds during audit work. Audit is a code-reading task; verification belongs in a separate pass.
+3. Write reports under `bughunt/<agent_name>_<area>.md` so the orchestrator can survive context compaction.
+4. Prefer parallelism: dispatch up to 8 agents simultaneously, each on a disjoint slice.

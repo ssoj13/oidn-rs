@@ -1,6 +1,6 @@
 # DIAGRAMS.md — oidn-rs flow & topology in Mermaid
 
-Renders for the parity audit (2026-05-21). See `AGENTS.md` for the ASCII counterparts and `plan1.md` for the issue list.
+Renders for the parity audit (2026-05-21). See `AGENTS.md` for the ASCII counterparts.
 
 ---
 
