@@ -44,7 +44,6 @@ pub struct RtFilterBuilder<'b, B: Backend> {
     weights_dir: PathBuf,
     hdr: bool,
     srgb: bool,
-    directional: bool,
     clean_aux: bool,
     quality: Quality,
     user_input_scale: Option<f32>,
@@ -60,7 +59,6 @@ impl<'b, B: Backend> RtFilterBuilder<'b, B> {
             weights_dir: weights_dir.into(),
             hdr: false,
             srgb: false,
-            directional: false,
             clean_aux: false,
             quality: Quality::High,
             user_input_scale: None,
@@ -76,10 +74,6 @@ impl<'b, B: Backend> RtFilterBuilder<'b, B> {
     }
     pub fn srgb(mut self, v: bool) -> Self {
         self.srgb = v;
-        self
-    }
-    pub fn directional(mut self, v: bool) -> Self {
-        self.directional = v;
         self
     }
     pub fn clean_aux(mut self, v: bool) -> Self {
@@ -130,7 +124,6 @@ impl<'b, B: Backend> RtFilterBuilder<'b, B> {
             weights_dir: self.weights_dir,
             hdr: self.hdr,
             srgb: self.srgb,
-            directional: self.directional,
             clean_aux: self.clean_aux,
             quality: self.quality,
             user_input_scale: self.user_input_scale,
@@ -161,7 +154,6 @@ pub struct RtFilter<'b, B: Backend> {
     weights_dir: PathBuf,
     hdr: bool,
     srgb: bool,
-    directional: bool,
     clean_aux: bool,
     quality: Quality,
     user_input_scale: Option<f32>,
@@ -440,7 +432,7 @@ impl<'b, B: Backend> RtFilter<'b, B> {
         Ok(CommittedRtFilter {
             device: self.device,
             hdr: self.hdr,
-            transfer: self.transfer_kind(),
+            transfer: self.transfer_kind(has_color),
             user_input_scale: self.user_input_scale,
             nan_to_zero: self.nan_to_zero,
             has_color,
@@ -482,10 +474,15 @@ impl<'b, B: Backend> RtFilter<'b, B> {
         }
     }
 
-    fn transfer_kind(&self) -> TransferFunction {
-        if self.directional {
-            TransferFunction::Linear
-        } else if self.hdr {
+    /// Reference: `_ref/oidn/core/rt_filter.cpp:55-68` — transfer kind depends
+    /// on both mode flags and which inputs are present. When no color image is
+    /// supplied (albedo-only or normal-only filtering), the transfer is always
+    /// `Linear` regardless of `hdr`/`srgb`.
+    fn transfer_kind(&self, has_color: bool) -> TransferFunction {
+        if !has_color {
+            return TransferFunction::Linear;
+        }
+        if self.hdr {
             TransferFunction::PU
         } else if self.srgb {
             TransferFunction::Linear
@@ -512,11 +509,9 @@ impl<'b, B: Backend> RtFilter<'b, B> {
                 has_normal,
                 self.hdr,
                 self.srgb,
-                self.directional,
                 self.clean_aux,
                 self.quality,
-            )
-            .ok_or(OidnError::UnsupportedFeatures)?;
+            )?;
 
             // Quality-based candidates: try _large / _small first, fall back to base.
             let candidates = quality_candidates(&base_key, self.quality);
@@ -722,12 +717,29 @@ fn validate_tensor_slot<B: Backend>(
 }
 
 impl<'b, B: Backend> Filter for RtFilter<'b, B> {
+    fn set_progress(
+        &mut self,
+        cb: Box<dyn FnMut(f32) -> bool + 'static>,
+    ) -> Result<(), OidnError> {
+        // The inherent `set_progress` boxes any `F: FnMut(f32) -> bool +
+        // 'static`; the trait method already takes a box, so store it
+        // without re-boxing.
+        self.progress = Some(cb);
+        Ok(())
+    }
+
     fn commit(&mut self) -> Result<(), OidnError> {
         let any_input_legacy =
             self.color.is_some() || self.albedo.is_some() || self.normal.is_some();
         let any_input_tensor = self.tensor_mode();
         if !any_input_legacy && !any_input_tensor {
             return Err(OidnError::Unset("color/albedo/normal"));
+        }
+
+        if self.hdr && self.srgb {
+            return Err(OidnError::InvalidArgument(
+                "hdr and srgb are mutually exclusive",
+            ));
         }
 
         // Channel count is taken from whichever side (legacy or tensor)
@@ -791,7 +803,8 @@ impl<'b, B: Backend> Filter for RtFilter<'b, B> {
         let net = self.net.as_ref().ok_or(OidnError::Unset("model"))?;
         let plan = self.plan.as_ref().ok_or(OidnError::Unset("plan"))?;
 
-        let transfer = self.transfer_kind();
+        let has_color = self.color.is_some() || self.color_tensor.is_some();
+        let transfer = self.transfer_kind(has_color);
 
         if self.tensor_mode() {
             let (out_w, out_h) = self

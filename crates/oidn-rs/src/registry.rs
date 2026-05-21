@@ -1,7 +1,7 @@
 //! Model picker — port of `UNetFilter::getWeights`
 //! (`_ref/oidn/core/rt_filter.cpp` + `unet_filter.cpp:394-466`).
 
-use crate::filter::Quality;
+use crate::{error::OidnError, filter::Quality};
 
 /// Identifies a model file in the `oidn-weights` archive. The inner string
 /// is the file stem (e.g. `rt_hdr_alb_nrm`); use [`Self::filename`] to get
@@ -21,6 +21,16 @@ impl ModelKey {
 /// Pick the RT base model key for a feature combination — independent of
 /// quality. Quality-based upgrading (`_large` / `_small`) happens in
 /// [`quality_candidates`].
+///
+/// Returns explicit errors for invalid combinations matching
+/// `_ref/oidn/core/unet_filter.cpp:423,428,434`:
+///
+/// - albedo-only with `hdr=true` (`InvalidArgument`)
+/// - normal-only with `hdr || srgb` (`InvalidArgument`)
+/// - albedo + normal without color (`InvalidArgument`)
+///
+/// Anything else with no recognised mapping falls through to
+/// [`OidnError::UnsupportedFeatures`].
 #[allow(clippy::too_many_arguments)]
 pub fn select_rt(
     has_color: bool,
@@ -28,31 +38,48 @@ pub fn select_rt(
     has_normal: bool,
     hdr: bool,
     srgb: bool,
-    directional: bool,
     clean_aux: bool,
     quality: Quality,
-) -> Option<ModelKey> {
+) -> Result<ModelKey, OidnError> {
     let _ = quality; // base key is independent of quality
-    let base: &'static str = match (has_color, has_albedo, has_normal, hdr, srgb, directional, clean_aux) {
-        (true, false, false, true,  _, false, _) => "rt_hdr",
-        (true, false, false, false, true,  false, _) => "rt_ldr",
-        (true, false, false, false, false, false, _) => "rt_ldr",
-        (true, false, false, false, _, true, _) => "rtlightmap_dir",
 
-        (true, true, false, true,  _, false, _) => "rt_hdr_alb",
-        (true, true, false, false, _, false, _) => "rt_ldr_alb",
+    // Reject combinations that the reference filter rejects in
+    // `unet_filter.cpp::checkParams` before even consulting the weight table.
+    if !has_color && has_albedo && !has_normal && hdr {
+        return Err(OidnError::InvalidArgument(
+            "hdr mode not supported for albedo-only filtering",
+        ));
+    }
+    if !has_color && !has_albedo && has_normal && (hdr || srgb) {
+        return Err(OidnError::InvalidArgument(
+            "hdr/srgb not supported for normal-only filtering",
+        ));
+    }
+    if !has_color && has_albedo && has_normal {
+        return Err(OidnError::InvalidArgument(
+            "invalid combination of input features",
+        ));
+    }
 
-        (true, true, true, true,  _, false, false) => "rt_hdr_alb_nrm",
-        (true, true, true, true,  _, false, true)  => "rt_hdr_calb_cnrm",
-        (true, true, true, false, _, false, false) => "rt_ldr_alb_nrm",
-        (true, true, true, false, _, false, true)  => "rt_ldr_calb_cnrm",
+    let base: &'static str = match (has_color, has_albedo, has_normal, hdr, srgb, clean_aux) {
+        (true, false, false, true,  _,    _) => "rt_hdr",
+        (true, false, false, false, true, _) => "rt_ldr",
+        (true, false, false, false, false, _) => "rt_ldr",
 
-        (false, true,  false, false, _, _, _) => "rt_alb",
-        (false, false, true,  false, false, _, _) => "rt_nrm",
+        (true, true, false, true,  _, _) => "rt_hdr_alb",
+        (true, true, false, false, _, _) => "rt_ldr_alb",
 
-        _ => return None,
+        (true, true, true, true,  _, false) => "rt_hdr_alb_nrm",
+        (true, true, true, true,  _, true)  => "rt_hdr_calb_cnrm",
+        (true, true, true, false, _, false) => "rt_ldr_alb_nrm",
+        (true, true, true, false, _, true)  => "rt_ldr_calb_cnrm",
+
+        (false, true,  false, false, _, _) => "rt_alb",
+        (false, false, true,  false, false, _) => "rt_nrm",
+
+        _ => return Err(OidnError::UnsupportedFeatures),
     };
-    Some(ModelKey::new(base))
+    Ok(ModelKey::new(base))
 }
 
 /// Given a base model key + quality, return the list of preferred filenames
