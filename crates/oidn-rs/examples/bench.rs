@@ -35,6 +35,7 @@ use std::path::{Path, PathBuf};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use oidn_rs::prelude::*;
+use oidn_rs::prelude::wgpu_prelude::*;
 
 // ---------------------- CLI ----------------------
 
@@ -105,7 +106,7 @@ fn default_cfg() -> Cfg {
         qualities: vec![Quality::Fast, Quality::Balanced, Quality::High],
         iters: 10,
         warmup: 2,
-        output: PathBuf::from(format!("bench-{}.csv", now_iso_short())),
+        output: PathBuf::from(format!("bench-{}.csv", now_epoch_secs_short())),
         noise_magnitude: 0.12,
     }
 }
@@ -251,9 +252,12 @@ fn rmse(a: &[f32], b: &[f32]) -> f32 {
 }
 
 fn psnr_db(rmse: f32) -> f32 {
-    // Peak signal ≈ 1.0 for our synthetic gradient (values land in
-    // ~[0.5, 0.95]). Clamp to avoid -inf when rmse is 0.
-    20.0 * (1.0_f32.max(1.0) / rmse.max(1e-12)).log10()
+    // Peak signal = 1.0 for our synthetic gradient (values land in
+    // ~[0.5, 0.95]). RMSE of the clamped denoised output can never
+    // exceed peak, but we still floor `rmse` to avoid -inf when it is
+    // exactly zero.
+    let peak = 1.0_f32;
+    20.0 * (peak / rmse.max(1e-12)).log10()
 }
 
 // ---------------------- Bench core ----------------------
@@ -277,7 +281,7 @@ struct Row {
 
 impl Row {
     fn header() -> &'static str {
-        "timestamp,width,height,mode,quality,iters,lat_min_ms,lat_med_ms,lat_max_ms,\
+        "epoch_secs,width,height,mode,quality,iters,lat_min_ms,lat_med_ms,lat_max_ms,\
          rmse_noisy,rmse_denoised,psnr_in_db,psnr_out_db,improvement_x,model"
     }
     fn to_csv(&self, timestamp: &str) -> String {
@@ -411,25 +415,25 @@ fn run_one(
     })
 }
 
-fn now_iso_short() -> String {
-    // YYYYMMDD-HHMMSS without external time deps. Good enough for a
-    // file suffix; the CSV `timestamp` column uses a full ISO string.
+fn now_epoch_secs_short() -> String {
+    // Raw Unix epoch seconds — good enough for a filename suffix
+    // without pulling in `chrono` / `time` just to format an ISO
+    // string. Kept distinct from `_long` so callers can tell intent
+    // apart even though the formats happen to coincide today.
     let secs = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or(0);
-    // Trivial Y/M/D math via Unix epoch days. Avoid pulling chrono
-    // just for a filename suffix.
     format!("{}", secs)
 }
 
-fn now_iso_long() -> String {
+fn now_epoch_secs_long() -> String {
+    // Same epoch-seconds value tagged onto every CSV row so the
+    // output sorts correctly without parsing a textual timestamp.
     let secs = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or(0);
-    // Same simplification — we tag rows with epoch seconds so the
-    // CSV is sortable without parsing.
     format!("{}", secs)
 }
 
@@ -473,7 +477,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     cfg.iters, cfg.warmup, cfg.noise_magnitude,
                 ) {
                     Ok(row) => {
-                        let ts = now_iso_long();
+                        let ts = now_epoch_secs_long();
                         writeln!(out, "{}", row.to_csv(&ts))?;
                         out.flush()?;
                         println!("{}", row.brief());

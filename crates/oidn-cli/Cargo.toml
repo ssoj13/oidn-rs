@@ -26,3 +26,6 @@ half      = { workspace = true }
 bytemuck  = { workspace = true }
 thiserror = { workspace = true }
 tracing   = { workspace = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+wgpu      = "29"
+pollster  = "0.4"
