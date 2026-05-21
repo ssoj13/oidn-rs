@@ -8,6 +8,7 @@
 use std::path::PathBuf;
 
 use oidn_rs::prelude::*;
+use oidn_rs::prelude::wgpu_prelude::*;
 use oidn_rs::tile;
 
 fn weights_dir() -> Option<PathBuf> {

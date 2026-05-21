@@ -39,3 +39,12 @@ pub use filters::rt::{CommittedRtFilter, RtFilter};
 pub use filters::rtlightmap::RtLightmapFilter;
 pub use image::{Image, ImageMut, PixelFormat};
 pub use registry::ModelKey;
+
+/// Upstream Intel OIDN snapshot this port tracks (major, minor, patch).
+///
+/// Tied to the network weights and preprocessing contracts encoded in
+/// `crates/oidn-rs/src/filters/*`. Bump together with any change that
+/// re-imports tensors or alters the colour-pipeline contract. The
+/// reference C++ release this port is aligned against is
+/// `_ref/oidn/cmake/oidn_version.cmake` (`OIDN_VERSION_*` macros).
+pub const OIDN_REFERENCE_VERSION: (u32, u32, u32) = (2, 4, 1);

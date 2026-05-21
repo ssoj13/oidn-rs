@@ -16,7 +16,7 @@ use crate::{
     color::TransferFunction,
     error::OidnError,
     filter::{Filter, Quality},
-    filters::unet_runner,
+    filters::unet_runner::{self, ProgressFn},
     image::{Image, ImageMut, PixelFormat},
     registry::ModelKey,
     tile::{self, DEFAULT_MAX_TILE_SIZE, MIN_TILE_ALIGNMENT, RECEPTIVE_FIELD_BASE, TilePlan},
@@ -28,6 +28,7 @@ pub struct RtLightmapFilterBuilder<'b, B: Backend> {
     directional: bool,
     quality: Quality,
     user_input_scale: Option<f32>,
+    user_weights: Option<Vec<u8>>,
 }
 
 impl<'b, B: Backend> RtLightmapFilterBuilder<'b, B> {
@@ -38,6 +39,7 @@ impl<'b, B: Backend> RtLightmapFilterBuilder<'b, B> {
             directional: false,
             quality: Quality::High,
             user_input_scale: None,
+            user_weights: None,
         }
     }
 
@@ -48,6 +50,16 @@ impl<'b, B: Backend> RtLightmapFilterBuilder<'b, B> {
     pub fn quality(mut self, q: Quality) -> Self { self.quality = q; self }
     pub fn input_scale(mut self, s: Option<f32>) -> Self { self.user_input_scale = s; self }
 
+    /// Use the caller-supplied TZA blob instead of looking up
+    /// `rtlightmap_hdr.tza` / `rtlightmap_dir.tza` in `weights_dir`. Mirrors
+    /// [`crate::filters::rt::RtFilterBuilder::weights`] — bypasses the
+    /// registry entirely, so callers must ensure the blob matches the
+    /// chosen mode (HDR vs directional).
+    pub fn weights(mut self, bytes: impl Into<Vec<u8>>) -> Self {
+        self.user_weights = Some(bytes.into());
+        self
+    }
+
     pub fn build(self) -> RtLightmapFilter<'b, B> {
         RtLightmapFilter {
             device: self.device,
@@ -55,12 +67,15 @@ impl<'b, B: Backend> RtLightmapFilterBuilder<'b, B> {
             directional: self.directional,
             quality: self.quality,
             user_input_scale: self.user_input_scale,
+            user_weights: self.user_weights,
             color: None,
             output: None,
             net: None,
             plan: None,
             model_key: None,
+            progress: None,
             committed: false,
+            last_committed_dims: None,
         }
     }
 }
@@ -71,6 +86,7 @@ pub struct RtLightmapFilter<'b, B: Backend> {
     directional: bool,
     quality: Quality,
     user_input_scale: Option<f32>,
+    user_weights: Option<Vec<u8>>,
 
     color: Option<OwnedImage>,
     output: Option<OwnedImageMut>,
@@ -78,7 +94,13 @@ pub struct RtLightmapFilter<'b, B: Backend> {
     net: Option<Net<B>>,
     plan: Option<TilePlan>,
     model_key: Option<ModelKey>,
+    progress: Option<Box<ProgressFn<'static>>>,
     committed: bool,
+    /// Output (w, h, format) the last `commit()` validated against. Used by
+    /// [`Self::allocate_output`] to preserve the cached UNet + tile plan
+    /// when the renderer re-uses the same shape across frames. Mirrors the
+    /// equivalent path on [`crate::filters::rt::RtFilter`].
+    last_committed_dims: Option<(usize, usize, PixelFormat)>,
 }
 
 struct OwnedImage {
@@ -129,11 +151,24 @@ impl<'b, B: Backend> RtLightmapFilter<'b, B> {
         RtLightmapFilterBuilder::new(device, weights_dir)
     }
 
-    pub fn set_color(&mut self, img: &Image<'_>) { self.color = Some(OwnedImage::from(img)); self.committed = false; }
+    pub fn set_color(&mut self, img: &Image<'_>) {
+        let needs_invalidate = self.color.is_none();
+        self.color = Some(OwnedImage::from(img));
+        if needs_invalidate {
+            self.committed = false;
+        }
+    }
 
+    /// Reserve a host-side output buffer at the requested shape. Identical
+    /// shape + format as the previous commit leaves `committed` intact so
+    /// the UNet weights and tile plan are reused across frames; only a
+    /// genuine shape change forces a rebuild. Mirrors `RtFilter::allocate_output`.
     pub fn allocate_output(&mut self, width: usize, height: usize, format: PixelFormat) {
+        let same_dims = self.last_committed_dims == Some((width, height, format));
         self.output = Some(OwnedImageMut::empty(width, height, format));
-        self.committed = false;
+        if !same_dims {
+            self.committed = false;
+        }
     }
 
     pub fn take_output(&mut self) -> Option<(Vec<u8>, usize, usize, PixelFormat)> {
@@ -143,6 +178,13 @@ impl<'b, B: Backend> RtLightmapFilter<'b, B> {
 
     pub fn model_key(&self) -> Option<&ModelKey> { self.model_key.as_ref() }
 
+    /// Install a progress callback. Receives `[0.0, 1.0]` after each
+    /// processed tile; returning `false` aborts execution with
+    /// `OidnError::Cancelled`. Mirrors `RtFilter::set_progress`.
+    pub fn set_progress<F: FnMut(f32) -> bool + 'static>(&mut self, callback: F) {
+        self.progress = Some(Box::new(callback));
+    }
+
     fn select_model(&self) -> ModelKey {
         // rtlightmap_filter.cpp:19-20 — directional → rtlightmap_dir, otherwise rtlightmap_hdr.
         if self.directional { ModelKey::new("rtlightmap_dir") } else { ModelKey::new("rtlightmap_hdr") }
@@ -150,20 +192,37 @@ impl<'b, B: Backend> RtLightmapFilter<'b, B> {
 }
 
 impl<'b, B: Backend> Filter for RtLightmapFilter<'b, B> {
+    fn set_progress(
+        &mut self,
+        cb: Box<dyn FnMut(f32) -> bool + 'static>,
+    ) -> Result<(), OidnError> {
+        // The inherent `set_progress` boxes any closure; here we already
+        // have a boxed dyn — store it directly to avoid re-boxing.
+        self.progress = Some(cb);
+        Ok(())
+    }
+
     fn commit(&mut self) -> Result<(), OidnError> {
         if self.color.is_none() { return Err(OidnError::Unset("color")); }
 
         let key = self.select_model();
         let _ = self.quality; // single-variant filter — no quality routing
-        let path = self.weights_dir.join(key.filename());
+
+        // User weights override the registry/file lookup, matching
+        // `RtFilter`'s contract.
+        let bytes: Vec<u8> = if let Some(user) = self.user_weights.clone() {
+            user
+        } else {
+            let path = self.weights_dir.join(key.filename());
+            std::fs::read(&path).map_err(|e| {
+                if e.kind() == std::io::ErrorKind::NotFound {
+                    OidnError::MissingModel(path.clone())
+                } else {
+                    OidnError::Io(e)
+                }
+            })?
+        };
         self.model_key = Some(key);
-        let bytes = std::fs::read(&path).map_err(|e| {
-            if e.kind() == std::io::ErrorKind::NotFound {
-                OidnError::MissingModel(path.clone())
-            } else {
-                OidnError::Io(e)
-            }
-        })?;
         let tensors = oidn_tza::parse(&bytes)?;
 
         // Lightmap models always take 3 colour channels → 3 channels out.
@@ -187,6 +246,7 @@ impl<'b, B: Backend> Filter for RtLightmapFilter<'b, B> {
         }
 
         self.committed = true;
+        self.last_committed_dims = Some((out.width, out.height, out.format));
         Ok(())
     }
 
@@ -207,6 +267,7 @@ impl<'b, B: Backend> Filter for RtLightmapFilter<'b, B> {
         let color = self.color.as_ref().map(|i| i.view());
 
         let mut out_view = output.view_mut();
+        let progress: Option<&mut ProgressFn<'_>> = self.progress.as_deref_mut();
         unet_runner::run(
             net,
             self.device,
@@ -219,7 +280,7 @@ impl<'b, B: Backend> Filter for RtLightmapFilter<'b, B> {
             is_hdr,
             self.user_input_scale,
             true, // nan_to_zero: match reference contract by default
-            None,
+            progress,
         )
     }
 }

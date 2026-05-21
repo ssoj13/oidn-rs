@@ -9,9 +9,11 @@ pub enum Quality {
     /// Maximum quality (default for new filters).
     #[default]
     High,
-    /// Same network width as `High` for v0.1, future variant slot.
+    /// Same network width as `High`; reserved for a future balanced
+    /// variant once dedicated weights are trained.
     Balanced,
-    /// Smaller model for previews / interactive (falls back to base in v0.1).
+    /// Smaller model for previews / interactive; falls back to the
+    /// base variant when no `_small` weights are shipped for a route.
     Fast,
 }
 
@@ -23,4 +25,19 @@ pub trait Filter {
 
     /// Run inference. Must be called after `commit()`.
     fn execute(&mut self) -> Result<(), OidnError>;
+
+    /// Install a progress callback. Receives `[0.0, 1.0]` after each
+    /// processed tile; returning `false` aborts execution with
+    /// `OidnError::Cancelled`.
+    ///
+    /// The default implementation returns
+    /// [`OidnError::UnsupportedFeatures`] so individual filter
+    /// implementations can opt in. Mirrors the
+    /// `oidnSetFilterProgressMonitorFunction` entrypoint in the C ABI.
+    fn set_progress(
+        &mut self,
+        _cb: Box<dyn FnMut(f32) -> bool + 'static>,
+    ) -> Result<(), OidnError> {
+        Err(OidnError::UnsupportedFeatures)
+    }
 }

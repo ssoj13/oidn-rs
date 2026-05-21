@@ -120,11 +120,12 @@ pub fn embedded(stem: &str) -> Option<&'static [u8]> {
 /// ```ignore
 /// let base_key = oidn_rs::registry::select_rt(
 ///     /* has_color */ true, has_alb, has_nrm, hdr, srgb,
-///     directional, clean_aux, quality,
+///     clean_aux, quality,
 /// )?;
 /// let (stem, bytes) = oidn_rs::weights::resolve(
 ///     &base_key, quality, Some(weights_dir.as_path()),
-/// )?;
+/// )
+/// .ok_or("no weights found")?;
 /// let filter = RtFilter::<B>::builder(device, weights_dir)
 ///     .weights(bytes)
 ///     .build();

@@ -11,6 +11,7 @@
 use std::path::PathBuf;
 
 use oidn_rs::prelude::*;
+use oidn_rs::prelude::wgpu_prelude::*;
 
 fn weights_dir() -> Option<PathBuf> {
     // CARGO_MANIFEST_DIR is the crate root (`crates/oidn-rs`), regardless of
@@ -339,8 +340,6 @@ fn quality_fast_routes_to_small_wgpu() {
 
 #[test]
 fn denoise_lightmap_hdr_wgpu() {
-    use oidn_rs::RtLightmapFilter;
-
     let Some(dir) = weights_dir() else { return; };
     let device = WgpuDevice::new().expect("wgpu init");
 
@@ -365,8 +364,6 @@ fn denoise_lightmap_hdr_wgpu() {
 
 #[test]
 fn denoise_lightmap_directional_wgpu() {
-    use oidn_rs::RtLightmapFilter;
-
     let Some(dir) = weights_dir() else { return; };
     let device = WgpuDevice::new().expect("wgpu init");
 

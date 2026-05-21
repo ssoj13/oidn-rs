@@ -4,6 +4,7 @@
 use std::path::PathBuf;
 
 use oidn_rs::prelude::*;
+use oidn_rs::prelude::wgpu_prelude::*;
 
 fn weights_dir() -> Option<PathBuf> {
     let p = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
