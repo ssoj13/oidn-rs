@@ -1,8 +1,8 @@
 # AGENTS.md — oidn-rs architecture notes for orchestrators
 
-This file documents the crates, dataflow and codepaths discovered during the parity audit (2026-05-21). It is the bird's-eye map an LLM agent needs before touching the codebase.
+This file documents the crates, dataflow and codepaths after the parity audit + fix sweep (2026-05-21). It is the bird's-eye map an LLM agent needs before touching the codebase.
 
-For per-issue findings see `bughunt/*.md`. For the prioritised fix list see `plan1.md`.
+**Status (2026-05-21):** all 12 HIGH parity divergences from `plan1.md` are fixed and merged to `main`. `cargo test --workspace` is green; `cargo check --workspace --all-targets` is clean. The dataflow / topology diagrams below reflect the current (post-fix) state. For the historical audit see `bughunt/*.md`; for the consolidated fix plan see `plan1.md`.
 
 ---
 
@@ -76,11 +76,15 @@ Audit ownership (one agent per bullet):
               │     ┌────────────────────────────────────────┐   │
               │     │ per-tile loop:                         │   │
               │     │ 1. slice src tile                      │   │
-              │     │ 2. PAD (currently reflect — BUG H1)    │   │
-              │     │ 3. forward transfer (color path)       │   │
+              │     │ 2. zero-pad via Tensor::zeros +        │   │
+              │     │      slice_assign at (align_y, align_x)│   │
+              │     │ 3. preprocess_input (color path):      │   │
+              │     │      nan_to_zero * scale clamp forward │   │
               │     │ 4. concat color|albedo|normal          │   │
               │     │ 5. net.forward(input_tensor)           │   │
-              │     │ 6. inverse transfer (MISSING CLAMPS H2)│   │
+              │     │ 6. postprocess_color:                  │   │
+              │     │      nan_to_zero clamp(0,fmax) inverse │   │
+              │     │      ldr-clamp * output_scale          │   │
               │     │ 7. crop + slice_assign into accum      │   │
               │     └────────────────────────────────────────┘   │
               └──────────────────────────────────────────────────┘
@@ -107,10 +111,14 @@ Autoexposure side-pass (only when `hdr && color.is_some() && input_scale.is_none
 ```
 for job in plan.jobs:                      // H-major then W-major
     src = (color, albedo, normal) sliced to job.input (Rect)
-    pad to tile_h × tile_w (zero-pad in ref; REFLECT in Rust — H1)
-    input_tensor = concat(forward_transfer(color), clamp_alb, clamp_remap_nrm)
+    pad to tile_h × tile_w (zero-pad via Tensor::zeros + slice_assign)
+    input_tensor = concat(
+        preprocess_input(color, scale, hdr, snorm, transfer),
+        clamp_alb,
+        clamp_remap_nrm,
+    )
     output_tensor = net.forward(input_tensor)
-    output_post = postprocess(output_tensor)   // missing clamps — H2/H3
+    output_post = postprocess_color(output_tensor, transfer, hdr, snorm, out_scale)
     crop output_post by job.output_src_in_tile
     accum.slice_assign(job.output_dst, crop)
 ```
@@ -208,7 +216,7 @@ Quality multiplier appended:
    dec_conv1a ─ ReLU
    dec_conv1b ─ ReLU
      │
-   dec_conv0  ◄── ReLU in ref runtime;  ✗ MISSING in Rust unet.rs:131 (BUG H5)
+   dec_conv0  ─ ReLU
      │
    output
 ```
@@ -219,7 +227,7 @@ UNetLarge differs by: doubled depth per stage (`enc_conv1a/1b`, `2a/2b`, …, `5
 
 ## Coordinate / tensor conventions
 
-- Image memory: HWC, row-major, `Vec<f32>`. Row stride = `width * pixel_size`. No `pixel_stride` support yet (BUG M7).
+- Image memory: HWC, row-major, `Vec<f32>`. Row stride = `width * pixel_size`. Arbitrary `pixel_stride` / `row_stride` (e.g. denoising the RGB triplet of an RGBA buffer in place) is an open follow-up — see `plan1.md` M7.
 - Burn tensor layout: `[N=1, C, H, W]`. Backend chooses internal blocked layout (cubecl handles it on wgpu).
 - f16 vs f32: TZA weights are f16, loader converts to f32 inside `oidn-model/src/loader.rs:57-60, 86-89` (Landau U5).
 - Tile job carries five rectangles (`tile.rs`): `input` (src region), `output_src_in_tile` (which subrect of the tile-output tensor to keep), `output_dst` (where to write in the user image), plus `align_offset_x/y`.

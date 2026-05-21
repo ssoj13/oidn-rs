@@ -38,11 +38,11 @@ flowchart TB
     J --> K[take_output / user callback]
 
     subgraph T[per-tile loop]
-        T1[1 slice src rect] --> T2[2 PAD<br/>currently reflect — H1]
-        T2 --> T3[3 forward transfer color path]
+        T1[1 slice src rect] --> T2[2 zero-pad<br/>Tensor::zeros + slice_assign]
+        T2 --> T3[3 preprocess_input<br/>nan→0 · *scale · clamp · forward]
         T3 --> T4[4 concat color · albedo · normal]
         T4 --> T5[5 net.forward]
-        T5 --> T6[6 inverse transfer<br/>missing clamps — H2/H3]
+        T5 --> T6[6 postprocess_color<br/>nan→0 · clamp · inverse · ldr-clamp · *out_scale]
         T6 --> T7[7 crop + slice_assign into accum]
         T7 --> T1
     end
@@ -87,10 +87,8 @@ flowchart TB
     in -. skip .-> cc1
     cc1 --> dc1a[dec_conv1a<br/>+ReLU]
     dc1a --> dc1b[dec_conv1b<br/>+ReLU]
-    dc1b --> dc0{{dec_conv0<br/>RUST: NO ReLU — H5<br/>REF: +ReLU}}
+    dc1b --> dc0[dec_conv0<br/>+ReLU]
     dc0 --> out([output N×C×H×W])
-
-    style dc0 fill:#fdd,stroke:#900,stroke-width:2px
 ```
 
 ---
@@ -128,20 +126,17 @@ flowchart TB
     start -- "hdr=false, srgb=false" --> chk2{"only normal?"}
     chk2 -- "yes" --> linear3[Linear<br/>ref rt_filter.cpp:65]
     chk2 -- "no" --> srgb[sRGB]
-
-    classDef bug fill:#fdd,stroke:#900
-    class chk2,linear3 bug
 ```
 
-Bug M3: Rust ignores input-presence and returns `SRGB` for the `(only-normal, !hdr, !srgb)` case; should return `Linear`.
+`transfer_kind(has_color: bool, hdr: bool, srgb: bool)` in `filters/rt.rs` mirrors the reference decision tree exactly. `has_color=false` short-circuits to `Linear` for normal-only / albedo-only routes (previously defaulted to sRGB).
 
 ---
 
-## Bug heatmap by area
+## Audit baseline — issue density (historical, pre-fix)
 
 ```mermaid
 quadrantChart
-    title oidn-rs parity audit — issue density
+    title oidn-rs parity audit baseline (2026-05-21, pre-fix)
     x-axis "fewer issues" --> "more issues"
     y-axis "lower severity" --> "higher severity"
     quadrant-1 "critical hotspots"
@@ -158,24 +153,32 @@ quadrantChart
     "CLI (kurchatov)": [0.85, 0.85]
 ```
 
+All 12 HIGH and the listed MED items are now closed — see commits
+`91a261e`, `912aecf`, `f3022a5`, `af69f9d` on `main`.
+
 ---
 
-## Fix ordering (proposed)
+## Fix delivery (status: DONE)
 
 ```mermaid
-flowchart TD
-    H5[H5 dec_conv0 + ReLU<br/>1-line] --> H1[H1 zero-pad tile borders]
-    H1 --> H2[H2/H3 sanitise + clamp around inverse]
-    H2 --> H4[H4 clamp after inputScale before forward]
-    H4 --> H6[H6 RG broadcast: replicate G into B]
-    H6 --> H7[H7 remove directional from RtFilter]
-    H7 --> M1[M1 reject invalid combos in select_rt]
-    M1 --> M2[M2 enforce hdr/srgb/directional mutex in commit]
-    M2 --> H8[H8 PFM/PHM I/O]
-    H8 --> H9[H9 save_image keep HDR precision]
-    H9 --> H10[H10 expose missing CLI flags]
-    H10 --> H11[H11 install tracing subscriber]
-    H11 --> H12[H12 add 4 missing OidnError variants + non_exhaustive]
+flowchart LR
+    H5[H5 dec_conv0 ReLU] --> COMMIT1[91a261e<br/>fix core]
+    H1[H1 zero-pad tiles] --> COMMIT1
+    H2[H2/H3 output sanitise + LDR clamp] --> COMMIT1
+    H4[H4 input clamp after scale] --> COMMIT1
+    H6[H6 RG → B replicate] --> COMMIT1
+    H7[H7 drop directional from RT] --> COMMIT2[912aecf<br/>fix filter]
+    M1[M1 reject invalid combos] --> COMMIT2
+    M2[M2 hdr/srgb mutex] --> COMMIT2
+    M3[M3 transfer_kind input-presence] --> COMMIT2
+    H12[H12 OidnError parity + non_exhaustive] --> COMMIT3[f3022a5<br/>feat api]
+    V09[V09 OIDN_REFERENCE_VERSION] --> COMMIT3
+    V13[V13 prelude split] --> COMMIT3
+    M9[M9 RtLightmap parity] --> COMMIT3
+    H8[H8 PFM/PHM I/O] --> COMMIT4[af69f9d<br/>feat cli]
+    H9[H9 HDR-precision save] --> COMMIT4
+    H10[H10 full flag set] --> COMMIT4
+    H11[H11 tracing subscriber] --> COMMIT4
 ```
 
 ---

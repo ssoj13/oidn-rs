@@ -7,7 +7,9 @@ GPU vendor (NVIDIA / AMD / Intel / Apple) through a single backend.
 **Status:** every shipped TZA model loads and runs, both `UNet` (base/small)
 and `UNetLarge` (large) topologies are implemented, multi-tile inference
 seamless on real GPU, denoiser verified to reduce synthetic noise by **~11×**
-RMSE on wgpu.
+RMSE on wgpu. Parity audit against Intel OIDN v2.4.1 completed 2026-05-21
+(`plan1.md`, `bughunt/` and the AGENTS.md / DIAGRAMS.md companions); all 12
+HIGH-severity divergences fixed.
 
 ## Workspace layout
 
@@ -38,12 +40,25 @@ cargo build --release --workspace
 # Print the tensor list of a weights blob
 cargo run -p oidn-cli --release -- probe data/weights/rt_hdr.tza
 
-# Denoise an HDR EXR (works with optional --albedo / --normal AOVs).
-# `--weights-dir data/weights` is the default; pass it explicitly if you
-# put the weights elsewhere.
-cargo run -p oidn-cli --release -- denoise -i noisy.exr -o clean.exr
-cargo run -p oidn-cli --release -- denoise \
+# --hdr or --ldr is required (mutually exclusive). Embedded weights are
+# used by default when `--weights-dir` and `--weights` are both omitted.
+cargo run -p oidn-cli --release -- denoise --hdr -i noisy.exr -o clean.exr
+cargo run -p oidn-cli --release -- denoise --hdr \
     -i color.exr --albedo albedo.exr --normal normal.exr -o out.exr
+
+# LDR PNG/JPG with sRGB encoding hint
+cargo run -p oidn-cli --release -- denoise --ldr --srgb -i in.png -o out.png
+
+# Reference golden formats are first-class
+cargo run -p oidn-cli --release -- denoise --hdr -i in.pfm -o out.pfm  # f32
+cargo run -p oidn-cli --release -- denoise --hdr -i in.phm -o out.phm  # f16
+
+# RTLightmap directional mode
+cargo run -p oidn-cli --release -- denoise --filter RTLightmap --dir --hdr \
+    -i lightmap.exr -o clean.exr
+
+# Enumerate wgpu adapters
+cargo run -p oidn-cli --release -- list-devices
 
 # Benchmark on a synthetic scene
 cargo run -p oidn-cli --release -- bench --resolution 1024x1024 --iters 10
@@ -52,7 +67,8 @@ cargo run -p oidn-cli --release -- bench --resolution 1024x1024 --iters 10
 ## Library use
 
 ```rust
-use oidn_rs::prelude::*;
+use oidn_rs::prelude::*;                    // backend-agnostic types
+use oidn_rs::prelude::wgpu_prelude::*;      // WgpuDevice / WgpuBackend
 
 let device = WgpuDevice::new()?;
 let mut filter = RtFilter::<WgpuBackend>::builder(&device.handle, "data")
@@ -68,6 +84,10 @@ filter.execute()?;
 
 let (raw, _, _, _) = filter.take_output().unwrap();
 ```
+
+The prelude is backend-agnostic by default — wgpu types live in the
+`wgpu_prelude` submodule so the same code can target `burn::backend::NdArray`
+or future Burn backends without leaking GPU symbols.
 
 For lightmaps, use `RtLightmapFilter` instead (HDR Log transfer, or directional
 mode with Linear transfer and signed input).
@@ -121,11 +141,21 @@ oidn-rs ships ~2000 LOC of Rust by **delegating all the GPU math to Burn**:
 - The U-Net architecture is described once as a Burn `Module` and runs
   unchanged on CPU (NdArray), wgpu (Vulkan / DX12 / Metal / WebGPU), and
   any future Burn backend (CUDA / ROCm).
+- **GPU-first execution**: per-tile input prep, transfer functions, the
+  network, and output postprocessing all stay in Burn tensors — no
+  host-roundtrip in the hot path.
+- **Embedded weights**: cargo features (`embed-hdr`, `embed-ldr`,
+  `embed-aov`, `embed-aux-clean`, `embed-lightmap`, `embed-all`) bake the
+  `.tza` blobs into the binary so deployment is a single executable. The
+  on-disk `--weights-dir` path remains as the default and always works.
 - Weights load directly from Intel's `.tza` archive (the
   [oidn-weights](https://github.com/RenderKit/oidn-weights) repo), no
   PyTorch or ONNX intermediate step.
 - No C-ABI / no `libOpenImageDenoise.dll` shim. Consumers depend on the
-  Rust crate directly.
+  Rust crate directly. `OidnError` is `#[non_exhaustive]` so future
+  variants ship as minor versions.
+- `pub const OIDN_REFERENCE_VERSION: (u32, u32, u32) = (2, 4, 1);`
+  identifies the upstream snapshot this port tracks.
 
 ## Testing
 
@@ -139,6 +169,11 @@ cargo test --workspace --release
 cargo clippy --workspace --all-targets -- -D warnings
 cargo doc --workspace --no-deps
 ```
+
+Current suite size (post-bughunt 2026-05-21): 25 integration tests across
+`e2e_wgpu` (10), `e2e_ldr`, `e2e_ndarray`, `multi_tile_wgpu`, `formats`,
+`unit_color_tile`, `all_models_smoke`, `api_surface`, plus per-crate unit
+tests and TZA parser sweeps. All passing on `cargo test --workspace`.
 
 ## License
 
