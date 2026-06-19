@@ -17,6 +17,30 @@
 //! 2. Reject bins whose mean falls below `EPS`.
 //! 3. Geometric mean over the surviving bins.
 //! 4. `scale = KEY / max(geom_mean, EPS)`.
+//!
+//! ## Luminance space (`acescg-autoexposure` feature)
+//!
+//! The estimator collapses each pixel to a single luminance value, so the
+//! channel weights it uses have to match the colour space the pixels live in.
+//!
+//! - **Default — Rec.709.** Weights `(0.212671, 0.715160, 0.072169)`, identical
+//!   to [`crate::color::luminance`] and the upstream OIDN reference. Correct for
+//!   sRGB / Rec.709 input and the right default for a general-purpose denoiser.
+//! - **`acescg-autoexposure` — ACEScg (AP1).** Weights `(0.2722287, 0.6740818,
+//!   0.0536895)`, the Y row of the AP1→XYZ matrix. Use when the denoiser input is
+//!   ACEScg: measuring an AP1 image with Rec.709 weights skews the exposure
+//!   estimate, because the same RGB triple carries different luminance in the two
+//!   spaces.
+//!
+//! It is a compile-time feature rather than a runtime parameter on purpose: a
+//! pipeline's working space is fixed, the weights are `const` (so the per-pixel
+//! multiply folds away), and both the CPU ([`compute_scale`]) and tensor
+//! ([`compute_scale_tensor`]) paths read the same constants with no parameter to
+//! thread through. [`crate::color::luminance`] stays on Rec.709 regardless, so
+//! other consumers of it are unaffected.
+//!
+//! Used by `vfx-rs`'s `pt-denoise-oidn` (a path tracer working internally in
+//! ACEScg), which turns the feature on through its git dependency on this crate.
 
 use burn::prelude::ElementConversion;
 use burn::tensor::{Bool, Tensor, backend::Backend, module::avg_pool2d};
