@@ -21,8 +21,6 @@
 use burn::prelude::ElementConversion;
 use burn::tensor::{Bool, Tensor, backend::Backend, module::avg_pool2d};
 
-use crate::color::luminance;
-
 /// Bin geometry from `_ref/oidn/devices/gpu/gpu_autoexposure.h:21`.
 pub const MAX_BIN_SIZE: usize = 16;
 /// Key value from autoexposure paper — `_ref/oidn/core/autoexposure.h`.
@@ -30,10 +28,28 @@ pub const KEY: f32 = 0.18;
 /// Eps used when the image has zero usable pixels.
 pub const EPS: f32 = 1e-8;
 
-/// Rec. 709 luminance weights — see [`crate::color::luminance`].
+// Luminance weights for the autoexposure estimator. Both the CPU and tensor
+// paths below share these constants so they stay within parity tolerance.
+//
+// Default: Rec.709 — identical to [`crate::color::luminance`] and the OIDN
+// reference. The CPU path computes `LUM_R*r + LUM_G*g + LUM_B*b`, byte-for-byte
+// what `luminance()` returns.
+#[cfg(not(feature = "acescg-autoexposure"))]
 const LUM_R: f32 = 0.212671;
+#[cfg(not(feature = "acescg-autoexposure"))]
 const LUM_G: f32 = 0.715160;
+#[cfg(not(feature = "acescg-autoexposure"))]
 const LUM_B: f32 = 0.072169;
+
+// With `acescg-autoexposure`: ACEScg (AP1) luminance weights — the Y row of the
+// AP1->XYZ matrix. Use when the denoiser input is ACEScg, so autoexposure
+// measures luminance in the same space the image lives in.
+#[cfg(feature = "acescg-autoexposure")]
+const LUM_R: f32 = 0.2722287;
+#[cfg(feature = "acescg-autoexposure")]
+const LUM_G: f32 = 0.6740818;
+#[cfg(feature = "acescg-autoexposure")]
+const LUM_B: f32 = 0.0536895;
 
 /// Compute the autoexposure scale factor for an HDR colour image laid out as
 /// HWC `f32` triples. Returns `1.0` if the image is empty or all zero.
@@ -67,7 +83,7 @@ pub fn compute_scale(rgb_hwc: &[f32], width: usize, height: usize) -> f32 {
             for y in y0..y1 {
                 let row = &rgb_hwc[(y * width + x0) * 3..(y * width + x1) * 3];
                 for px in row.chunks_exact(3) {
-                    let lum = luminance(px[0], px[1], px[2]);
+                    let lum = LUM_R * px[0] + LUM_G * px[1] + LUM_B * px[2];
                     if lum.is_finite() {
                         sum += lum;
                         n += 1;

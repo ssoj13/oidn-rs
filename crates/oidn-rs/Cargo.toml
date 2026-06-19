@@ -22,6 +22,11 @@ path = "src/lib.rs"
 # subsets their renderer needs.
 [features]
 default = []
+# Autoexposure luminance weights. Default = Rec.709 (the OIDN reference). Enable
+# this to measure luminance with ACEScg (AP1) weights instead — for pipelines
+# whose denoiser input is ACEScg (e.g. a path tracer working internally in AP1).
+# Affects only the autoexposure estimator; `crate::color::luminance` is unchanged.
+acescg-autoexposure = []
 embed-hdr = []
 embed-ldr = []
 embed-aov = []
