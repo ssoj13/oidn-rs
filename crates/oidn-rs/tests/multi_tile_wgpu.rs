@@ -7,15 +7,16 @@
 
 use std::path::PathBuf;
 
-use oidn_rs::prelude::*;
 use oidn_rs::prelude::wgpu_prelude::*;
+use oidn_rs::prelude::*;
 use oidn_rs::tile;
 
 fn weights_dir() -> Option<PathBuf> {
     let p = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("..")
         .join("..")
-        .join("data").join("weights");
+        .join("data")
+        .join("weights");
     if p.is_dir() { Some(p) } else { None }
 }
 
@@ -33,7 +34,7 @@ fn make_clean(w: usize, h: usize) -> Vec<f32> {
             let r = (dx * dx + dy * dy).sqrt() / rmax;
             let v = 0.6 + 0.3 * (1.0 - r);
             let i = (y * w + x) * 3;
-            buf[i]     = v;
+            buf[i] = v;
             buf[i + 1] = v * 0.9;
             buf[i + 2] = v * 0.7;
         }
@@ -51,13 +52,29 @@ fn plan_actually_tiles_at_3072() {
         tile::MIN_TILE_ALIGNMENT,
         tile::DEFAULT_MAX_TILE_SIZE,
     );
-    assert!(plan.jobs.len() > 1,
-            "expected multi-tile plan at 3072x3072, got {} jobs", plan.jobs.len());
-    eprintln!("3072×3072 → {} tiles of {}×{}", plan.jobs.len(), plan.tile_w, plan.tile_h);
+    assert!(
+        plan.jobs.len() > 1,
+        "expected multi-tile plan at 3072x3072, got {} jobs",
+        plan.jobs.len()
+    );
+    eprintln!(
+        "3072×3072 → {} tiles of {}×{}",
+        plan.jobs.len(),
+        plan.tile_w,
+        plan.tile_h
+    );
 
     // Tiles must collectively cover every pixel exactly once.
-    let total: i64 = plan.jobs.iter().map(|j| (j.output_dst.w as i64) * (j.output_dst.h as i64)).sum();
-    assert_eq!(total, 3072i64 * 3072, "tiles must cover full image without gaps or overlap");
+    let total: i64 = plan
+        .jobs
+        .iter()
+        .map(|j| (j.output_dst.w as i64) * (j.output_dst.h as i64))
+        .sum();
+    assert_eq!(
+        total,
+        3072i64 * 3072,
+        "tiles must cover full image without gaps or overlap"
+    );
 }
 
 #[test]
@@ -73,7 +90,7 @@ fn denoise_3072_multi_tile_wgpu() {
     let clean = make_clean(w, h);
 
     let in_img = Image::from_rgb_f32(&clean, w, h);
-    let mut filter = RtFilter::<WgpuBackend>::builder(&device.handle, &dir)
+    let mut filter = RtFilter::builder(&device.handle, &dir)
         .hdr(true)
         .quality(Quality::High)
         .input_scale(Some(1.0))
@@ -88,20 +105,24 @@ fn denoise_3072_multi_tile_wgpu() {
     let out: &[f32] = bytemuck::cast_slice(&raw);
 
     // 1) All finite.
-    for x in out { assert!(x.is_finite(), "non-finite output value"); }
+    for x in out {
+        assert!(x.is_finite(), "non-finite output value");
+    }
 
     // 2) No tile-seam discontinuities: row means should vary smoothly because
     // the input is smooth. We compute mean luminance per row, then look at the
     // largest absolute first-difference. For a smooth gradient this should be
     // small; a tile seam would show a spike.
-    let row_means: Vec<f32> = (0..h).map(|y| {
-        let mut s = 0.0f32;
-        for x in 0..w {
-            let i = (y * w + x) * 3;
-            s += (out[i] + out[i + 1] + out[i + 2]) / 3.0;
-        }
-        s / w as f32
-    }).collect();
+    let row_means: Vec<f32> = (0..h)
+        .map(|y| {
+            let mut s = 0.0f32;
+            for x in 0..w {
+                let i = (y * w + x) * 3;
+                s += (out[i] + out[i + 1] + out[i + 2]) / 3.0;
+            }
+            s / w as f32
+        })
+        .collect();
 
     let mut max_jump = 0.0f32;
     let mut max_jump_y = 0;
@@ -122,6 +143,8 @@ fn denoise_3072_multi_tile_wgpu() {
     // Threshold: 0.01 is generous — at the seam between two adjacent tiles
     // on a smooth image, the network's output noise alone would be < 0.001.
     // A real seam (no overlap) would show jumps of 0.05+.
-    assert!(max_jump < 0.01,
-            "row-mean jump {max_jump} at y={max_jump_y} suggests a tile seam");
+    assert!(
+        max_jump < 0.01,
+        "row-mean jump {max_jump} at y={max_jump_y} suggests a tile seam"
+    );
 }

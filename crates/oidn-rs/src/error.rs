@@ -21,7 +21,9 @@ pub enum OidnError {
     #[error("input/output image dimensions or formats inconsistent: {0}")]
     Inconsistent(&'static str),
 
-    #[error("unsupported feature combination — see _ref/oidn/core/rt_filter.cpp:getWeights for valid sets")]
+    #[error(
+        "unsupported feature combination — see _ref/oidn/core/rt_filter.cpp:getWeights for valid sets"
+    )]
     UnsupportedFeatures,
 
     #[error("model file not found: {0}")]

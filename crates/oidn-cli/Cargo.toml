@@ -27,5 +27,5 @@ bytemuck  = { workspace = true }
 thiserror = { workspace = true }
 tracing   = { workspace = true }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-wgpu      = "29"
+wgpu      = "30"
 pollster  = "0.4"

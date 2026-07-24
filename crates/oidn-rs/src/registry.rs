@@ -13,9 +13,15 @@ use crate::{error::OidnError, filter::Quality};
 pub struct ModelKey(pub String);
 
 impl ModelKey {
-    pub fn new(s: impl Into<String>) -> Self { Self(s.into()) }
-    pub fn name(&self) -> &str { &self.0 }
-    pub fn filename(&self) -> String { format!("{}.tza", self.0) }
+    pub fn new(s: impl Into<String>) -> Self {
+        Self(s.into())
+    }
+    pub fn name(&self) -> &str {
+        &self.0
+    }
+    pub fn filename(&self) -> String {
+        format!("{}.tza", self.0)
+    }
 }
 
 /// Pick the RT base model key for a feature combination — independent of
@@ -62,20 +68,20 @@ pub fn select_rt(
     }
 
     let base: &'static str = match (has_color, has_albedo, has_normal, hdr, srgb, clean_aux) {
-        (true, false, false, true,  _,    _) => "rt_hdr",
+        (true, false, false, true, _, _) => "rt_hdr",
         (true, false, false, false, true, _) => "rt_ldr",
         (true, false, false, false, false, _) => "rt_ldr",
 
-        (true, true, false, true,  _, _) => "rt_hdr_alb",
+        (true, true, false, true, _, _) => "rt_hdr_alb",
         (true, true, false, false, _, _) => "rt_ldr_alb",
 
-        (true, true, true, true,  _, false) => "rt_hdr_alb_nrm",
-        (true, true, true, true,  _, true)  => "rt_hdr_calb_cnrm",
+        (true, true, true, true, _, false) => "rt_hdr_alb_nrm",
+        (true, true, true, true, _, true) => "rt_hdr_calb_cnrm",
         (true, true, true, false, _, false) => "rt_ldr_alb_nrm",
-        (true, true, true, false, _, true)  => "rt_ldr_calb_cnrm",
+        (true, true, true, false, _, true) => "rt_ldr_calb_cnrm",
 
-        (false, true,  false, false, _, _) => "rt_alb",
-        (false, false, true,  false, false, _) => "rt_nrm",
+        (false, true, false, false, _, _) => "rt_alb",
+        (false, false, true, false, false, _) => "rt_nrm",
 
         _ => return Err(OidnError::UnsupportedFeatures),
     };
@@ -92,8 +98,8 @@ pub fn select_rt(
 pub fn quality_candidates(base: &ModelKey, quality: Quality) -> Vec<String> {
     let s = base.name();
     match quality {
-        Quality::High     => vec![format!("{s}_large"), s.to_string()],
+        Quality::High => vec![format!("{s}_large"), s.to_string()],
         Quality::Balanced => vec![s.to_string()],
-        Quality::Fast     => vec![format!("{s}_small"), s.to_string()],
+        Quality::Fast => vec![format!("{s}_small"), s.to_string()],
     }
 }

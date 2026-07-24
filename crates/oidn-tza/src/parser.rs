@@ -78,7 +78,9 @@ fn decode_layout(s: &str) -> Result<Layout, TzaError> {
     match s {
         "x" => Ok(Layout::X),
         "oihw" => Ok(Layout::Oihw),
-        other => Err(TzaError::InvalidLayout { got: other.to_owned() }),
+        other => Err(TzaError::InvalidLayout {
+            got: other.to_owned(),
+        }),
     }
 }
 
@@ -136,8 +138,10 @@ pub fn parse(bytes: &[u8]) -> Result<TensorMap, TzaError> {
 
         // Layout (`ndim` chars)
         let layout_bytes = cur.read_bytes(ndim)?;
-        let layout_str = std::str::from_utf8(layout_bytes)
-            .map_err(|_| TzaError::InvalidLayout { got: format!("{layout_bytes:?}") })?;
+        let layout_str =
+            std::str::from_utf8(layout_bytes).map_err(|_| TzaError::InvalidLayout {
+                got: format!("{layout_bytes:?}"),
+            })?;
         let layout = decode_layout(layout_str)?;
         if expected_ndim(layout) != ndim {
             return Err(TzaError::LayoutNdimMismatch {
@@ -154,7 +158,11 @@ pub fn parse(bytes: &[u8]) -> Result<TensorMap, TzaError> {
         // Tensor data offset
         let data_offset = cur.read_u64()? as usize;
 
-        let desc = TensorDesc { dims, layout, dtype };
+        let desc = TensorDesc {
+            dims,
+            layout,
+            dtype,
+        };
         let byte_size = desc.byte_size();
 
         // Bounds-check raw data without consuming the cursor's position

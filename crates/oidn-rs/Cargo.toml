@@ -43,8 +43,11 @@ embed-all = [
 [dependencies]
 oidn-tza   = { path = "../oidn-tza",   version = "0.1.0" }
 oidn-model = { path = "../oidn-model", version = "0.1.0" }
-burn       = { workspace = true }
-burn-wgpu  = { workspace = true }
+# burn 0.22 selects the backend via the device, not a type parameter. The
+# `wgpu` feature registers the wgpu backend into burn's dynamic dispatch and
+# exposes `Device::wgpu(..)`; `ndarray` (from the workspace defaults) backs the
+# CPU test path via `Device::ndarray()`.
+burn       = { workspace = true, features = ["wgpu"] }
 half       = { workspace = true }
 bytemuck   = { workspace = true }
 thiserror  = { workspace = true }

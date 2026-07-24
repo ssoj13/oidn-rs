@@ -6,14 +6,15 @@
 
 use std::path::PathBuf;
 
-use burn::backend::NdArray;
+use burn::tensor::Device;
 use oidn_rs::{Filter, Image, PixelFormat, Quality, RtFilter};
 
 fn weights_dir() -> Option<PathBuf> {
     let p = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("..")
         .join("..")
-        .join("data").join("weights");
+        .join("data")
+        .join("weights");
     if p.is_dir() { Some(p) } else { None }
 }
 
@@ -24,8 +25,7 @@ fn denoise_small_hdr_color_only_ndarray() {
         return;
     };
 
-    type B = NdArray<f32>;
-    let device = <B as burn::tensor::backend::BackendTypes>::Device::default();
+    let device = Device::ndarray();
 
     // Generate a synthetic noisy 64×64 HDR colour image (a smooth gradient
     // with additive noise — pixel values in [0, 4]).
@@ -36,7 +36,7 @@ fn denoise_small_hdr_color_only_ndarray() {
             let g = 0.5 + 0.3 * ((x as f32 + y as f32) / (w as f32 + h as f32));
             let n = ((x * 17 + y * 31) % 19) as f32 * 0.05;
             let i = (y * w + x) * 3;
-            color[i]     = g + n;
+            color[i] = g + n;
             color[i + 1] = g + n * 0.7;
             color[i + 2] = g + n * 0.4;
         }
@@ -45,7 +45,7 @@ fn denoise_small_hdr_color_only_ndarray() {
     let mut output = vec![0.0f32; w * h * 3];
     let in_img = Image::from_rgb_f32(&color, w, h);
 
-    let mut filter = RtFilter::<B>::builder(&device, &dir)
+    let mut filter = RtFilter::builder(&device, &dir)
         .hdr(true)
         .quality(Quality::High)
         .input_scale(Some(1.0)) // skip autoexposure to keep test deterministic
@@ -65,24 +65,29 @@ fn denoise_small_hdr_color_only_ndarray() {
     // the input (denoise shouldn't shift mean intensity by orders of magnitude).
     let mean_in: f32 = color.iter().sum::<f32>() / color.len() as f32;
     let mean_out: f32 = output.iter().sum::<f32>() / output.len() as f32;
-    for x in &output { assert!(x.is_finite(), "non-finite output value"); }
-    assert!((mean_out - mean_in).abs() < 1.0,
-            "output mean ({mean_out}) drifted too far from input ({mean_in})");
+    for x in &output {
+        assert!(x.is_finite(), "non-finite output value");
+    }
+    assert!(
+        (mean_out - mean_in).abs() < 1.0,
+        "output mean ({mean_out}) drifted too far from input ({mean_in})"
+    );
 }
 
 #[test]
 fn rt_filter_picks_correct_model_key() {
-    let Some(dir) = weights_dir() else { return; };
+    let Some(dir) = weights_dir() else {
+        return;
+    };
 
-    type B = NdArray<f32>;
-    let device = <B as burn::tensor::backend::BackendTypes>::Device::default();
+    let device = Device::ndarray();
 
     // hdr + albedo + normal → rt_hdr_alb_nrm
     let (w, h) = (32usize, 32usize);
     let buf = vec![0.5f32; w * h * 3];
     let img = Image::from_rgb_f32(&buf, w, h);
 
-    let mut filter = RtFilter::<B>::builder(&device, &dir)
+    let mut filter = RtFilter::builder(&device, &dir)
         .hdr(true)
         .input_scale(Some(1.0))
         .build();

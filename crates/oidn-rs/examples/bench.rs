@@ -34,8 +34,8 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
-use oidn_rs::prelude::*;
 use oidn_rs::prelude::wgpu_prelude::*;
+use oidn_rs::prelude::*;
 
 // ---------------------- CLI ----------------------
 
@@ -124,11 +124,26 @@ fn parse_args() -> Cfg {
             })
         };
         match flag {
-            "--weights-dir" => { cfg.weights_dir = PathBuf::from(value()); i += 2; }
-            "--output" | "-o" => { cfg.output = PathBuf::from(value()); i += 2; }
-            "--iters" => { cfg.iters = value().parse().expect("--iters: integer"); i += 2; }
-            "--warmup" => { cfg.warmup = value().parse().expect("--warmup: integer"); i += 2; }
-            "--noise" => { cfg.noise_magnitude = value().parse().expect("--noise: float"); i += 2; }
+            "--weights-dir" => {
+                cfg.weights_dir = PathBuf::from(value());
+                i += 2;
+            }
+            "--output" | "-o" => {
+                cfg.output = PathBuf::from(value());
+                i += 2;
+            }
+            "--iters" => {
+                cfg.iters = value().parse().expect("--iters: integer");
+                i += 2;
+            }
+            "--warmup" => {
+                cfg.warmup = value().parse().expect("--warmup: integer");
+                i += 2;
+            }
+            "--noise" => {
+                cfg.noise_magnitude = value().parse().expect("--noise: float");
+                i += 2;
+            }
             "--resolutions" => {
                 cfg.resolutions = value()
                     .split(',')
@@ -153,7 +168,10 @@ fn parse_args() -> Cfg {
                     .collect();
                 i += 2;
             }
-            "-h" | "--help" => { print_help(); std::process::exit(0); }
+            "-h" | "--help" => {
+                print_help();
+                std::process::exit(0);
+            }
             other => {
                 eprintln!("error: unknown flag `{other}`. Use --help.");
                 std::process::exit(1);
@@ -173,7 +191,7 @@ fn parse_args() -> Cfg {
 
 fn print_help() {
     println!(
-"oidn-bench — sweep (resolution × mode × quality) and dump CSV
+        "oidn-bench — sweep (resolution × mode × quality) and dump CSV
 
 OPTIONS
   --weights-dir PATH     directory containing rt_*.tza weights
@@ -189,7 +207,8 @@ OPTIONS
   --warmup N             non-timed warmup iterations (default 2)
   --noise F              per-pixel noise magnitude added to the synthetic
                          gradient (default 0.12)
-  -h, --help             print this and exit");
+  -h, --help             print this and exit"
+    );
 }
 
 // ---------------------- Synthetic data ----------------------
@@ -293,13 +312,18 @@ impl Row {
         format!(
             "{},{},{},{},{},{},{:.3},{:.3},{:.3},{:.5},{:.5},{:.2},{:.2},{:.3},{}",
             timestamp,
-            self.width, self.height,
+            self.width,
+            self.height,
             self.mode.as_str(),
             quality_str(self.quality),
             self.iters,
-            self.lat_min, self.lat_med, self.lat_max,
-            self.rmse_noisy, self.rmse_denoised,
-            self.psnr_in_db, self.psnr_out_db,
+            self.lat_min,
+            self.lat_med,
+            self.lat_max,
+            self.rmse_noisy,
+            self.rmse_denoised,
+            self.psnr_in_db,
+            self.psnr_out_db,
             improvement,
             self.model,
         )
@@ -308,12 +332,16 @@ impl Row {
         format!(
             "{:>5}x{:<5} {:>20} {:>9}  iters={:>3}  lat={:>6.1}/{:>6.1}/{:>6.1}ms  \
              PSNR {:>5.2}→{:>5.2}dB  {:>5.2}× rmse  [{}]",
-            self.width, self.height,
+            self.width,
+            self.height,
             self.mode.as_str(),
             quality_str(self.quality),
             self.iters,
-            self.lat_min, self.lat_med, self.lat_max,
-            self.psnr_in_db, self.psnr_out_db,
+            self.lat_min,
+            self.lat_med,
+            self.lat_max,
+            self.psnr_in_db,
+            self.psnr_out_db,
             self.rmse_noisy / self.rmse_denoised.max(1e-12),
             self.model,
         )
@@ -346,7 +374,7 @@ fn run_one(
         Vec::new()
     };
 
-    let mut filter = RtFilter::<WgpuBackend>::builder(&device.handle, weights_dir)
+    let mut filter = RtFilter::builder(&device.handle, weights_dir)
         .hdr(true)
         .quality(quality)
         // Pin the autoexposure so latency isn't dominated by scale
@@ -472,9 +500,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         for &mode in &cfg.modes {
             for &quality in &cfg.qualities {
                 match run_one(
-                    &device, &cfg.weights_dir,
-                    w, h, mode, quality,
-                    cfg.iters, cfg.warmup, cfg.noise_magnitude,
+                    &device,
+                    &cfg.weights_dir,
+                    w,
+                    h,
+                    mode,
+                    quality,
+                    cfg.iters,
+                    cfg.warmup,
+                    cfg.noise_magnitude,
                 ) {
                     Ok(row) => {
                         let ts = now_epoch_secs_long();
@@ -483,10 +517,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         println!("{}", row.brief());
                     }
                     Err(e) => {
-                        eprintln!(
-                            "  ! skipped {}×{} {:?} {:?}: {}",
-                            w, h, mode, quality, e
-                        );
+                        eprintln!("  ! skipped {}×{} {:?} {:?}: {}", w, h, mode, quality, e);
                     }
                 }
             }

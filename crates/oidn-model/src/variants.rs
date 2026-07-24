@@ -26,7 +26,9 @@ impl Variant {
     /// channel widths inferred from shapes).
     pub fn from_tensor_names<I: IntoIterator<Item = S>, S: AsRef<str>>(names: I) -> Self {
         for n in names {
-            if n.as_ref() == "enc_conv1b.weight" { return Variant::Large; }
+            if n.as_ref() == "enc_conv1b.weight" {
+                return Variant::Large;
+            }
         }
         Variant::Base
     }
@@ -53,15 +55,35 @@ impl ChannelConfig {
     pub const fn for_variant(v: Variant) -> Self {
         match v {
             Variant::Base => Self {
-                ec1: 32, ec2: 48, ec3: 64, ec4: 80, ec5: 96,
-                dc4: 112, dc3: 96, dc2a: 64, dc2b: 64, dc1a: 64, dc1b: 32,
+                ec1: 32,
+                ec2: 48,
+                ec3: 64,
+                ec4: 80,
+                ec5: 96,
+                dc4: 112,
+                dc3: 96,
+                dc2a: 64,
+                dc2b: 64,
+                dc1a: 64,
+                dc1b: 32,
             },
             Variant::Small => Self {
-                ec1: 32, ec2: 32, ec3: 32, ec4: 32, ec5: 32,
-                dc4: 64, dc3: 64, dc2a: 64, dc2b: 32, dc1a: 32, dc1b: 32,
+                ec1: 32,
+                ec2: 32,
+                ec3: 32,
+                ec4: 32,
+                ec5: 32,
+                dc4: 64,
+                dc3: 64,
+                dc2a: 64,
+                dc2b: 32,
+                dc1a: 32,
+                dc1b: 32,
             },
             Variant::Large | Variant::XLarge => {
-                panic!("ChannelConfig::for_variant called with Large/XLarge — use UNetLarge instead")
+                panic!(
+                    "ChannelConfig::for_variant called with Large/XLarge — use UNetLarge instead"
+                )
             }
         }
     }

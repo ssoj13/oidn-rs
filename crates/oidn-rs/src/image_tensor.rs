@@ -10,7 +10,7 @@
 //! [`Image::to_rgb_f32`](crate::image::Image::to_rgb_f32) helper produces
 //! HWC. The two layout helpers in this module translate between them.
 
-use burn::tensor::{Tensor, TensorData, backend::Backend};
+use burn::tensor::{Device, Tensor, TensorData};
 
 /// Convert a flat NCHW `f32` slice into HWC layout.
 ///
@@ -54,13 +54,13 @@ pub fn hwc_to_chw(hwc: &[f32], channels: usize, height: usize, width: usize) -> 
 /// Pull a `[1, C, H, W]` Burn tensor onto the host as a `Vec<f32>` in CHW
 /// order. Returns the data plus the original `[N, C, H, W]` dims so the
 /// caller doesn't have to query them separately after the move.
-pub fn tensor_to_chw_vec<B: Backend>(t: Tensor<B, 4>) -> (Vec<f32>, [usize; 4]) {
+pub fn tensor_to_chw_vec(t: Tensor<4>) -> (Vec<f32>, [usize; 4]) {
     let dims = t.dims();
     let v = t
         .into_data()
         .convert::<f32>()
         .to_vec::<f32>()
-        .expect("Tensor<B, 4> → Vec<f32> conversion failed (NCHW must be f32-compatible)");
+        .expect("Tensor<4> → Vec<f32> conversion failed (NCHW must be f32-compatible)");
     (v, dims)
 }
 
@@ -68,18 +68,18 @@ pub fn tensor_to_chw_vec<B: Backend>(t: Tensor<B, 4>) -> (Vec<f32>, [usize; 4]) 
 ///
 /// Used by [`RtFilter::take_output_tensor`](crate::filters::rt::RtFilter::take_output_tensor)
 /// and the upcoming I.2 GPU pre-process path. The data is uploaded to
-/// `device` via Burn's [`TensorData`] machinery; for `WgpuBackend` this
+/// `device` via Burn's [`TensorData`] machinery; on a wgpu device this
 /// goes through cubecl-wgpu's staging path today (I.5 will swap that for
 /// an in-place wrap once the cubecl public API allows it).
-pub fn chw_vec_to_tensor<B: Backend>(
+pub fn chw_vec_to_tensor(
     data: Vec<f32>,
     channels: usize,
     height: usize,
     width: usize,
-    device: &B::Device,
-) -> Tensor<B, 4> {
+    device: &Device,
+) -> Tensor<4> {
     debug_assert_eq!(data.len(), channels * height * width);
-    Tensor::<B, 4>::from_data(TensorData::new(data, [1, channels, height, width]), device)
+    Tensor::<4>::from_data(TensorData::new(data, [1, channels, height, width]), device)
 }
 
 #[cfg(test)]
@@ -93,22 +93,17 @@ mod tests {
         // C=3, H=2, W=2. Each value is unique so any permutation bug shows.
         let chw = vec![
             // R-plane (row-major H×W)
-            1.0, 2.0,
-            3.0, 4.0,
-            // G-plane
-            5.0, 6.0,
-            7.0, 8.0,
-            // B-plane
-            9.0, 10.0,
-            11.0, 12.0,
+            1.0, 2.0, 3.0, 4.0, // G-plane
+            5.0, 6.0, 7.0, 8.0, // B-plane
+            9.0, 10.0, 11.0, 12.0,
         ];
         let hwc = chw_to_hwc(&chw, 3, 2, 2);
         // Expect interleaved RGB per pixel in row-major scan.
         let expected_hwc = vec![
-            1.0, 5.0, 9.0,   // (y=0, x=0)
-            2.0, 6.0, 10.0,  // (y=0, x=1)
-            3.0, 7.0, 11.0,  // (y=1, x=0)
-            4.0, 8.0, 12.0,  // (y=1, x=1)
+            1.0, 5.0, 9.0, // (y=0, x=0)
+            2.0, 6.0, 10.0, // (y=0, x=1)
+            3.0, 7.0, 11.0, // (y=1, x=0)
+            4.0, 8.0, 12.0, // (y=1, x=1)
         ];
         assert_eq!(hwc, expected_hwc);
 
@@ -130,17 +125,12 @@ mod tests {
     /// dims, regardless of backend memory layout assumptions.
     #[test]
     fn tensor_chw_vec_roundtrip_ndarray() {
-        use burn::backend::NdArray;
-        use burn::backend::ndarray::NdArrayDevice;
-        type B = NdArray<f32>;
-        let device = NdArrayDevice::default();
+        let device = Device::ndarray();
         let original = vec![
             // C=3, H=2, W=2 — same shape as the layout test above.
-            1.0_f32, 2.0, 3.0, 4.0,
-            5.0, 6.0, 7.0, 8.0,
-            9.0, 10.0, 11.0, 12.0,
+            1.0_f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0,
         ];
-        let t = chw_vec_to_tensor::<B>(original.clone(), 3, 2, 2, &device);
+        let t = chw_vec_to_tensor(original.clone(), 3, 2, 2, &device);
         let (back, dims) = tensor_to_chw_vec(t);
         assert_eq!(dims, [1, 3, 2, 2]);
         assert_eq!(back, original);

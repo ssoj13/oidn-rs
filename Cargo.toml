@@ -18,8 +18,14 @@ description   = "Pure Rust port of Intel Open Image Denoise on Burn + wgpu"
 
 [workspace.dependencies]
 # ML
-burn         = { version = "0.21", default-features = false, features = ["std", "ndarray"] }
-burn-wgpu    = { version = "0.21", default-features = false }
+# burn is a GIT dep (not crates.io): the wgpu-30 world needs burn's wgpu backend on cubecl main
+# (= wgpu 30). Published burn 0.21 hard-pins cubecl-wgpu 0.10 = wgpu 29, which would split the lock.
+# A [patch] cannot cross 0.21→0.22 (minor bump), so this is a direct git dep. The wgpu backend is
+# pulled via burn's `wgpu` feature (see oidn-rs crate), NOT a separate burn-wgpu dep. cubecl is left
+# transitive: oidn has ZERO #[cube] kernels, so it never names cubecl directly and burn's own pinned
+# cubecl rev (31c5506c, matching this burn rev) stays the single cubecl in the graph. When bumping
+# burn, keep both revs in lockstep with gsplat-rs (see colmap-rs migration notes).
+burn         = { git = "https://github.com/tracel-ai/burn", rev = "93e63e8e9cf215ffb870ed62132961588a774096", default-features = false, features = ["std", "ndarray"] }
 
 # math / data
 half         = { version = "2", features = ["bytemuck"] }

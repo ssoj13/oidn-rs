@@ -7,7 +7,10 @@ use std::path::PathBuf;
 fn weights_dir() -> Option<PathBuf> {
     // Tests run from the crate root (crates/oidn-tza/), so weights live up two levels.
     let p = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("..").join("..").join("data").join("weights");
+        .join("..")
+        .join("..")
+        .join("data")
+        .join("weights");
     if p.is_dir() { Some(p) } else { None }
 }
 
@@ -36,7 +39,9 @@ fn parse_all_shipped_tza_files() {
 
 #[test]
 fn rt_hdr_has_expected_layer_set() {
-    let Some(dir) = weights_dir() else { return; };
+    let Some(dir) = weights_dir() else {
+        return;
+    };
     let bytes = std::fs::read(dir.join("rt_hdr.tza")).unwrap();
     let map = oidn_tza::parse(&bytes).unwrap();
 
@@ -45,16 +50,23 @@ fn rt_hdr_has_expected_layer_set() {
 
     // Sample of names that must exist (they match PyTorch state_dict naming).
     for n in &[
-        "enc_conv0.weight", "enc_conv0.bias",
-        "enc_conv5b.weight", "dec_conv4a.weight",
-        "dec_conv1b.bias",  "dec_conv0.weight",
+        "enc_conv0.weight",
+        "enc_conv0.bias",
+        "enc_conv5b.weight",
+        "dec_conv4a.weight",
+        "dec_conv1b.bias",
+        "dec_conv0.weight",
     ] {
         assert!(map.contains_key(*n), "missing tensor {n}");
     }
 
     // Spot-check shapes (must match _ref/oidn/training/model.py:UNet base config).
     let w = &map["enc_conv0.weight"];
-    assert_eq!(w.desc.dims, vec![32, 3, 3, 3], "enc_conv0.weight shape mismatch");
+    assert_eq!(
+        w.desc.dims,
+        vec![32, 3, 3, 3],
+        "enc_conv0.weight shape mismatch"
+    );
     assert_eq!(w.desc.layout, oidn_tza::Layout::Oihw);
     assert_eq!(w.desc.dtype, oidn_tza::DType::Float16);
 

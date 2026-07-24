@@ -11,7 +11,12 @@ use std::path::Path;
 use half::f16;
 
 pub fn load_rgb_f32(path: &Path) -> Result<(Vec<f32>, usize, usize), Box<dyn std::error::Error>> {
-    match path.extension().and_then(|s| s.to_str()).map(str::to_ascii_lowercase).as_deref() {
+    match path
+        .extension()
+        .and_then(|s| s.to_str())
+        .map(str::to_ascii_lowercase)
+        .as_deref()
+    {
         Some("exr") => load_exr(path),
         Some("pfm") => load_pfm(path),
         Some("phm") => load_phm(path),
@@ -19,8 +24,18 @@ pub fn load_rgb_f32(path: &Path) -> Result<(Vec<f32>, usize, usize), Box<dyn std
     }
 }
 
-pub fn save_rgb_f32(path: &Path, pixels: &[f32], w: usize, h: usize) -> Result<(), Box<dyn std::error::Error>> {
-    match path.extension().and_then(|s| s.to_str()).map(str::to_ascii_lowercase).as_deref() {
+pub fn save_rgb_f32(
+    path: &Path,
+    pixels: &[f32],
+    w: usize,
+    h: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
+    match path
+        .extension()
+        .and_then(|s| s.to_str())
+        .map(str::to_ascii_lowercase)
+        .as_deref()
+    {
         Some("exr") => save_exr(path, pixels, w, h),
         Some("pfm") => save_pfm(path, pixels, w, h),
         Some("phm") => save_phm(path, pixels, w, h),
@@ -53,7 +68,12 @@ fn load_exr(path: &Path) -> Result<(Vec<f32>, usize, usize), Box<dyn std::error:
     Ok((flat, w, h))
 }
 
-fn save_exr(path: &Path, pixels: &[f32], w: usize, h: usize) -> Result<(), Box<dyn std::error::Error>> {
+fn save_exr(
+    path: &Path,
+    pixels: &[f32],
+    w: usize,
+    h: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
     use exr::prelude::*;
     debug_assert_eq!(pixels.len(), w * h * 3);
     write_rgb_file(path, w, h, |x, y| {
@@ -71,7 +91,12 @@ fn load_image(path: &Path) -> Result<(Vec<f32>, usize, usize), Box<dyn std::erro
 
 /// HDR-preserving image save. Branches on extension; refuses to silently
 /// quantise float pixels into an 8-bit container.
-fn save_image(path: &Path, pixels: &[f32], w: usize, h: usize) -> Result<(), Box<dyn std::error::Error>> {
+fn save_image(
+    path: &Path,
+    pixels: &[f32],
+    w: usize,
+    h: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
     debug_assert_eq!(pixels.len(), w * h * 3);
     let ext = path
         .extension()
@@ -162,7 +187,12 @@ fn load_pfm(path: &Path) -> Result<(Vec<f32>, usize, usize), Box<dyn std::error:
     Ok((flat, w, h))
 }
 
-fn save_pfm(path: &Path, pixels: &[f32], w: usize, h: usize) -> Result<(), Box<dyn std::error::Error>> {
+fn save_pfm(
+    path: &Path,
+    pixels: &[f32],
+    w: usize,
+    h: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
     debug_assert_eq!(pixels.len(), w * h * 3);
     let mut writer = BufWriter::new(File::create(path)?);
     // Negative scale → little-endian, matches reference OIDN writer.
@@ -204,7 +234,12 @@ fn load_phm(path: &Path) -> Result<(Vec<f32>, usize, usize), Box<dyn std::error:
     Ok((flat, w, h))
 }
 
-fn save_phm(path: &Path, pixels: &[f32], w: usize, h: usize) -> Result<(), Box<dyn std::error::Error>> {
+fn save_phm(
+    path: &Path,
+    pixels: &[f32],
+    w: usize,
+    h: usize,
+) -> Result<(), Box<dyn std::error::Error>> {
     debug_assert_eq!(pixels.len(), w * h * 3);
     let mut writer = BufWriter::new(File::create(path)?);
     writer.write_all(b"PH\n")?;

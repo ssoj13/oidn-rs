@@ -3,7 +3,11 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum TzaError {
     #[error("buffer too small at offset {offset}: need {need}, have {have}")]
-    OutOfBounds { offset: usize, need: usize, have: usize },
+    OutOfBounds {
+        offset: usize,
+        need: usize,
+        have: usize,
+    },
 
     #[error("invalid TZA magic: expected 0x41D7, got 0x{got:04X}")]
     BadMagic { got: u16 },
@@ -21,5 +25,9 @@ pub enum TzaError {
     BadName(#[from] std::string::FromUtf8Error),
 
     #[error("invalid layout/ndim mismatch: layout {layout:?} requires {expected} dims, got {got}")]
-    LayoutNdimMismatch { layout: String, expected: usize, got: usize },
+    LayoutNdimMismatch {
+        layout: String,
+        expected: usize,
+        got: usize,
+    },
 }

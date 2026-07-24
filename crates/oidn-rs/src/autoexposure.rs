@@ -42,8 +42,7 @@
 //! Used by `vfx-rs`'s `pt-denoise-oidn` (a path tracer working internally in
 //! ACEScg), which turns the feature on through its git dependency on this crate.
 
-use burn::prelude::ElementConversion;
-use burn::tensor::{Bool, Tensor, backend::Backend, module::avg_pool2d};
+use burn::tensor::{Bool, Tensor, module::avg_pool2d};
 
 /// Bin geometry from `_ref/oidn/devices/gpu/gpu_autoexposure.h:21`.
 pub const MAX_BIN_SIZE: usize = 16;
@@ -141,10 +140,13 @@ pub fn compute_scale(rgb_hwc: &[f32], width: usize, height: usize) -> f32 {
 /// stride = kernel = [`MAX_BIN_SIZE`], which floors the bin grid to whole
 /// 16-pixel cells (drops at most 15 boundary pixels per axis — irrelevant
 /// for a statistical estimator).
-pub fn compute_scale_tensor<B: Backend>(rgb_chw: Tensor<B, 4>) -> f32 {
+pub fn compute_scale_tensor(rgb_chw: Tensor<4>) -> f32 {
     let dims = rgb_chw.dims();
     debug_assert_eq!(dims[0], 1, "compute_scale_tensor expects batch size 1");
-    debug_assert_eq!(dims[1], 3, "compute_scale_tensor expects 3 colour channels (CHW)");
+    debug_assert_eq!(
+        dims[1], 3,
+        "compute_scale_tensor expects 3 colour channels (CHW)"
+    );
     let h = dims[2];
     let w = dims[3];
     if h < MAX_BIN_SIZE || w < MAX_BIN_SIZE {
@@ -159,13 +161,12 @@ pub fn compute_scale_tensor<B: Backend>(rgb_chw: Tensor<B, 4>) -> f32 {
     let r = rgb_chw.clone().narrow(1, 0, 1);
     let g = rgb_chw.clone().narrow(1, 1, 1);
     let b = rgb_chw.narrow(1, 2, 1);
-    let lum: Tensor<B, 4> =
-        r.mul_scalar(LUM_R) + g.mul_scalar(LUM_G) + b.mul_scalar(LUM_B);
+    let lum: Tensor<4> = r.mul_scalar(LUM_R) + g.mul_scalar(LUM_G) + b.mul_scalar(LUM_B);
 
     // 2. avg_pool2d over MAX_BIN_SIZE × MAX_BIN_SIZE → bin grid.
     //    count_include_pad=false; padding=0 (we already floored above so
     //    every pooled cell is full).
-    let binned: Tensor<B, 4> = avg_pool2d(
+    let binned: Tensor<4> = avg_pool2d(
         lum,
         [MAX_BIN_SIZE, MAX_BIN_SIZE],
         [MAX_BIN_SIZE, MAX_BIN_SIZE],
@@ -175,7 +176,7 @@ pub fn compute_scale_tensor<B: Backend>(rgb_chw: Tensor<B, 4>) -> f32 {
     );
 
     // 3. Reject bins with luminance ≤ EPS, take log of survivors.
-    let valid_mask: Tensor<B, 4, Bool> = binned.clone().greater_elem(EPS);
+    let valid_mask: Tensor<4, Bool> = binned.clone().greater_elem(EPS);
     let valid_f = valid_mask.clone().float();
     // clamp_min(EPS) keeps log() finite for the rejected bins; mask
     // zeroes their contribution to the sum, so any finite value is fine.
@@ -183,8 +184,8 @@ pub fn compute_scale_tensor<B: Backend>(rgb_chw: Tensor<B, 4>) -> f32 {
     let masked_log = log_binned.mul(valid_f.clone());
 
     // 4. Pull only the two reduced scalars to host.
-    let sum_log = masked_log.sum().into_scalar().elem::<f32>();
-    let count = valid_f.sum().into_scalar().elem::<f32>();
+    let sum_log = masked_log.sum().into_scalar::<f32>();
+    let count = valid_f.sum().into_scalar::<f32>();
     if count < 0.5 {
         return 1.0;
     }
@@ -195,17 +196,13 @@ pub fn compute_scale_tensor<B: Backend>(rgb_chw: Tensor<B, 4>) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use burn::backend::NdArray;
-    use burn::backend::ndarray::NdArrayDevice;
-    use burn::tensor::TensorData;
-
-    type B = NdArray<f32>;
+    use burn::tensor::{Device, TensorData};
 
     /// CPU and tensor implementations must agree within 1% on a synthetic
     /// HDR-ish gradient. Plan-stated tolerance (I.3 acceptance).
     #[test]
     fn cpu_vs_tensor_parity_gradient() {
-        let device = NdArrayDevice::default();
+        let device = Device::ndarray();
         // 64×48 gradient: luminance ranges roughly [0.01, 10.0]. Plenty of
         // dynamic range; 12 full 16×16 bins fit.
         let w = 64;
@@ -217,7 +214,7 @@ mod tests {
                 // luminances across the image to avoid pathological cases.
                 let v = 0.01_f32 + (x as f32 / w as f32) * 9.99;
                 let idx = (y * w + x) * 3;
-                hwc[idx]     = v;
+                hwc[idx] = v;
                 hwc[idx + 1] = v * 0.9;
                 hwc[idx + 2] = v * 0.5;
             }
@@ -226,7 +223,7 @@ mod tests {
 
         // HWC → CHW for the tensor path.
         let chw = crate::image_tensor::hwc_to_chw(&hwc, 3, h, w);
-        let t = Tensor::<B, 4>::from_data(TensorData::new(chw, [1, 3, h, w]), &device);
+        let t = Tensor::<4>::from_data(TensorData::new(chw, [1, 3, h, w]), &device);
         let gpu_scale = compute_scale_tensor(t);
 
         let rel = (cpu_scale - gpu_scale).abs() / cpu_scale.abs().max(1e-6);
@@ -241,13 +238,13 @@ mod tests {
     /// `count < 0.5`).
     #[test]
     fn cpu_vs_tensor_parity_dark() {
-        let device = NdArrayDevice::default();
+        let device = Device::ndarray();
         let (w, h) = (32, 32);
         let hwc = vec![0.0f32; w * h * 3];
         assert_eq!(compute_scale(&hwc, w, h), 1.0);
 
         let chw = crate::image_tensor::hwc_to_chw(&hwc, 3, h, w);
-        let t = Tensor::<B, 4>::from_data(TensorData::new(chw, [1, 3, h, w]), &device);
+        let t = Tensor::<4>::from_data(TensorData::new(chw, [1, 3, h, w]), &device);
         assert_eq!(compute_scale_tensor(t), 1.0);
     }
 }

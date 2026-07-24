@@ -1,4 +1,4 @@
-//! UNet inference pipeline — generic over Burn `Backend`.
+//! UNet inference pipeline (burn 0.22 — dynamic, device-selected backend).
 //!
 //! Two entry points share a single tensor-native core:
 //!
@@ -11,8 +11,7 @@
 //!   around `run_tensors` so callers that don't have a wgpu pipeline
 //!   keep working.
 
-use burn::prelude::Backend;
-use burn::tensor::Tensor;
+use burn::tensor::{Device, Tensor};
 use oidn_model::Net;
 
 use crate::{
@@ -38,13 +37,13 @@ pub type ProgressFn<'a> = dyn FnMut(f32) -> bool + 'a;
 /// `output_w` / `output_h` must match the input tensor dimensions (and
 /// the tile plan's image size).
 #[allow(clippy::too_many_arguments)]
-pub fn run_tensors<B: Backend>(
-    net: &Net<B>,
-    device: &B::Device,
+pub fn run_tensors(
+    net: &Net,
+    device: &Device,
     plan: &TilePlan,
-    color: Option<Tensor<B, 4>>,
-    albedo: Option<Tensor<B, 4>>,
-    normal: Option<Tensor<B, 4>>,
+    color: Option<Tensor<4>>,
+    albedo: Option<Tensor<4>>,
+    normal: Option<Tensor<4>>,
     output_w: usize,
     output_h: usize,
     transfer_kind: TransferFunction,
@@ -52,16 +51,16 @@ pub fn run_tensors<B: Backend>(
     user_input_scale: Option<f32>,
     nan_to_zero: bool,
     mut progress: Option<&mut ProgressFn<'_>>,
-) -> Result<Tensor<B, 4>, OidnError> {
+) -> Result<Tensor<4>, OidnError> {
     // Canonical sanitisation point: NaN/Inf -> 0 is applied here once on
     // each whole input tensor. `preprocess_input` / `postprocess_color`
     // also call `nan_to_zero` internally to match the reference's
     // per-kernel contract, but for the colour path the upstream pass is
     // what catches user-provided non-finite samples before tiling.
-    let sanitize = |t: Tensor<B, 4>| -> Tensor<B, 4> {
+    let sanitize = |t: Tensor<4>| -> Tensor<4> {
         if nan_to_zero {
             let finite_mask = t.clone().is_finite();
-            let zeros: Tensor<B, 4> = Tensor::zeros(t.dims(), &t.device());
+            let zeros: Tensor<4> = Tensor::zeros(t.dims(), &t.device());
             t.mask_where(finite_mask.bool_not(), zeros)
         } else {
             t
@@ -74,9 +73,14 @@ pub fn run_tensors<B: Backend>(
     let h = output_h;
     log::debug!(
         "unet_runner::run_tensors() {}x{} color={} albedo={} normal={} transfer={:?} hdr={} tiles={}",
-        w, h,
-        color.is_some(), albedo.is_some(), normal.is_some(),
-        transfer_kind, hdr, plan.jobs.len()
+        w,
+        h,
+        color.is_some(),
+        albedo.is_some(),
+        normal.is_some(),
+        transfer_kind,
+        hdr,
+        plan.jobs.len()
     );
 
     // Autoexposure — when HDR and no user override, use the GPU variant
@@ -96,7 +100,9 @@ pub fn run_tensors<B: Backend>(
     tf.set_input_scale(scale);
     log::debug!(
         "unet_runner: autoexposure scale={:.6} (hdr={}, user_scale={:?})",
-        scale, hdr, user_input_scale
+        scale,
+        hdr,
+        user_input_scale
     );
 
     let trace_tensors = tensor_diagnostics_enabled();
@@ -129,7 +135,7 @@ pub fn run_tensors<B: Backend>(
     );
 
     // Output accumulator: starts at zeros, slice_assign per tile.
-    let mut accum: Tensor<B, 4> = Tensor::zeros([1, 3, h, w], device);
+    let mut accum: Tensor<4> = Tensor::zeros([1, 3, h, w], device);
 
     let total_jobs = plan.jobs.len();
     let tile_w = plan.tile_w as usize;
@@ -152,14 +158,14 @@ pub fn run_tensors<B: Backend>(
         debug_assert!(pad_left + src_w <= tile_w);
         debug_assert!(pad_top + src_h <= tile_h);
 
-        let zero_pad = |src: &Tensor<B, 4>, channels: usize| -> Tensor<B, 4> {
+        let zero_pad = |src: &Tensor<4>, channels: usize| -> Tensor<4> {
             let rect = src.clone().slice([
                 0..1,
                 0..channels,
                 src_y..src_y + src_h,
                 src_x..src_x + src_w,
             ]);
-            let dst: Tensor<B, 4> = Tensor::zeros([1, channels, tile_h, tile_w], device);
+            let dst: Tensor<4> = Tensor::zeros([1, channels, tile_h, tile_w], device);
             dst.slice_assign(
                 [
                     0..1,
@@ -171,7 +177,7 @@ pub fn run_tensors<B: Backend>(
             )
         };
 
-        let mut channel_parts: Vec<Tensor<B, 4>> = Vec::with_capacity(3);
+        let mut channel_parts: Vec<Tensor<4>> = Vec::with_capacity(3);
 
         if let Some(src) = color.as_ref() {
             let padded = zero_pad(src, 3);
@@ -186,15 +192,18 @@ pub fn run_tensors<B: Backend>(
         if let Some(src) = normal.as_ref() {
             let padded = zero_pad(src, 3);
             // Reference getNormal(): clamp(-1, 1) → *0.5 + 0.5.
-            let normalized = padded.clamp(-1.0, 1.0).mul_scalar(0.5_f32).add_scalar(0.5_f32);
+            let normalized = padded
+                .clamp(-1.0, 1.0)
+                .mul_scalar(0.5_f32)
+                .add_scalar(0.5_f32);
             channel_parts.push(normalized);
         }
 
         // 2. Concat along channel dim → [1, in_c, tile_h, tile_w].
-        let input_tensor: Tensor<B, 4> = Tensor::cat(channel_parts, 1);
+        let input_tensor: Tensor<4> = Tensor::cat(channel_parts, 1);
 
         // 3. Forward.
-        let output_tensor: Tensor<B, 4> = net.forward(input_tensor);
+        let output_tensor: Tensor<4> = net.forward(input_tensor);
 
         // 4. Postprocess (nan_to_zero -> clamp -> inverse transfer ->
         //    [ldr clamp] -> *output_scale) then crop + slice_assign.
@@ -202,8 +211,18 @@ pub fn run_tensors<B: Backend>(
         //    the surrounding clamp/scale still apply per reference.
         let post = gpu_ops::postprocess_color(output_tensor, &tf, hdr, false, tf.output_scale);
 
-        let Rect { x: ox, y: oy, w: ow, h: oh } = job.output_src_in_tile;
-        let Rect { x: dx, y: dy, w: _, h: _ } = job.output_dst;
+        let Rect {
+            x: ox,
+            y: oy,
+            w: ow,
+            h: oh,
+        } = job.output_src_in_tile;
+        let Rect {
+            x: dx,
+            y: dy,
+            w: _,
+            h: _,
+        } = job.output_dst;
         let cropped = post.slice([
             0..1,
             0..3,
@@ -222,7 +241,9 @@ pub fn run_tensors<B: Backend>(
 
         if let Some(cb) = progress.as_deref_mut() {
             let fraction = (tile_idx + 1) as f32 / total_jobs as f32;
-            if !cb(fraction) { return Err(OidnError::Cancelled); }
+            if !cb(fraction) {
+                return Err(OidnError::Cancelled);
+            }
         }
     }
 
@@ -242,9 +263,9 @@ pub fn run_tensors<B: Backend>(
 /// `pt-denoise-oidn` and the tensor-native API on
 /// [`RtFilter`](crate::filters::rt::RtFilter).
 #[allow(clippy::too_many_arguments)]
-pub fn run<B: Backend>(
-    net: &Net<B>,
-    device: &B::Device,
+pub fn run(
+    net: &Net,
+    device: &Device,
     plan: &TilePlan,
     color: Option<&Image<'_>>,
     albedo: Option<&Image<'_>>,
@@ -268,15 +289,28 @@ pub fn run<B: Backend>(
         log::debug!("unet input color stats: min={cmin:.4} max={cmax:.4} mean={cmean:.4}");
     }
 
-    let color_t = color_buf.as_deref().map(|buf| upload_hwc_as_chw_tensor::<B>(buf, w, h, device));
-    let albedo_t = albedo_buf.as_deref().map(|buf| upload_hwc_as_chw_tensor::<B>(buf, w, h, device));
-    let normal_t = normal_buf.as_deref().map(|buf| upload_hwc_as_chw_tensor::<B>(buf, w, h, device));
+    let color_t = color_buf
+        .as_deref()
+        .map(|buf| upload_hwc_as_chw_tensor(buf, w, h, device));
+    let albedo_t = albedo_buf
+        .as_deref()
+        .map(|buf| upload_hwc_as_chw_tensor(buf, w, h, device));
+    let normal_t = normal_buf
+        .as_deref()
+        .map(|buf| upload_hwc_as_chw_tensor(buf, w, h, device));
 
     let accum = run_tensors(
-        net, device, plan,
-        color_t, albedo_t, normal_t,
-        w, h,
-        transfer_kind, hdr, user_input_scale,
+        net,
+        device,
+        plan,
+        color_t,
+        albedo_t,
+        normal_t,
+        w,
+        h,
+        transfer_kind,
+        hdr,
+        user_input_scale,
         nan_to_zero,
         progress,
     )?;
@@ -294,14 +328,14 @@ pub fn run<B: Backend>(
 }
 
 /// Stage a flat HWC `f32` slice as a `[1, 3, H, W]` Burn tensor on `device`.
-fn upload_hwc_as_chw_tensor<B: Backend>(
+fn upload_hwc_as_chw_tensor(
     buf_hwc: &[f32],
     width: usize,
     height: usize,
-    device: &B::Device,
-) -> Tensor<B, 4> {
+    device: &Device,
+) -> Tensor<4> {
     let chw = image_tensor::hwc_to_chw(buf_hwc, 3, height, width);
-    image_tensor::chw_vec_to_tensor::<B>(chw, 3, height, width, device)
+    image_tensor::chw_vec_to_tensor(chw, 3, height, width, device)
 }
 
 fn quick_stats(data: &[f32]) -> (f32, f32, f32) {
@@ -313,8 +347,12 @@ fn quick_stats(data: &[f32]) -> (f32, f32, f32) {
     let mut sum = 0.0f64;
     for &v in data {
         if v.is_finite() {
-            if v < min { min = v; }
-            if v > max { max = v; }
+            if v < min {
+                min = v;
+            }
+            if v > max {
+                max = v;
+            }
             sum += v as f64;
         }
     }
@@ -326,11 +364,16 @@ fn tensor_diagnostics_enabled() -> bool {
         return true;
     }
     std::env::var("OIDN_TRACE_TENSORS")
-        .map(|v| matches!(v.as_str(), "1" | "true" | "TRUE" | "yes" | "YES" | "on" | "ON"))
+        .map(|v| {
+            matches!(
+                v.as_str(),
+                "1" | "true" | "TRUE" | "yes" | "YES" | "on" | "ON"
+            )
+        })
         .unwrap_or(false)
 }
 
-fn log_tensor_stats<B: Backend>(label: &str, tensor: &Tensor<B, 4>) {
+fn log_tensor_stats(label: &str, tensor: &Tensor<4>) {
     let dims = tensor.dims();
     match tensor.clone().into_data().convert::<f32>().to_vec::<f32>() {
         Ok(data) => {
@@ -408,7 +451,11 @@ impl TensorStats {
             gt_one,
             min,
             max,
-            mean: if finite == 0 { 0.0 } else { (sum / finite as f64) as f32 },
+            mean: if finite == 0 {
+                0.0
+            } else {
+                (sum / finite as f64) as f32
+            },
         }
     }
 }

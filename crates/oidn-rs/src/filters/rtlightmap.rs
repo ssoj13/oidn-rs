@@ -9,7 +9,7 @@
 
 use std::path::PathBuf;
 
-use burn::tensor::backend::Backend;
+use burn::tensor::Device;
 use oidn_model::{Net, UNet, Variant, load_tza};
 
 use crate::{
@@ -22,8 +22,8 @@ use crate::{
     tile::{self, DEFAULT_MAX_TILE_SIZE, MIN_TILE_ALIGNMENT, RECEPTIVE_FIELD_BASE, TilePlan},
 };
 
-pub struct RtLightmapFilterBuilder<'b, B: Backend> {
-    device: &'b B::Device,
+pub struct RtLightmapFilterBuilder<'b> {
+    device: &'b Device,
     weights_dir: PathBuf,
     directional: bool,
     quality: Quality,
@@ -31,8 +31,8 @@ pub struct RtLightmapFilterBuilder<'b, B: Backend> {
     user_weights: Option<Vec<u8>>,
 }
 
-impl<'b, B: Backend> RtLightmapFilterBuilder<'b, B> {
-    pub fn new(device: &'b B::Device, weights_dir: impl Into<PathBuf>) -> Self {
+impl<'b> RtLightmapFilterBuilder<'b> {
+    pub fn new(device: &'b Device, weights_dir: impl Into<PathBuf>) -> Self {
         Self {
             device,
             weights_dir: weights_dir.into(),
@@ -46,9 +46,18 @@ impl<'b, B: Backend> RtLightmapFilterBuilder<'b, B> {
     /// In directional mode the lightmap stores signed per-axis irradiance
     /// gradients; we use Linear transfer + snorm input handling instead of
     /// Log (matches `RTLightmapFilter::setInt("directional", ...)` semantics).
-    pub fn directional(mut self, v: bool) -> Self { self.directional = v; self }
-    pub fn quality(mut self, q: Quality) -> Self { self.quality = q; self }
-    pub fn input_scale(mut self, s: Option<f32>) -> Self { self.user_input_scale = s; self }
+    pub fn directional(mut self, v: bool) -> Self {
+        self.directional = v;
+        self
+    }
+    pub fn quality(mut self, q: Quality) -> Self {
+        self.quality = q;
+        self
+    }
+    pub fn input_scale(mut self, s: Option<f32>) -> Self {
+        self.user_input_scale = s;
+        self
+    }
 
     /// Use the caller-supplied TZA blob instead of looking up
     /// `rtlightmap_hdr.tza` / `rtlightmap_dir.tza` in `weights_dir`. Mirrors
@@ -60,7 +69,7 @@ impl<'b, B: Backend> RtLightmapFilterBuilder<'b, B> {
         self
     }
 
-    pub fn build(self) -> RtLightmapFilter<'b, B> {
+    pub fn build(self) -> RtLightmapFilter<'b> {
         RtLightmapFilter {
             device: self.device,
             weights_dir: self.weights_dir,
@@ -80,8 +89,8 @@ impl<'b, B: Backend> RtLightmapFilterBuilder<'b, B> {
     }
 }
 
-pub struct RtLightmapFilter<'b, B: Backend> {
-    device: &'b B::Device,
+pub struct RtLightmapFilter<'b> {
+    device: &'b Device,
     weights_dir: PathBuf,
     directional: bool,
     quality: Quality,
@@ -91,7 +100,7 @@ pub struct RtLightmapFilter<'b, B: Backend> {
     color: Option<OwnedImage>,
     output: Option<OwnedImageMut>,
 
-    net: Option<Net<B>>,
+    net: Option<Net>,
     plan: Option<TilePlan>,
     model_key: Option<ModelKey>,
     progress: Option<Box<ProgressFn<'static>>>,
@@ -130,24 +139,43 @@ impl OwnedImage {
         }
     }
     fn view(&self) -> Image<'_> {
-        Image { data: &self.data, width: self.width, height: self.height,
-                row_stride: self.row_stride, format: self.format }
+        Image {
+            data: &self.data,
+            width: self.width,
+            height: self.height,
+            row_stride: self.row_stride,
+            format: self.format,
+        }
     }
 }
 
 impl OwnedImageMut {
     fn empty(width: usize, height: usize, format: PixelFormat) -> Self {
         let row_stride = width * format.pixel_size();
-        Self { data: vec![0u8; row_stride * height], width, height, row_stride, format }
+        Self {
+            data: vec![0u8; row_stride * height],
+            width,
+            height,
+            row_stride,
+            format,
+        }
     }
     fn view_mut(&mut self) -> ImageMut<'_> {
-        ImageMut { data: &mut self.data, width: self.width, height: self.height,
-                   row_stride: self.row_stride, format: self.format }
+        ImageMut {
+            data: &mut self.data,
+            width: self.width,
+            height: self.height,
+            row_stride: self.row_stride,
+            format: self.format,
+        }
     }
 }
 
-impl<'b, B: Backend> RtLightmapFilter<'b, B> {
-    pub fn builder(device: &'b B::Device, weights_dir: impl Into<PathBuf>) -> RtLightmapFilterBuilder<'b, B> {
+impl<'b> RtLightmapFilter<'b> {
+    pub fn builder(
+        device: &'b Device,
+        weights_dir: impl Into<PathBuf>,
+    ) -> RtLightmapFilterBuilder<'b> {
         RtLightmapFilterBuilder::new(device, weights_dir)
     }
 
@@ -176,7 +204,9 @@ impl<'b, B: Backend> RtLightmapFilter<'b, B> {
         Some((o.data, o.width, o.height, o.format))
     }
 
-    pub fn model_key(&self) -> Option<&ModelKey> { self.model_key.as_ref() }
+    pub fn model_key(&self) -> Option<&ModelKey> {
+        self.model_key.as_ref()
+    }
 
     /// Install a progress callback. Receives `[0.0, 1.0]` after each
     /// processed tile; returning `false` aborts execution with
@@ -187,15 +217,16 @@ impl<'b, B: Backend> RtLightmapFilter<'b, B> {
 
     fn select_model(&self) -> ModelKey {
         // rtlightmap_filter.cpp:19-20 — directional → rtlightmap_dir, otherwise rtlightmap_hdr.
-        if self.directional { ModelKey::new("rtlightmap_dir") } else { ModelKey::new("rtlightmap_hdr") }
+        if self.directional {
+            ModelKey::new("rtlightmap_dir")
+        } else {
+            ModelKey::new("rtlightmap_hdr")
+        }
     }
 }
 
-impl<'b, B: Backend> Filter for RtLightmapFilter<'b, B> {
-    fn set_progress(
-        &mut self,
-        cb: Box<dyn FnMut(f32) -> bool + 'static>,
-    ) -> Result<(), OidnError> {
+impl<'b> Filter for RtLightmapFilter<'b> {
+    fn set_progress(&mut self, cb: Box<dyn FnMut(f32) -> bool + 'static>) -> Result<(), OidnError> {
         // The inherent `set_progress` boxes any closure; here we already
         // have a boxed dyn — store it directly to avoid re-boxing.
         self.progress = Some(cb);
@@ -203,7 +234,9 @@ impl<'b, B: Backend> Filter for RtLightmapFilter<'b, B> {
     }
 
     fn commit(&mut self) -> Result<(), OidnError> {
-        if self.color.is_none() { return Err(OidnError::Unset("color")); }
+        if self.color.is_none() {
+            return Err(OidnError::Unset("color"));
+        }
 
         let key = self.select_model();
         let _ = self.quality; // single-variant filter — no quality routing
@@ -226,7 +259,7 @@ impl<'b, B: Backend> Filter for RtLightmapFilter<'b, B> {
         let tensors = oidn_tza::parse(&bytes)?;
 
         // Lightmap models always take 3 colour channels → 3 channels out.
-        let unet = UNet::<B>::new(3, 3, Variant::Base, self.device);
+        let unet = UNet::new(3, 3, Variant::Base, self.device);
         let unet = load_tza(unet, &tensors, self.device)?;
         self.net = Some(Net::Base(unet));
 
@@ -251,9 +284,11 @@ impl<'b, B: Backend> Filter for RtLightmapFilter<'b, B> {
     }
 
     fn execute(&mut self) -> Result<(), OidnError> {
-        if !self.committed { self.commit()?; }
-        let net   = self.net.as_ref().ok_or(OidnError::Unset("model"))?;
-        let plan  = self.plan.as_ref().ok_or(OidnError::Unset("plan"))?;
+        if !self.committed {
+            self.commit()?;
+        }
+        let net = self.net.as_ref().ok_or(OidnError::Unset("model"))?;
+        let plan = self.plan.as_ref().ok_or(OidnError::Unset("plan"))?;
         let output = self.output.as_mut().ok_or(OidnError::Unset("output"))?;
 
         // rtlightmap_filter.cpp:24-30 — HDR uses Log, directional uses Linear.

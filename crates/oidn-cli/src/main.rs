@@ -6,8 +6,8 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use clap::{ArgAction, Args, Parser, Subcommand, ValueEnum};
-use oidn_rs::prelude::*;
 use oidn_rs::prelude::wgpu_prelude::*;
+use oidn_rs::prelude::*;
 use oidn_rs::registry::select_rt;
 use oidn_rs::weights;
 
@@ -195,7 +195,13 @@ fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
     match cli.cmd {
         Cmd::Probe { path, json } => probe(&path, json),
         Cmd::Denoise(args) => denoise(args),
-        Cmd::Bench { resolution, iters, quality, weights_dir, threads } => {
+        Cmd::Bench {
+            resolution,
+            iters,
+            quality,
+            weights_dir,
+            threads,
+        } => {
             if threads.is_some() {
                 tracing::info!("--threads is a no-op on the wgpu backend");
             }
@@ -281,7 +287,10 @@ fn denoise(args: DenoiseArgs) -> Result<(), Box<dyn std::error::Error>> {
         // `weights_dir` at commit time.
         None
     };
-    let weights_dir = args.weights_dir.clone().unwrap_or_else(|| PathBuf::from("data/weights"));
+    let weights_dir = args
+        .weights_dir
+        .clone()
+        .unwrap_or_else(|| PathBuf::from("data/weights"));
 
     match args.filter {
         FilterKind::Rt => run_rt(
@@ -321,7 +330,7 @@ fn run_rt(
     w: usize,
     h: usize,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let mut builder = RtFilter::<WgpuBackend>::builder(&device.handle, weights_dir)
+    let mut builder = RtFilter::builder(&device.handle, weights_dir)
         .hdr(args.hdr)
         .srgb(args.srgb)
         .clean_aux(args.clean_aux)
@@ -381,7 +390,7 @@ fn run_rtlightmap(
     w: usize,
     h: usize,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let mut builder = RtLightmapFilter::<WgpuBackend>::builder(&device.handle, weights_dir)
+    let mut builder = RtLightmapFilter::builder(&device.handle, weights_dir)
         .directional(args.directional)
         .quality(args.quality)
         .input_scale(args.input_scale);
@@ -422,10 +431,7 @@ fn compare_against_reference(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let (ref_pixels, rw, rh) = io::load_rgb_f32(ref_path)?;
     if rw != w || rh != h {
-        return Err(format!(
-            "reference image is {rw}x{rh}, output is {w}x{h}",
-        )
-        .into());
+        return Err(format!("reference image is {rw}x{rh}, output is {w}x{h}",).into());
     }
     let mut sse = 0.0f64;
     let mut maxe = 0.0f32;
@@ -437,7 +443,11 @@ fn compare_against_reference(
         }
     }
     let mse = (sse / out_pixels.len() as f64) as f32;
-    let psnr = if mse > 0.0 { 10.0 * (1.0 / mse).log10() } else { f32::INFINITY };
+    let psnr = if mse > 0.0 {
+        10.0 * (1.0 / mse).log10()
+    } else {
+        f32::INFINITY
+    };
     println!("compare: mse={mse:.6e} psnr={psnr:.2} dB max={maxe:.6e}");
     if let Some(thr) = maxerror {
         if mse > thr {
@@ -461,7 +471,9 @@ fn parse_quality_clap(s: &str) -> Result<Quality, String> {
 }
 
 fn parse_resolution(s: &str) -> Result<(usize, usize), Box<dyn std::error::Error>> {
-    let (w, h) = s.split_once('x').ok_or("resolution must be WxH (e.g. 1024x1024)")?;
+    let (w, h) = s
+        .split_once('x')
+        .ok_or("resolution must be WxH (e.g. 1024x1024)")?;
     Ok((w.parse()?, h.parse()?))
 }
 
@@ -508,7 +520,7 @@ fn bench(
     }
     let color_img = Image::from_rgb_f32(&color, w, h);
 
-    let mut filter = RtFilter::<WgpuBackend>::builder(&device.handle, weights_dir)
+    let mut filter = RtFilter::builder(&device.handle, weights_dir)
         .hdr(true)
         .quality(quality)
         .build();
@@ -541,7 +553,10 @@ fn bench(
     let med = times_ms[times_ms.len() / 2];
     let mp = (w * h) as f64 / 1_000_000.0;
 
-    println!("resolution={w}x{h} ({mp:.2} MP) quality={:?} iters={iters}", quality);
+    println!(
+        "resolution={w}x{h} ({mp:.2} MP) quality={:?} iters={iters}",
+        quality
+    );
     println!("  min={min:>8.2} ms  median={med:>8.2} ms  avg={avg:>8.2} ms  max={max:>8.2} ms");
     println!("  throughput @ median: {:.2} MP/s", mp / (med / 1000.0));
 

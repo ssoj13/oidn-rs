@@ -48,7 +48,11 @@ impl TransferState {
         let scaled = forward_one(kind, Y_MAX, 1.0);
         let xmax = scaled.max(forward_one(kind, Y_MAX, 1.0));
         s.norm_scale = if xmax > 0.0 { 1.0 / xmax } else { 1.0 };
-        s.rcp_norm_scale = if s.norm_scale != 0.0 { 1.0 / s.norm_scale } else { 1.0 };
+        s.rcp_norm_scale = if s.norm_scale != 0.0 {
+            1.0 / s.norm_scale
+        } else {
+            1.0
+        };
         s
     }
 
@@ -102,12 +106,20 @@ pub(crate) const SRGB_X0: f32 = 0.04045;
 
 #[inline]
 pub fn srgb_forward(y: f32) -> f32 {
-    if y <= SRGB_Y0 { SRGB_A * y } else { SRGB_B * y.powf(SRGB_C) + SRGB_D }
+    if y <= SRGB_Y0 {
+        SRGB_A * y
+    } else {
+        SRGB_B * y.powf(SRGB_C) + SRGB_D
+    }
 }
 
 #[inline]
 pub fn srgb_inverse(x: f32) -> f32 {
-    if x <= SRGB_X0 { x / SRGB_A } else { ((x - SRGB_D) / SRGB_B).powf(1.0 / SRGB_C) }
+    if x <= SRGB_X0 {
+        x / SRGB_A
+    } else {
+        ((x - SRGB_D) / SRGB_B).powf(1.0 / SRGB_C)
+    }
 }
 
 // ---------- PU constants from color.h ----------

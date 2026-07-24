@@ -1,7 +1,9 @@
 //! RT filter — public API + glue, equivalent to `_ref/oidn/core/rt_filter.cpp`.
 //!
-//! Generic over Burn `Backend` so the same filter type can run on CPU
-//! (`burn::backend::NdArray`) for tests and on `WgpuBackend` in the CLI.
+//! In burn 0.22 the backend is dynamic (device-selected), so the same filter
+//! type runs on CPU (`Device::ndarray()`) for tests and on wgpu
+//! (`Device::wgpu(..)`) in the CLI — the choice is the device, not a type
+//! parameter.
 //!
 //! Supports three network topologies via the `Net` enum dispatcher:
 //! base / small `UNet` and the wider `UNetLarge`. Variant is detected from
@@ -15,7 +17,7 @@
 //!   reserves a host-side buffer; [`Self::take_output`] returns those bytes.
 //!   Used by the CLI and the test fixtures.
 //! - **Tensor mode.** [`Self::set_color_tensor`] etc. take a Burn
-//!   `Tensor<B, 4>` (`[1, 3, H, W]` NCHW). [`Self::allocate_output_tensor`]
+//!   `Tensor<4>` (`[1, 3, H, W]` NCHW). [`Self::allocate_output_tensor`]
 //!   declares the output shape; [`Self::take_output_tensor`] returns the
 //!   denoised accumulator. Used by squarebob's wgpu bridge to keep pixels
 //!   on-device end-to-end.
@@ -26,7 +28,7 @@
 
 use std::path::PathBuf;
 
-use burn::tensor::{Tensor, backend::Backend};
+use burn::tensor::{Device, Tensor};
 use oidn_model::{Net, UNet, UNetLarge, Variant, load_tza, load_tza_large};
 
 use crate::{
@@ -39,8 +41,8 @@ use crate::{
     tile::{self, DEFAULT_MAX_TILE_SIZE, MIN_TILE_ALIGNMENT, RECEPTIVE_FIELD_BASE, TilePlan},
 };
 
-pub struct RtFilterBuilder<'b, B: Backend> {
-    device: &'b B::Device,
+pub struct RtFilterBuilder<'b> {
+    device: &'b Device,
     weights_dir: PathBuf,
     hdr: bool,
     srgb: bool,
@@ -52,8 +54,8 @@ pub struct RtFilterBuilder<'b, B: Backend> {
     nan_to_zero: bool,
 }
 
-impl<'b, B: Backend> RtFilterBuilder<'b, B> {
-    pub fn new(device: &'b B::Device, weights_dir: impl Into<PathBuf>) -> Self {
+impl<'b> RtFilterBuilder<'b> {
+    pub fn new(device: &'b Device, weights_dir: impl Into<PathBuf>) -> Self {
         Self {
             device,
             weights_dir: weights_dir.into(),
@@ -118,7 +120,7 @@ impl<'b, B: Backend> RtFilterBuilder<'b, B> {
         self
     }
 
-    pub fn build(self) -> RtFilter<'b, B> {
+    pub fn build(self) -> RtFilter<'b> {
         RtFilter {
             device: self.device,
             weights_dir: self.weights_dir,
@@ -149,8 +151,8 @@ impl<'b, B: Backend> RtFilterBuilder<'b, B> {
     }
 }
 
-pub struct RtFilter<'b, B: Backend> {
-    device: &'b B::Device,
+pub struct RtFilter<'b> {
+    device: &'b Device,
     weights_dir: PathBuf,
     hdr: bool,
     srgb: bool,
@@ -168,18 +170,18 @@ pub struct RtFilter<'b, B: Backend> {
     output: Option<OwnedImageMut>,
 
     // --- Tensor path (zero host-roundtrip; Phase I.5/I.6) ---
-    color_tensor: Option<Tensor<B, 4>>,
-    albedo_tensor: Option<Tensor<B, 4>>,
-    normal_tensor: Option<Tensor<B, 4>>,
+    color_tensor: Option<Tensor<4>>,
+    albedo_tensor: Option<Tensor<4>>,
+    normal_tensor: Option<Tensor<4>>,
     /// Populated by `execute()` in tensor mode; consumed by
     /// [`Self::take_output_tensor`].
-    output_tensor: Option<Tensor<B, 4>>,
+    output_tensor: Option<Tensor<4>>,
     /// `(width, height)` declared by [`Self::allocate_output_tensor`].
     /// Doubles as the tile-plan / shape source when the tensor path is
     /// active.
     output_tensor_dims: Option<(usize, usize)>,
 
-    net: Option<Net<B>>,
+    net: Option<Net>,
     plan: Option<TilePlan>,
     model_key: Option<ModelKey>,
     progress: Option<Box<ProgressFn<'static>>>,
@@ -195,8 +197,8 @@ pub struct RtFilter<'b, B: Backend> {
 /// This owns the expensive committed state (`Net` weights + tile plan) but no
 /// per-pass input/output tensor slots. Reuse this across frames/passes, and
 /// pass fresh tensors to [`Self::execute_tensors`] each time.
-pub struct CommittedRtFilter<'b, B: Backend> {
-    device: &'b B::Device,
+pub struct CommittedRtFilter<'b> {
+    device: &'b Device,
     hdr: bool,
     transfer: TransferFunction,
     user_input_scale: Option<f32>,
@@ -206,13 +208,13 @@ pub struct CommittedRtFilter<'b, B: Backend> {
     has_normal: bool,
     width: usize,
     height: usize,
-    net: Net<B>,
+    net: Net,
     plan: TilePlan,
     model_key: ModelKey,
 }
 
-struct RtCommitArtifacts<B: Backend> {
-    net: Net<B>,
+struct RtCommitArtifacts {
+    net: Net,
     plan: TilePlan,
     model_key: ModelKey,
 }
@@ -279,11 +281,11 @@ impl OwnedImageMut {
     }
 }
 
-impl<'b, B: Backend> RtFilter<'b, B> {
+impl<'b> RtFilter<'b> {
     pub fn builder(
-        device: &'b B::Device,
+        device: &'b Device,
         weights_dir: impl Into<PathBuf>,
-    ) -> RtFilterBuilder<'b, B> {
+    ) -> RtFilterBuilder<'b> {
         RtFilterBuilder::new(device, weights_dir)
     }
 
@@ -322,8 +324,8 @@ impl<'b, B: Backend> RtFilter<'b, B> {
     /// The tensor is stored by reference (Burn tensors are cheap to
     /// `clone()`); no data crosses to host. `execute()` runs the
     /// tensor-native pipeline when *any* `set_*_tensor` was used.
-    pub fn set_color_tensor(&mut self, t: Tensor<B, 4>) {
-        debug_assert_tensor_chw_3::<B>(&t, "set_color_tensor");
+    pub fn set_color_tensor(&mut self, t: Tensor<4>) {
+        debug_assert_tensor_chw_3(&t, "set_color_tensor");
         let needs_invalidate =
             self.color_tensor.is_none() || tensor_dims_changed(&self.color_tensor, &t);
         self.color_tensor = Some(t);
@@ -333,8 +335,8 @@ impl<'b, B: Backend> RtFilter<'b, B> {
     }
 
     /// Tensor-native albedo input. See [`Self::set_color_tensor`].
-    pub fn set_albedo_tensor(&mut self, t: Tensor<B, 4>) {
-        debug_assert_tensor_chw_3::<B>(&t, "set_albedo_tensor");
+    pub fn set_albedo_tensor(&mut self, t: Tensor<4>) {
+        debug_assert_tensor_chw_3(&t, "set_albedo_tensor");
         let needs_invalidate =
             self.albedo_tensor.is_none() || tensor_dims_changed(&self.albedo_tensor, &t);
         self.albedo_tensor = Some(t);
@@ -344,8 +346,8 @@ impl<'b, B: Backend> RtFilter<'b, B> {
     }
 
     /// Tensor-native normal input. See [`Self::set_color_tensor`].
-    pub fn set_normal_tensor(&mut self, t: Tensor<B, 4>) {
-        debug_assert_tensor_chw_3::<B>(&t, "set_normal_tensor");
+    pub fn set_normal_tensor(&mut self, t: Tensor<4>) {
+        debug_assert_tensor_chw_3(&t, "set_normal_tensor");
         let needs_invalidate =
             self.normal_tensor.is_none() || tensor_dims_changed(&self.normal_tensor, &t);
         self.normal_tensor = Some(t);
@@ -362,7 +364,7 @@ impl<'b, B: Backend> RtFilter<'b, B> {
     /// same shape requires a fresh [`Self::allocate_output_tensor`]
     /// (idempotent — cached model and plan are reused when shape
     /// matches).
-    pub fn take_output_tensor(&mut self) -> Option<Tensor<B, 4>> {
+    pub fn take_output_tensor(&mut self) -> Option<Tensor<4>> {
         self.output_tensor.take()
     }
 
@@ -423,7 +425,7 @@ impl<'b, B: Backend> RtFilter<'b, B> {
         has_color: bool,
         has_albedo: bool,
         has_normal: bool,
-    ) -> Result<CommittedRtFilter<'b, B>, OidnError> {
+    ) -> Result<CommittedRtFilter<'b>, OidnError> {
         if !has_color && !has_albedo && !has_normal {
             return Err(OidnError::Unset("color/albedo/normal"));
         }
@@ -498,7 +500,7 @@ impl<'b, B: Backend> RtFilter<'b, B> {
         has_color: bool,
         has_albedo: bool,
         has_normal: bool,
-    ) -> Result<RtCommitArtifacts<B>, OidnError> {
+    ) -> Result<RtCommitArtifacts, OidnError> {
         // User-supplied weights override the registry/quality lookup entirely.
         let (stem, bytes): (String, Vec<u8>) = if let Some(bytes) = self.user_weights.clone() {
             ("user".to_string(), bytes)
@@ -552,11 +554,11 @@ impl<'b, B: Backend> RtFilter<'b, B> {
         };
         let net = match variant {
             Variant::Base | Variant::Small => {
-                let unet = UNet::<B>::new(in_channels, out_channels, variant, self.device);
+                let unet = UNet::new(in_channels, out_channels, variant, self.device);
                 Net::Base(load_tza(unet, &tensors, self.device)?)
             }
             Variant::Large | Variant::XLarge => {
-                let unet = UNetLarge::<B>::new(in_channels, out_channels, self.device);
+                let unet = UNetLarge::new(in_channels, out_channels, self.device);
                 Net::Large(load_tza_large(unet, &tensors, self.device)?)
             }
         };
@@ -589,14 +591,14 @@ impl<'b, B: Backend> RtFilter<'b, B> {
     }
 }
 
-fn tensor_dims_changed<B: Backend>(slot: &Option<Tensor<B, 4>>, new: &Tensor<B, 4>) -> bool {
+fn tensor_dims_changed(slot: &Option<Tensor<4>>, new: &Tensor<4>) -> bool {
     match slot {
         None => true,
         Some(existing) => existing.dims() != new.dims(),
     }
 }
 
-fn debug_assert_tensor_chw_3<B: Backend>(t: &Tensor<B, 4>, who: &'static str) {
+fn debug_assert_tensor_chw_3(t: &Tensor<4>, who: &'static str) {
     let dims = t.dims();
     debug_assert_eq!(dims[0], 1, "{who}: batch size must be 1, got {:?}", dims);
     debug_assert_eq!(dims[1], 3, "{who}: must be 3-channel CHW, got {:?}", dims);
@@ -614,7 +616,7 @@ fn variant_from_stem(stem: &str) -> Variant {
     }
 }
 
-impl<'b, B: Backend> CommittedRtFilter<'b, B> {
+impl<'b> CommittedRtFilter<'b> {
     /// Returns the model key chosen when this committed filter was built.
     pub fn model_key(&self) -> &ModelKey {
         &self.model_key
@@ -647,11 +649,11 @@ impl<'b, B: Backend> CommittedRtFilter<'b, B> {
     /// committed object keeps no references to these tensors after returning.
     pub fn execute_tensors(
         &self,
-        color: Option<Tensor<B, 4>>,
-        albedo: Option<Tensor<B, 4>>,
-        normal: Option<Tensor<B, 4>>,
+        color: Option<Tensor<4>>,
+        albedo: Option<Tensor<4>>,
+        normal: Option<Tensor<4>>,
         progress: Option<&mut ProgressFn<'_>>,
-    ) -> Result<Tensor<B, 4>, OidnError> {
+    ) -> Result<Tensor<4>, OidnError> {
         validate_tensor_slot(
             self.has_color,
             color.as_ref(),
@@ -693,9 +695,9 @@ impl<'b, B: Backend> CommittedRtFilter<'b, B> {
     }
 }
 
-fn validate_tensor_slot<B: Backend>(
+fn validate_tensor_slot(
     required: bool,
-    tensor: Option<&Tensor<B, 4>>,
+    tensor: Option<&Tensor<4>>,
     width: usize,
     height: usize,
     name: &'static str,
@@ -705,7 +707,7 @@ fn validate_tensor_slot<B: Backend>(
         (false, Some(_)) => Err(OidnError::Inconsistent(name)),
         (false, None) => Ok(()),
         (true, Some(t)) => {
-            debug_assert_tensor_chw_3::<B>(t, name);
+            debug_assert_tensor_chw_3(t, name);
             let d = t.dims();
             if d[3] == width && d[2] == height {
                 Ok(())
@@ -716,11 +718,8 @@ fn validate_tensor_slot<B: Backend>(
     }
 }
 
-impl<'b, B: Backend> Filter for RtFilter<'b, B> {
-    fn set_progress(
-        &mut self,
-        cb: Box<dyn FnMut(f32) -> bool + 'static>,
-    ) -> Result<(), OidnError> {
+impl<'b> Filter for RtFilter<'b> {
+    fn set_progress(&mut self, cb: Box<dyn FnMut(f32) -> bool + 'static>) -> Result<(), OidnError> {
         // The inherent `set_progress` boxes any `F: FnMut(f32) -> bool +
         // 'static`; the trait method already takes a box, so store it
         // without re-boxing.

@@ -126,7 +126,7 @@ pub fn embedded(stem: &str) -> Option<&'static [u8]> {
 ///     &base_key, quality, Some(weights_dir.as_path()),
 /// )
 /// .ok_or("no weights found")?;
-/// let filter = RtFilter::<B>::builder(device, weights_dir)
+/// let filter = RtFilter::builder(device, weights_dir)
 ///     .weights(bytes)
 ///     .build();
 /// ```
@@ -164,11 +164,16 @@ mod tests {
     fn embedded_blobs_are_non_empty_when_features_enabled() {
         // Cheap stems to spot-check from each feature gate.
         let stems_under_test: &[&str] = &[
-            #[cfg(feature = "embed-hdr")] "rt_hdr",
-            #[cfg(feature = "embed-ldr")] "rt_ldr",
-            #[cfg(feature = "embed-aov")] "rt_alb",
-            #[cfg(feature = "embed-aux-clean")] "rt_hdr_calb_cnrm",
-            #[cfg(feature = "embed-lightmap")] "rtlightmap_hdr",
+            #[cfg(feature = "embed-hdr")]
+            "rt_hdr",
+            #[cfg(feature = "embed-ldr")]
+            "rt_ldr",
+            #[cfg(feature = "embed-aov")]
+            "rt_alb",
+            #[cfg(feature = "embed-aux-clean")]
+            "rt_hdr_calb_cnrm",
+            #[cfg(feature = "embed-lightmap")]
+            "rtlightmap_hdr",
         ];
         for stem in stems_under_test {
             let bytes = embedded(stem)

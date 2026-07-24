@@ -1,8 +1,8 @@
 //! U-Net architecture definitions for Intel OIDN.
 //!
-//! Direct port of `_ref/oidn/training/model.py:UNet`. Generic over Burn
-//! `Backend` so the same network runs on CPU (NdArray) for tests and on wgpu
-//! for production.
+//! Direct port of `_ref/oidn/training/model.py:UNet`. In burn 0.22 the backend
+//! is dynamic (device-selected), so the same network runs on CPU (NdArray) for
+//! tests and on wgpu for production simply by choosing the device.
 
 #![forbid(unsafe_op_in_unsafe_fn)]
 
