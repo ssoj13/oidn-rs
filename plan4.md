@@ -1,10 +1,10 @@
 # plan4 — Systematic OIDN contract repairs
 
-Updated: 2026-10-02. Status: **33 confirmed findings repaired and verified; publication approved and in progress**. Continues [plan2](plan2.md) and [plan3](plan3.md). Historical source findings and test results are preserved.
+Updated: 2026-10-02. Status: **33 confirmed findings repaired and verified; OIDN source and Squarebob dependency update published**. Continues [plan2](plan2.md) and [plan3](plan3.md). Historical source findings and test results are preserved.
 
 ## Authorization and evidence boundary
 
-The user instructed “тогда надо всё системно исправлять”. This explicitly authorizes the proposed systematic OIDN source repairs and the verification needed to complete them. Earlier report-approval and audit-only restrictions describe prior phases and no longer block this implementation. No further approval is needed for the repairs already authorized. After reviewing the completed repairs and verification, the user explicitly instructed “пушни всё в main”, authorizing publication of the OIDN repairs and the Squarebob consumer update. Publication is in progress; confirmed commit and remote receipts will be recorded when available.
+The user instructed “тогда надо всё системно исправлять”. This explicitly authorizes the proposed systematic OIDN source repairs and the verification needed to complete them. Earlier report-approval and audit-only restrictions describe prior phases and no longer block this implementation. No further approval is needed for the repairs already authorized. After reviewing the completed repairs and verification, the user explicitly instructed “пушни всё в main”, authorizing publication of the OIDN repairs and the Squarebob consumer update. OIDN source and Squarebob dependency publication are confirmed below.
 
 Reference: **LOCAL2.5**, `D:/Projects/vfx.ref/oidn`, v2.5.0 `f7ae1bf07b3201aaa8cfe04d71f5243f8e0f2bb7`. Original v2.4.1 report citations remain original. A confirmed contract defect is not proof of the user's progressive highlight-noise cause.
 
@@ -17,6 +17,7 @@ Reference: **LOCAL2.5**, `D:/Projects/vfx.ref/oidn`, v2.5.0 `f7ae1bf07b3201aaa8c
 - [Shared repair contract](#shared-repair-contract)
 - [Verification receipts](#verification-receipts)
 - [Squarebob consumer verification](#squarebob-consumer-verification)
+- [Publication receipt](#publication-receipt--2026-10-02)
 - [Resumption](#resumption)
 
 ## Work sequence
@@ -198,7 +199,7 @@ Initial final-core pass is not a clean receipt: `planned_rectangles_cover_each_p
 
 Final boundary review also found that the public helper `tile::total_output_pixels(&plan)` could overflow an unchecked i64 sum for three malicious i32MAX rectangles, or return negative areas. The existing helper now returns `Result<i64, OidnError>`, checks positive dimensions and checked addition, and has a malicious-plan regression. The final feature matrix reran geometry11/color-tile6 successfully after this change; the prior 51-test receipt describes the earlier source pass. Descriptor planning arithmetic now uses `div_ceil`; model/TZA21 also passed again in the final feature matrix.
 
-Supported feature tests, explicit GPU regressions, benchmark tests, strict Clippy, strict rustdoc and source review passed. The matched-native binary hash above belongs to that numerical pass; a refreshed CLI binary subsequently built successfully. Original progressive scene/AOV replay, exhaustive tile geometries, release-mode execution, other hardware, physical convergence and universal bitwise equality remain unverified. Publication approval has been received for this concrete report and the verified repairs; commit and remote receipts are pending while delivery is in progress.
+Supported feature tests, explicit GPU regressions, benchmark tests, strict Clippy, strict rustdoc and source review passed. The matched-native binary hash above belongs to that numerical pass; a refreshed CLI binary subsequently built successfully. Original progressive scene/AOV replay, exhaustive tile geometries, release-mode execution, other hardware, physical convergence and universal bitwise equality remain unverified. The verified source repairs are published at the OIDN revision below. Squarebob's verified dependency update is also published at the revision below.
 
 ### Squarebob consumer verification
 
@@ -212,7 +213,20 @@ cargo check --workspace --all-targets --quiet --config patch."ssh://git@github.c
 
 Check passed in1.653s with empty logs: [stdout](bughunt/native-verification/bob_local_contract_check_verified.stdout.log), [stderr](bughunt/native-verification/bob_local_contract_check_verified.stderr.log). The freshly linked `target/debug/examples/oidn_highlight_probe.exe` then passed in4.545s on RTX3080Ti/Vulkan, frozen96x64 HDR/full-AOV/Balanced/scale0.02. Repeated output and fixed-clamp SPP1/256 output were identical; 32 additional repeats were identical. Adaptive SPP1/256 changed by max8.448264122, reproducing the previous bounded input-policy diagnostic, not the user's scene. [Probe stdout](bughunt/native-verification/bob_local_contract_probe_verified.stdout.log) and [stderr](bughunt/native-verification/bob_local_contract_probe_verified.stderr.log) record results; stderr contains the existing Bandicam Vulkan layer API1.2/1.3 warning.
 
-The isolated worktree was removed after verification. Original Squarebob lock SHA256 remained `F600F1F5390E0D46066076690A7A93D26F900AA66942F277030C25453F83FCBF`; no permanent path dependency or original lock edit was introduced. The user has now approved publishing OIDN and updating Squarebob's permanent Git revision. These delivery steps are in progress; the unchanged-lock receipt above describes the completed isolated verification. Earlier published Squarebob PQ/CPU fixes remain recorded in plan3.
+The isolated worktree was removed after verification. Original Squarebob lock SHA256 remained `F600F1F5390E0D46066076690A7A93D26F900AA66942F277030C25453F83FCBF`; no permanent path dependency or original lock edit was introduced. The user has now approved publishing OIDN and updating Squarebob's permanent Git revision. OIDN source is now published and Squarebob's permanent lock update has passed its real-Git dependency check and binary build; the unchanged-lock receipt above describes the earlier isolated verification. Earlier published Squarebob PQ/CPU fixes remain recorded in plan3.
+
+## Publication receipt — 2026-10-02
+
+The verified OIDN source repairs were committed and pushed to `main` as `09bdf7e4b7e5c091e262400c7eb7cfcbe9677763`; `git ls-remote` confirmed that remote revision. Squarebob's existing bridge and nine unchanged document moves were committed by another contributor as `b1afc7d` and preserved. The moved documents matched their preceding HEAD bytes exactly.
+
+Squarebob now locks `oidn-rs`, `oidn-model`, and `oidn-tza` to the published OIDN source revision through the real SSH Git dependency. The initial `cargo update -p oidn-rs` also rebound nine unrelated Windows dependency references, causing incompatible DX12 types in `gpu-allocator`. Those nine references were restored from checked old/new package blocks; the final lockfile diff changes only the three OIDN packages and their dependencies. [Initial stdout](bughunt/native-verification/bob_published_contract_check.stdout.log) and [stderr](bughunt/native-verification/bob_published_contract_check.stderr.log) preserve the failed check.
+
+| Published-dependency verification | Result |
+| --- | --- |
+| `cargo check --workspace --all-targets --locked --quiet` | Exit0 in8.374s; empty [stdout](bughunt/native-verification/bob_published_contract_check_retry.stdout.log) and [stderr](bughunt/native-verification/bob_published_contract_check_retry.stderr.log) |
+| `cargo build -p squarebob-rs --bin squarebob --locked --quiet` | Exit0 in39.011s; empty [stdout](bughunt/native-verification/bob_published_build.stdout.log) and [stderr](bughunt/native-verification/bob_published_build.stderr.log) |
+
+Squarebob's dependency update was committed and pushed to `main` as `e4cd39bebf6cff907264a12b852993f66819a682`; its remote revision was independently confirmed. The lock intentionally retains OIDN source `09bdf7e4b7e5c091e262400c7eb7cfcbe9677763`; subsequent receipt documentation changes no API source. The consumer delivery ledger is [Squarebob plan18](../squarebob-rs/docs/plans/plan18.md). These checks cover compilation and binary linking against the published source; the frozen diagnostic limits and unresolved user-scene cause above remain unchanged.
 
 ## Resumption
 

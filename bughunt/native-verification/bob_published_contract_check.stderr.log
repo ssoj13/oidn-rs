@@ -1,0 +1,349 @@
+error[E0308]: mismatched types
+   --> C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\wgpu-hal-30.0.1\src\dx12\suballocation.rs:83:71
+    |
+ 83 |             device: gpu_allocator::d3d12::ID3D12DeviceVersion::Device(raw.clone()),
+    |                     ------------------------------------------------- ^^^^^^^^^^^ expected `ID3D12Device`, found `Direct3D12::ID3D12Device`
+    |                     |
+    |                     arguments to this enum variant are incorrect
+    |
+note: there are multiple different versions of crate `windows` in the dependency graph
+   --> C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-core-0.56.0\src\imp\mod.rs:79:9
+    |
+ 79 |         pub struct $name(::windows_core::IUnknown);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this is the expected type
+    |
+   ::: C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-core-0.62.2\src\imp\mod.rs:64:9
+    |
+ 64 |         pub struct $name(::windows_core::IUnknown);
+    |         ------------------------------------------- this is the found type
+    |
+   ::: C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-0.56.0\src\Windows\Win32\Graphics\Direct3D12\mod.rs:655:1
+    |
+655 | windows_core::imp::define_interface!(ID3D12Device, ID3D12Device_Vtbl, 0x189819f1_1db6_4b57_be54_1821339b85f7);
+    | ------------------------------------------------------------------------------------------------------------- in this macro invocation
+    = help: you can use `cargo tree` to explore your dependency tree
+note: tuple variant defined here
+   --> C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\gpu-allocator-0.28.0\src\d3d12\mod.rs:142:5
+    |
+142 |     Device(ID3D12Device),
+    |     ^^^^^^
+    = note: this error originates in the macro `windows_core::imp::define_interface` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: the trait bound `ResourceCategory: From<&D3D12_RESOURCE_DESC>` is not satisfied
+   --> C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\wgpu-hal-30.0.1\src\dx12\suballocation.rs:299:32
+    |
+299 |             resource_category: gpu_allocator::d3d12::ResourceCategory::from(&raw_desc),
+    |                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `From<&D3D12_RESOURCE_DESC>` is not implemented for `ResourceCategory`
+    |
+help: the trait `From<&D3D12_RESOURCE_DESC>` is not implemented for `ResourceCategory`
+      but trait `From<&windows::Win32::Graphics::Direct3D12::D3D12_RESOURCE_DESC>` is implemented for it
+   --> C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\gpu-allocator-0.28.0\src\d3d12\mod.rs:79:1
+    |
+ 79 | impl From<&D3D12_RESOURCE_DESC> for ResourceCategory {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for that trait implementation, expected `windows::Win32::Graphics::Direct3D12::D3D12_RESOURCE_DESC`, found `D3D12_RESOURCE_DESC`
+
+error[E0277]: the trait bound `&ID3D12Heap: Param<ID3D12Heap, InterfaceType>` is not satisfied
+    --> C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\wgpu-hal-30.0.1\src\dx12\suballocation.rs:306:17
+     |
+ 305 |             self.raw.CreatePlacedResource(
+     |                      -------------------- required by a bound introduced by this call
+ 306 |                 allocation.heap(),
+     |                 ^^^^^^^^^^^^^^^^^ the trait `Interface` is not implemented for `windows::Win32::Graphics::Direct3D12::ID3D12Heap`
+     |
+note: there are multiple different versions of crate `windows_core` in the dependency graph
+    --> C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-core-0.62.2\src\interface.rs:14:1
+     |
+  14 | pub unsafe trait Interface: Sized + Clone {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this is the expected trait
+     |
+    ::: C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-core-0.56.0\src\interface.rs:9:1
+     |
+   9 | pub unsafe trait Interface: Sized + Clone {
+     | ----------------------------------------- this is the found trait
+     = help: you can use `cargo tree` to explore your dependency tree
+     = help: the following other types implement trait `Interface`:
+               AsyncIAdviseSink
+               AsyncIAdviseSink2
+               AsyncIMultiQI
+               AsyncIPipeByte
+               AsyncIPipeDouble
+               AsyncIPipeLong
+               AsyncIUnknown
+               CIE4ConnectionPoint
+             and 1300 others
+     = note: there are multiple different versions of crate `windows` in the dependency graph
+     = help: you can use `cargo tree` to explore your dependency tree
+     = note: required for `&windows::Win32::Graphics::Direct3D12::ID3D12Heap` to implement `Param<ID3D12Heap, windows_core::InterfaceType>`
+note: required by a bound in `Direct3D12::ID3D12Device::CreatePlacedResource`
+    --> C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-0.62.2\src\Windows\Win32\Graphics\Direct3D12\mod.rs:9456:13
+     |
+9454 |     pub unsafe fn CreatePlacedResource<P0, T>(&self, pheap: P0, heapoffset: u64, pdesc: *const D3D12_RESOURCE_DESC, initialstate: ...
+     |                   -------------------- required by a bound in this associated function
+9455 |     where
+9456 |         P0: windows_core::Param<ID3D12Heap>,
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `ID3D12Device::CreatePlacedResource`
+     = note: the full name for the type has been written to 'C:\projects\projects.rust.cg\cglibs\squarebob-rs\target\debug\deps\wgpu_hal-f76d277d4c964d6c.long-type-14172278014416459337.txt'
+     = note: consider using `--verbose` to print the full type name to the console
+
+error[E0277]: the trait bound `&ID3D12Heap: Param<ID3D12Heap, InterfaceType>` is not satisfied
+     --> C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\wgpu-hal-30.0.1\src\dx12\suballocation.rs:306:17
+      |
+  305 |             self.raw.CreatePlacedResource(
+      |                      -------------------- required by a bound introduced by this call
+  306 |                 allocation.heap(),
+      |                 ^^^^^^^^^^^^^^^^^ the trait `windows_core::imp::CanInto<ID3D12Heap>` is not implemented for `windows::Win32::Graphics::Direct3D12::ID3D12Heap`
+      |
+note: there are multiple different versions of crate `windows_core` in the dependency graph
+     --> C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-core-0.62.2\src\imp\can_into.rs:1:1
+      |
+    1 | pub trait CanInto<T>: Sized {
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^ this is the expected trait
+      |
+     ::: C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-core-0.56.0\src\param.rs:104:1
+      |
+  104 | pub trait CanInto<T>: Sized {
+      | ---------------------------
+      | |
+      | this is the found trait
+      | this is the found trait
+      | this is the found trait
+      | this is the found trait
+      | this is the found trait
+      = help: you can use `cargo tree` to explore your dependency tree
+help: the trait `windows_core::imp::CanInto<ID3D12Heap>` is implemented for `ID3D12Heap1`
+     --> C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-core-0.62.2\src\imp\mod.rs:22:9
+      |
+   22 |         impl ::windows_core::imp::CanInto<$parent> for $child {}
+      |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      |
+     ::: C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-0.62.2\src\Windows\Win32\Graphics\Direct3D12\mod.rs:13607:1
+      |
+13607 | windows_core::imp::interface_hierarchy!(ID3D12Heap1, windows_core::IUnknown, ID3D12Object, ID3D12DeviceChild, ID3D12Pageable, ID3D12Heap);
+      | ----------------------------------------------------------------------------------------------------------------------------------------- in this macro invocation
+      = note: required for `&windows::Win32::Graphics::Direct3D12::ID3D12Heap` to implement `Param<ID3D12Heap, windows_core::InterfaceType>`
+note: required by a bound in `Direct3D12::ID3D12Device::CreatePlacedResource`
+     --> C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-0.62.2\src\Windows\Win32\Graphics\Direct3D12\mod.rs:9456:13
+      |
+ 9454 |     pub unsafe fn CreatePlacedResource<P0, T>(&self, pheap: P0, heapoffset: u64, pdesc: *const D3D12_RESOURCE_DESC, initialstate:...
+      |                   -------------------- required by a bound in this associated function
+ 9455 |     where
+ 9456 |         P0: windows_core::Param<ID3D12Heap>,
+      |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `ID3D12Device::CreatePlacedResource`
+      = note: the full name for the type has been written to 'C:\projects\projects.rust.cg\cglibs\squarebob-rs\target\debug\deps\wgpu_hal-f76d277d4c964d6c.long-type-14172278014416459337.txt'
+      = note: consider using `--verbose` to print the full type name to the console
+      = note: this error originates in the macro `$crate::imp::interface_hierarchy` which comes from the expansion of the macro `windows_core::imp::interface_hierarchy` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: the trait bound `ResourceCategory: From<&D3D12_RESOURCE_DESC>` is not satisfied
+   --> C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\wgpu-hal-30.0.1\src\dx12\suballocation.rs:338:32
+    |
+338 |             resource_category: gpu_allocator::d3d12::ResourceCategory::from(&raw_desc),
+    |                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `From<&D3D12_RESOURCE_DESC>` is not implemented for `ResourceCategory`
+    |
+help: the trait `From<&D3D12_RESOURCE_DESC>` is not implemented for `ResourceCategory`
+      but trait `From<&windows::Win32::Graphics::Direct3D12::D3D12_RESOURCE_DESC>` is implemented for it
+   --> C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\gpu-allocator-0.28.0\src\d3d12\mod.rs:79:1
+    |
+ 79 | impl From<&D3D12_RESOURCE_DESC> for ResourceCategory {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for that trait implementation, expected `windows::Win32::Graphics::Direct3D12::D3D12_RESOURCE_DESC`, found `D3D12_RESOURCE_DESC`
+
+error[E0277]: the trait bound `&ID3D12Heap: Param<ID3D12Heap, InterfaceType>` is not satisfied
+    --> C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\wgpu-hal-30.0.1\src\dx12\suballocation.rs:345:17
+     |
+ 344 |             self.raw.CreatePlacedResource(
+     |                      -------------------- required by a bound introduced by this call
+ 345 |                 allocation.heap(),
+     |                 ^^^^^^^^^^^^^^^^^ the trait `Interface` is not implemented for `windows::Win32::Graphics::Direct3D12::ID3D12Heap`
+     |
+note: there are multiple different versions of crate `windows_core` in the dependency graph
+    --> C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-core-0.62.2\src\interface.rs:14:1
+     |
+  14 | pub unsafe trait Interface: Sized + Clone {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this is the expected trait
+     |
+    ::: C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-core-0.56.0\src\interface.rs:9:1
+     |
+   9 | pub unsafe trait Interface: Sized + Clone {
+     | ----------------------------------------- this is the found trait
+     = help: you can use `cargo tree` to explore your dependency tree
+     = help: the following other types implement trait `Interface`:
+               AsyncIAdviseSink
+               AsyncIAdviseSink2
+               AsyncIMultiQI
+               AsyncIPipeByte
+               AsyncIPipeDouble
+               AsyncIPipeLong
+               AsyncIUnknown
+               CIE4ConnectionPoint
+             and 1300 others
+     = note: there are multiple different versions of crate `windows` in the dependency graph
+     = help: you can use `cargo tree` to explore your dependency tree
+     = note: required for `&windows::Win32::Graphics::Direct3D12::ID3D12Heap` to implement `Param<ID3D12Heap, windows_core::InterfaceType>`
+note: required by a bound in `Direct3D12::ID3D12Device::CreatePlacedResource`
+    --> C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-0.62.2\src\Windows\Win32\Graphics\Direct3D12\mod.rs:9456:13
+     |
+9454 |     pub unsafe fn CreatePlacedResource<P0, T>(&self, pheap: P0, heapoffset: u64, pdesc: *const D3D12_RESOURCE_DESC, initialstate: ...
+     |                   -------------------- required by a bound in this associated function
+9455 |     where
+9456 |         P0: windows_core::Param<ID3D12Heap>,
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `ID3D12Device::CreatePlacedResource`
+     = note: the full name for the type has been written to 'C:\projects\projects.rust.cg\cglibs\squarebob-rs\target\debug\deps\wgpu_hal-f76d277d4c964d6c.long-type-14172278014416459337.txt'
+     = note: consider using `--verbose` to print the full type name to the console
+
+error[E0277]: the trait bound `&ID3D12Heap: Param<ID3D12Heap, InterfaceType>` is not satisfied
+     --> C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\wgpu-hal-30.0.1\src\dx12\suballocation.rs:345:17
+      |
+  344 |             self.raw.CreatePlacedResource(
+      |                      -------------------- required by a bound introduced by this call
+  345 |                 allocation.heap(),
+      |                 ^^^^^^^^^^^^^^^^^ the trait `windows_core::imp::CanInto<ID3D12Heap>` is not implemented for `windows::Win32::Graphics::Direct3D12::ID3D12Heap`
+      |
+note: there are multiple different versions of crate `windows_core` in the dependency graph
+     --> C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-core-0.62.2\src\imp\can_into.rs:1:1
+      |
+    1 | pub trait CanInto<T>: Sized {
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^ this is the expected trait
+      |
+     ::: C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-core-0.56.0\src\param.rs:104:1
+      |
+  104 | pub trait CanInto<T>: Sized {
+      | ---------------------------
+      | |
+      | this is the found trait
+      | this is the found trait
+      | this is the found trait
+      | this is the found trait
+      | this is the found trait
+      = help: you can use `cargo tree` to explore your dependency tree
+help: the trait `windows_core::imp::CanInto<ID3D12Heap>` is implemented for `ID3D12Heap1`
+     --> C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-core-0.62.2\src\imp\mod.rs:22:9
+      |
+   22 |         impl ::windows_core::imp::CanInto<$parent> for $child {}
+      |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      |
+     ::: C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-0.62.2\src\Windows\Win32\Graphics\Direct3D12\mod.rs:13607:1
+      |
+13607 | windows_core::imp::interface_hierarchy!(ID3D12Heap1, windows_core::IUnknown, ID3D12Object, ID3D12DeviceChild, ID3D12Pageable, ID3D12Heap);
+      | ----------------------------------------------------------------------------------------------------------------------------------------- in this macro invocation
+      = note: required for `&windows::Win32::Graphics::Direct3D12::ID3D12Heap` to implement `Param<ID3D12Heap, windows_core::InterfaceType>`
+note: required by a bound in `Direct3D12::ID3D12Device::CreatePlacedResource`
+     --> C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-0.62.2\src\Windows\Win32\Graphics\Direct3D12\mod.rs:9456:13
+      |
+ 9454 |     pub unsafe fn CreatePlacedResource<P0, T>(&self, pheap: P0, heapoffset: u64, pdesc: *const D3D12_RESOURCE_DESC, initialstate:...
+      |                   -------------------- required by a bound in this associated function
+ 9455 |     where
+ 9456 |         P0: windows_core::Param<ID3D12Heap>,
+      |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `ID3D12Device::CreatePlacedResource`
+      = note: the full name for the type has been written to 'C:\projects\projects.rust.cg\cglibs\squarebob-rs\target\debug\deps\wgpu_hal-f76d277d4c964d6c.long-type-14172278014416459337.txt'
+      = note: consider using `--verbose` to print the full type name to the console
+      = note: this error originates in the macro `$crate::imp::interface_hierarchy` which comes from the expansion of the macro `windows_core::imp::interface_hierarchy` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: the trait bound `ResourceCategory: From<&D3D12_RESOURCE_DESC>` is not satisfied
+   --> C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\wgpu-hal-30.0.1\src\dx12\suballocation.rs:377:32
+    |
+377 |             resource_category: gpu_allocator::d3d12::ResourceCategory::from(&raw_desc),
+    |                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `From<&D3D12_RESOURCE_DESC>` is not implemented for `ResourceCategory`
+    |
+help: the trait `From<&D3D12_RESOURCE_DESC>` is not implemented for `ResourceCategory`
+      but trait `From<&windows::Win32::Graphics::Direct3D12::D3D12_RESOURCE_DESC>` is implemented for it
+   --> C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\gpu-allocator-0.28.0\src\d3d12\mod.rs:79:1
+    |
+ 79 | impl From<&D3D12_RESOURCE_DESC> for ResourceCategory {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for that trait implementation, expected `windows::Win32::Graphics::Direct3D12::D3D12_RESOURCE_DESC`, found `D3D12_RESOURCE_DESC`
+
+error[E0277]: the trait bound `&ID3D12Heap: Param<ID3D12Heap, InterfaceType>` is not satisfied
+    --> C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\wgpu-hal-30.0.1\src\dx12\suballocation.rs:384:17
+     |
+ 383 |             self.raw.CreatePlacedResource(
+     |                      -------------------- required by a bound introduced by this call
+ 384 |                 allocation.heap(),
+     |                 ^^^^^^^^^^^^^^^^^ the trait `Interface` is not implemented for `windows::Win32::Graphics::Direct3D12::ID3D12Heap`
+     |
+note: there are multiple different versions of crate `windows_core` in the dependency graph
+    --> C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-core-0.62.2\src\interface.rs:14:1
+     |
+  14 | pub unsafe trait Interface: Sized + Clone {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ this is the expected trait
+     |
+    ::: C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-core-0.56.0\src\interface.rs:9:1
+     |
+   9 | pub unsafe trait Interface: Sized + Clone {
+     | ----------------------------------------- this is the found trait
+     = help: you can use `cargo tree` to explore your dependency tree
+     = help: the following other types implement trait `Interface`:
+               AsyncIAdviseSink
+               AsyncIAdviseSink2
+               AsyncIMultiQI
+               AsyncIPipeByte
+               AsyncIPipeDouble
+               AsyncIPipeLong
+               AsyncIUnknown
+               CIE4ConnectionPoint
+             and 1300 others
+     = note: there are multiple different versions of crate `windows` in the dependency graph
+     = help: you can use `cargo tree` to explore your dependency tree
+     = note: required for `&windows::Win32::Graphics::Direct3D12::ID3D12Heap` to implement `Param<ID3D12Heap, windows_core::InterfaceType>`
+note: required by a bound in `Direct3D12::ID3D12Device::CreatePlacedResource`
+    --> C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-0.62.2\src\Windows\Win32\Graphics\Direct3D12\mod.rs:9456:13
+     |
+9454 |     pub unsafe fn CreatePlacedResource<P0, T>(&self, pheap: P0, heapoffset: u64, pdesc: *const D3D12_RESOURCE_DESC, initialstate: ...
+     |                   -------------------- required by a bound in this associated function
+9455 |     where
+9456 |         P0: windows_core::Param<ID3D12Heap>,
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `ID3D12Device::CreatePlacedResource`
+     = note: the full name for the type has been written to 'C:\projects\projects.rust.cg\cglibs\squarebob-rs\target\debug\deps\wgpu_hal-f76d277d4c964d6c.long-type-14172278014416459337.txt'
+     = note: consider using `--verbose` to print the full type name to the console
+
+error[E0277]: the trait bound `&ID3D12Heap: Param<ID3D12Heap, InterfaceType>` is not satisfied
+     --> C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\wgpu-hal-30.0.1\src\dx12\suballocation.rs:384:17
+      |
+  383 |             self.raw.CreatePlacedResource(
+      |                      -------------------- required by a bound introduced by this call
+  384 |                 allocation.heap(),
+      |                 ^^^^^^^^^^^^^^^^^ the trait `windows_core::imp::CanInto<ID3D12Heap>` is not implemented for `windows::Win32::Graphics::Direct3D12::ID3D12Heap`
+      |
+note: there are multiple different versions of crate `windows_core` in the dependency graph
+     --> C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-core-0.62.2\src\imp\can_into.rs:1:1
+      |
+    1 | pub trait CanInto<T>: Sized {
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^ this is the expected trait
+      |
+     ::: C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-core-0.56.0\src\param.rs:104:1
+      |
+  104 | pub trait CanInto<T>: Sized {
+      | ---------------------------
+      | |
+      | this is the found trait
+      | this is the found trait
+      | this is the found trait
+      | this is the found trait
+      | this is the found trait
+      = help: you can use `cargo tree` to explore your dependency tree
+help: the trait `windows_core::imp::CanInto<ID3D12Heap>` is implemented for `ID3D12Heap1`
+     --> C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-core-0.62.2\src\imp\mod.rs:22:9
+      |
+   22 |         impl ::windows_core::imp::CanInto<$parent> for $child {}
+      |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      |
+     ::: C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-0.62.2\src\Windows\Win32\Graphics\Direct3D12\mod.rs:13607:1
+      |
+13607 | windows_core::imp::interface_hierarchy!(ID3D12Heap1, windows_core::IUnknown, ID3D12Object, ID3D12DeviceChild, ID3D12Pageable, ID3D12Heap);
+      | ----------------------------------------------------------------------------------------------------------------------------------------- in this macro invocation
+      = note: required for `&windows::Win32::Graphics::Direct3D12::ID3D12Heap` to implement `Param<ID3D12Heap, windows_core::InterfaceType>`
+note: required by a bound in `Direct3D12::ID3D12Device::CreatePlacedResource`
+     --> C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\windows-0.62.2\src\Windows\Win32\Graphics\Direct3D12\mod.rs:9456:13
+      |
+ 9454 |     pub unsafe fn CreatePlacedResource<P0, T>(&self, pheap: P0, heapoffset: u64, pdesc: *const D3D12_RESOURCE_DESC, initialstate:...
+      |                   -------------------- required by a bound in this associated function
+ 9455 |     where
+ 9456 |         P0: windows_core::Param<ID3D12Heap>,
+      |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `ID3D12Device::CreatePlacedResource`
+      = note: the full name for the type has been written to 'C:\projects\projects.rust.cg\cglibs\squarebob-rs\target\debug\deps\wgpu_hal-f76d277d4c964d6c.long-type-14172278014416459337.txt'
+      = note: consider using `--verbose` to print the full type name to the console
+      = note: this error originates in the macro `$crate::imp::interface_hierarchy` which comes from the expansion of the macro `windows_core::imp::interface_hierarchy` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+Some errors have detailed explanations: E0277, E0308.
+For more information about an error, try `rustc --explain E0277`.
+error: could not compile `wgpu-hal` (lib) due to 10 previous errors

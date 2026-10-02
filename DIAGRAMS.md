@@ -263,7 +263,7 @@ All P1–P11 were rechecked against local v2.5.0. Logical model topology/widths 
 
 ## User-authorized renderer verification follow-up
 
-The static pass above did not build or run tests. The later user instruction authorized Squarebob dependency updates and diagnostic testing; production fixes still await report approval. Current verification results are maintained in [Squarebob plan16](../squarebob-rs/plan16.md) and [plan2](plan2.md). The RTX 3080 Ti/Vulkan frozen-input probe passed: repeated adaptive output at 256 SPP and fixed-clamp output at 1/256 SPP were identical; adaptive output at 1/256 SPP changed by max absolute RGB 8.448264122. Another 32 fixed-clamp runs at 256 SPP were identical. This establishes stability for this frozen input/device/configuration and sample-dependent input influence, not the user's scene or general race absence.
+The static pass above did not build or run tests. The later user instruction authorized Squarebob dependency updates and diagnostic testing; production fixes still await report approval. Current verification results are maintained in [Squarebob plan16](../squarebob-rs/docs/plans/plan16.md) and [plan2](plan2.md). The RTX 3080 Ti/Vulkan frozen-input probe passed: repeated adaptive output at 256 SPP and fixed-clamp output at 1/256 SPP were identical; adaptive output at 1/256 SPP changed by max absolute RGB 8.448264122. Another 32 fixed-clamp runs at 256 SPP were identical. This establishes stability for this frozen input/device/configuration and sample-dependent input influence, not the user's scene or general race absence.
 
 ```mermaid
 flowchart TD
@@ -294,7 +294,7 @@ flowchart LR
 
 Default adaptive ceiling is constant after 256 SPP; this mechanism alone does not explain indefinite later growth. The final-scheduling defect can separately leave an older preview on screen: target 300/interval 128 displays256SPP after earlier successful periodic passes. See Squarebob plan16 for the proposed shared completed-SPP/accumulation state and remaining runtime gates.
 
-Verification follow-up: the synthetic GPU probe and 32 fixed-input repeats passed, as did workspace compilation and actual squarebob binary linking. No actual-scene noise reproduction or native numerical parity result is asserted. Exact commands, logs, and device limits are in [Squarebob plan16](../squarebob-rs/plan16.md).
+Verification follow-up: the synthetic GPU probe and 32 fixed-input repeats passed, as did workspace compilation and actual squarebob binary linking. No actual-scene noise reproduction or native numerical parity result is asserted. Exact commands, logs, and device limits are in [Squarebob plan16](../squarebob-rs/docs/plans/plan16.md).
 
 End of diagrams.
 
@@ -302,7 +302,7 @@ End of diagrams.
 
 [Native runtime report](../oidn-rs/bughunt/native_runtime.md) records 90 successful finite synthetic runs and all 23 archive byte matches. Earlier missing-asset/no-runtime statements are historical. Aligned explicit-scale CPU/WGPU results are close; unaligned AOV and odd/tiny exposure are separate measured defects. The checker SD change measures restored contrast, not error against a clean target. See [Astra numerics](../oidn-rs/bughunt/astra_numerics.md).
 
-The following display source is implemented under explicit PQ authorization; final actual-window/color/shader validation remains tracked in [Squarebob plan17](../squarebob-rs/plan17.md).
+The following display source is implemented under explicit PQ authorization; final actual-window/color/shader validation remains tracked in [Squarebob plan17](../squarebob-rs/docs/plans/plan17.md).
 
 ```mermaid
 flowchart TB
@@ -322,7 +322,7 @@ PQ encoding belongs only to the shared presenter (`present.rs:127-149,202-215,76
 
 ## CPU display source ownership after authorized repair
 
-Earlier bridge diagrams covered GPU composition. CPU display now uses the same shared composition entry point for raw and denoised sources; it does not overwrite either raw source. See [Squarebob plan17](../squarebob-rs/plan17.md) and [Astra post-fix review](../oidn-rs/bughunt/astra_pq_review.md).
+Earlier bridge diagrams covered GPU composition. CPU display now uses the same shared composition entry point for raw and denoised sources; it does not overwrite either raw source. See [Squarebob plan17](../squarebob-rs/docs/plans/plan17.md) and [Astra post-fix review](../oidn-rs/bughunt/astra_pq_review.md).
 
 ```mermaid
 flowchart LR

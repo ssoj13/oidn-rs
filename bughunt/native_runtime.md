@@ -53,7 +53,7 @@ Checked source explains relevant precision distinctions: LOCAL2.5 `devices/cuda/
 
 ## Signal, noise and highlight interpretation
 
-The earlier Squarebob checker SD comparison is **not a measured noise increase**. The synthetic RGB checker has luminances6.62464 and39.74784. Adaptive threshold6 at128SPP collapses both levels to the same chromaticity/luminance before inference; threshold10 at256SPP restores contrast. Its output spatial SD can therefore rise because real fixture structure returns. Frozen fixed-clamp repeats remain useful repeatability evidence, but no noisy/clean target was defined. Exact source/formula/SD analysis is in [astra_numerics.md](astra_numerics.md), with prior measurements in [Squarebob plan16](../../squarebob-rs/plan16.md).
+The earlier Squarebob checker SD comparison is **not a measured noise increase**. The synthetic RGB checker has luminances6.62464 and39.74784. Adaptive threshold6 at128SPP collapses both levels to the same chromaticity/luminance before inference; threshold10 at256SPP restores contrast. Its output spatial SD can therefore rise because real fixture structure returns. Frozen fixed-clamp repeats remain useful repeatability evidence, but no noisy/clean target was defined. Exact source/formula/SD analysis is in [astra_numerics.md](astra_numerics.md), with prior measurements in [Squarebob plan16](../../squarebob-rs/docs/plans/plan16.md).
 
 PU constants and branch formulas match the native scalar contract; the exponential inverse increases absolute radiance sensitivity in highlights (Rust `gpu_ops.rs:179-196`, `color.rs:126-136`; LOCAL2.5 `core/color.h:77-106`). The 65504 normalization reference is not a hard clamp. Matched weights plus close f32 CPU/WGPU output narrow speculation about corrupted archives or gross color-only operator mismatch; they do not prove actual-scene convergence, half/f32 quality equivalence or all-mode correctness.
 
@@ -74,7 +74,7 @@ The user's progressive highlight-noise cause remains unproven. This report recor
 
 ## CPU/PQ verification closure — 2026-10-02
 
-The user explicitly authorized the old CPU display repair and push to main in addition to PQ integration. Unrelated denoiser/scheduling proposals remain unapproved. [Squarebob plan17](../../squarebob-rs/plan17.md), [Astra post-fix review](astra_pq_review.md), and [OIIO CPU review](oiio_cpu_display.md) record the checked contracts and results.
+The user explicitly authorized the old CPU display repair and push to main in addition to PQ integration. Unrelated denoiser/scheduling proposals remain unapproved. [Squarebob plan17](../../squarebob-rs/docs/plans/plan17.md), [Astra post-fix review](astra_pq_review.md), and [OIIO CPU review](oiio_cpu_display.md) record the checked contracts and results.
 
 The historical no-feedback conclusion described the inspected GPU bridge; CPU display had existing raw-buffer feedback/exposure-order and denoised-view defects. The shared composition repair reads raw PT/OIDN, applies CPU exposure before OCIO, and writes a separate reusable display scratch. Source: Squarebob `crates/render-3d/src/lib.rs:1190-1236`, `crates/pt-megakernel/src/compute.rs:5383-5495`, and both callers `src/app/treemap_view.rs:699-708,1193-1205`. No matching defect was found in the scoped OCIO/OIIO library inspection.
 

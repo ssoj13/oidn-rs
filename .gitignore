@@ -24,3 +24,13 @@ __pycache__/
 *.pyc
 *.denoised.exr
 out.exr
+
+# Local audit downloads and regenerated runtime products; receipts are tracked separately.
+/bughunt/final_metadata.json
+/bughunt/native-verification/runtime/
+/bughunt/native-verification/oidn-weights/
+/bughunt/native-verification/*.zip
+/bughunt/native-verification/matrix/
+/bughunt/native-verification/postfix/
+/bughunt/native-verification/*.pfm
+/bughunt/native-verification/bob_bridge_graph_reindex.*.log

@@ -43,11 +43,11 @@ GitNexus MCP is absent in this turn; CLI help is available, but catalog-backed q
 
 ## Historical display implementation checkpoint — superseded by closure below
 
-[Squarebob plan17](../squarebob-rs/plan17.md) tracks shared `egui-display` native host, actual negotiated output state, runtime HDR/white context and OCIO display-reference XYZ->Rec.709 light conversion. PQ is encoded by the canonical shared presenter once after float canvas composition. Initial workspace check passed; host/color/shader/binary/actual-window validation is still in progress. Mark implementation complete only after those gates pass. Native diagnostic source/runtime acquisition does not authorize unrelated denoiser production repairs.
+[Squarebob plan17](../squarebob-rs/docs/plans/plan17.md) tracks shared `egui-display` native host, actual negotiated output state, runtime HDR/white context and OCIO display-reference XYZ->Rec.709 light conversion. PQ is encoded by the canonical shared presenter once after float canvas composition. Initial workspace check passed; host/color/shader/binary/actual-window validation is still in progress. Mark implementation complete only after those gates pass. Native diagnostic source/runtime acquisition does not authorize unrelated denoiser production repairs.
 
 ## CPU/PQ verification closure — 2026-10-02
 
-The user explicitly authorized the old CPU display repair and push to main in addition to PQ integration. Unrelated denoiser/scheduling proposals remain unapproved. [Squarebob plan17](../squarebob-rs/plan17.md), [Astra post-fix review](bughunt/astra_pq_review.md), and [OIIO CPU review](bughunt/oiio_cpu_display.md) record the checked contracts and results.
+The user explicitly authorized the old CPU display repair and push to main in addition to PQ integration. Unrelated denoiser/scheduling proposals remain unapproved. [Squarebob plan17](../squarebob-rs/docs/plans/plan17.md), [Astra post-fix review](bughunt/astra_pq_review.md), and [OIIO CPU review](bughunt/oiio_cpu_display.md) record the checked contracts and results.
 
 The historical no-feedback conclusion described the inspected GPU bridge; CPU display had existing raw-buffer feedback/exposure-order and denoised-view defects. The shared composition repair reads raw PT/OIDN, applies CPU exposure before OCIO, and writes a separate reusable display scratch. Source: Squarebob `crates/render-3d/src/lib.rs:1190-1236`, `crates/pt-megakernel/src/compute.rs:5383-5495`, and both callers `src/app/treemap_view.rs:699-708,1193-1205`. No matching defect was found in the scoped OCIO/OIIO library inspection.
 

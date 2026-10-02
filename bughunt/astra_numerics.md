@@ -4,7 +4,7 @@ Date: 2026-10-02. Scope: source review and analytical derivation; no production 
 
 ## Evidence and source notation
 
-The user reports localized noise in highlights/fine details growing during one progressive render. Growth beyond 256 SPP is not established. The inspected Squarebob path explicitly selects HDR; this does not retroactively prove every image described by the user was HDR. This report extends [astra_review.md](astra_review.md), [squarebob_bridge.md](squarebob_bridge.md), and [Squarebob plan16](../../squarebob-rs/plan16.md).
+The user reports localized noise in highlights/fine details growing during one progressive render. Growth beyond 256 SPP is not established. The inspected Squarebob path explicitly selects HDR; this does not retroactively prove every image described by the user was HDR. This report extends [astra_review.md](astra_review.md), [squarebob_bridge.md](squarebob_bridge.md), and [Squarebob plan16](../../squarebob-rs/docs/plans/plan16.md).
 
 Source prefixes below identify exact checked trees:
 
