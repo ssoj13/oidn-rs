@@ -8,8 +8,7 @@ use burn::{
         pool::{MaxPool2d, MaxPool2dConfig},
     },
     tensor::{
-        Device,
-        Tensor,
+        Device, Tensor,
         activation::relu,
         module::interpolate,
         ops::{InterpolateMode, InterpolateOptions},
@@ -20,7 +19,7 @@ use crate::variants::{ChannelConfig, Variant};
 
 /// 3×3 convolution with padding=1 on all sides (matches `Conv` in Python
 /// reference, which uses `nn.Conv2d(..., 3, padding=1)`).
-fn conv3(in_ch: usize, out_ch: usize, device: &Device) -> Conv2d {
+pub(crate) fn conv3(in_ch: usize, out_ch: usize, device: &Device) -> Conv2d {
     Conv2dConfig::new([in_ch, out_ch], [3, 3])
         .with_padding(PaddingConfig2d::Explicit(1, 1, 1, 1))
         .with_bias(true)
@@ -57,13 +56,22 @@ pub struct UNet {
 
 impl UNet {
     /// Construct a U-Net with the given variant, input/output channel counts.
-    pub fn new(
+    pub fn new(in_channels: usize, out_channels: usize, variant: Variant, device: &Device) -> Self {
+        Self::new_with(
+            in_channels,
+            out_channels,
+            ChannelConfig::for_variant(variant),
+            device,
+        )
+    }
+
+    /// Construct the base topology using validated archive-derived channel widths.
+    pub fn new_with(
         in_channels: usize,
         out_channels: usize,
-        variant: Variant,
+        c: ChannelConfig,
         device: &Device,
     ) -> Self {
-        let c = ChannelConfig::for_variant(variant);
         let ic = in_channels;
         let oc = out_channels;
 
@@ -144,7 +152,7 @@ impl UNet {
 }
 
 /// 2× nearest-neighbor upsample, matching `F.interpolate(x, scale_factor=2, mode='nearest')`.
-fn upsample2x(x: Tensor<4>) -> Tensor<4> {
+pub(crate) fn upsample2x(x: Tensor<4>) -> Tensor<4> {
     let [_, _, h, w] = x.dims();
     interpolate(
         x,

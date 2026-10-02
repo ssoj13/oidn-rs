@@ -15,7 +15,7 @@ fn run_rgb_f32_round_trip() {
     }
 
     let img = Image::from_rgb_f32(&src, w, h);
-    let rgb_f32 = img.to_rgb_f32();
+    let rgb_f32 = img.to_rgb_f32().unwrap();
     assert_eq!(rgb_f32.len(), w * h * 3);
     for (a, b) in rgb_f32.iter().zip(src.iter()) {
         assert!((a - b).abs() < 1e-6, "{a} vs {b}");
@@ -23,7 +23,7 @@ fn run_rgb_f32_round_trip() {
 
     let mut dst = vec![0.0f32; w * h * 3];
     let mut dst_img = ImageMut::from_rgb_f32(&mut dst, w, h);
-    dst_img.write_rgb_f32(&rgb_f32);
+    dst_img.write_rgb_f32(&rgb_f32).unwrap();
     assert_eq!(dst, src);
 }
 
@@ -41,11 +41,11 @@ fn rgb_f16_round_trip() {
     }
 
     let img = Image::from_rgb_f16(&src, w, h);
-    let rgb_f32 = img.to_rgb_f32();
+    let rgb_f32 = img.to_rgb_f32().unwrap();
 
     let mut dst = vec![f16::ZERO; w * h * 3];
     let mut dst_img = ImageMut::from_rgb_f16(&mut dst, w, h);
-    dst_img.write_rgb_f32(&rgb_f32);
+    dst_img.write_rgb_f32(&rgb_f32).unwrap();
 
     for (a, b) in dst.iter().zip(src.iter()) {
         assert!(
@@ -62,7 +62,7 @@ fn r_f32_broadcasts_to_rgb_and_collapses_on_write() {
 
     let img = Image::from_r_f32(&src, w, h);
     assert_eq!(img.format.channels(), 1);
-    let rgb = img.to_rgb_f32();
+    let rgb = img.to_rgb_f32().unwrap();
     // Each pixel must have all 3 channels equal to the luminance.
     for x in 0..w * h {
         assert_eq!(rgb[x * 3], src[x]);
@@ -75,7 +75,7 @@ fn r_f32_broadcasts_to_rgb_and_collapses_on_write() {
     let denoised_rgb = vec![0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2];
     let mut dst = vec![0.0f32; w * h];
     let mut dst_img = ImageMut::from_r_f32(&mut dst, w, h);
-    dst_img.write_rgb_f32(&denoised_rgb);
+    dst_img.write_rgb_f32(&denoised_rgb).unwrap();
     assert_eq!(dst, vec![0.1, 0.4, 0.7, 1.0]);
 }
 
@@ -86,7 +86,7 @@ fn rg_f32_replicates_green_into_blue_and_drops_blue_on_write() {
 
     let img = Image::from_rg_f32(&src, w, h);
     assert_eq!(img.format.channels(), 2);
-    let rgb = img.to_rgb_f32();
+    let rgb = img.to_rgb_f32().unwrap();
     // Matches `_ref/oidn/core/image_accessor.h::get3` for `C==2`:
     // `vec3<T>(pixel[0], pixel[1], pixel[1])`.
     for x in 0..w * h {
@@ -100,7 +100,7 @@ fn rg_f32_replicates_green_into_blue_and_drops_blue_on_write() {
     ];
     let mut dst = vec![0.0f32; w * h * 2];
     let mut dst_img = ImageMut::from_rg_f32(&mut dst, w, h);
-    dst_img.write_rgb_f32(&denoised_rgb);
+    dst_img.write_rgb_f32(&denoised_rgb).unwrap();
     assert_eq!(dst, vec![0.9, 0.8, 0.6, 0.5, 0.3, 0.2, 0.05, 0.025]);
 }
 

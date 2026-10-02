@@ -10,48 +10,78 @@
 use std::path::PathBuf;
 
 use burn::tensor::Device;
-use oidn_model::{Net, UNet, Variant, load_tza};
+use oidn_model::Net;
 
 use crate::{
     color::TransferFunction,
     error::OidnError,
     filter::{Filter, Quality},
-    filters::unet_runner::{self, ProgressFn},
-    image::{Image, ImageMut, PixelFormat},
+    filters::unet_runner::{self, ProgressFn, RunOptions},
+    image::{Image, OwnedImage, PixelFormat},
     registry::ModelKey,
-    tile::{self, DEFAULT_MAX_TILE_SIZE, MIN_TILE_ALIGNMENT, RECEPTIVE_FIELD_BASE, TilePlan},
+    tile::TilePlan,
+    weights::{self, SourcePolicy},
 };
 
 pub struct RtLightmapFilterBuilder<'b> {
     device: &'b Device,
     weights_dir: PathBuf,
+    weight_source: SourcePolicy,
+    max_memory_mb: Option<i32>,
     directional: bool,
     quality: Quality,
     user_input_scale: Option<f32>,
     user_weights: Option<Vec<u8>>,
+    nan_to_zero: bool,
 }
 
 impl<'b> RtLightmapFilterBuilder<'b> {
     pub fn new(device: &'b Device, weights_dir: impl Into<PathBuf>) -> Self {
+        let weights_dir = weights_dir.into();
+        let weight_source = if weights_dir.as_os_str().is_empty() {
+            SourcePolicy::EmbeddedFirst
+        } else {
+            SourcePolicy::DiskFirst
+        };
         Self {
             device,
-            weights_dir: weights_dir.into(),
+            weights_dir,
+            weight_source,
+            max_memory_mb: None,
             directional: false,
             quality: Quality::High,
             user_input_scale: None,
             user_weights: None,
+            nan_to_zero: true,
         }
     }
 
     /// In directional mode the lightmap stores signed per-axis irradiance
     /// gradients; we use Linear transfer + snorm input handling instead of
     /// Log (matches `RTLightmapFilter::setInt("directional", ...)` semantics).
+    /// Choose source precedence for the single lightmap model.
+    pub fn weight_source(mut self, policy: SourcePolicy) -> Self {
+        self.weight_source = policy;
+        self
+    }
+    /// Best-effort memory budget in MiB; negative values restore the default.
+    pub fn max_memory_mb(mut self, mb: i32) -> Self {
+        self.max_memory_mb = (mb >= 0).then_some(mb);
+        self
+    }
+
     pub fn directional(mut self, v: bool) -> Self {
         self.directional = v;
         self
     }
     pub fn quality(mut self, q: Quality) -> Self {
         self.quality = q;
+        self
+    }
+    /// Optional stronger policy replacing all nonfinite samples before scaling.
+    /// When disabled, mandatory native NaN-only sanitation/clamping remains.
+    pub fn nan_to_zero(mut self, enabled: bool) -> Self {
+        self.nan_to_zero = enabled;
         self
     }
     pub fn input_scale(mut self, s: Option<f32>) -> Self {
@@ -73,10 +103,13 @@ impl<'b> RtLightmapFilterBuilder<'b> {
         RtLightmapFilter {
             device: self.device,
             weights_dir: self.weights_dir,
+            weight_source: self.weight_source,
+            max_memory_mb: self.max_memory_mb,
             directional: self.directional,
             quality: self.quality,
             user_input_scale: self.user_input_scale,
             user_weights: self.user_weights,
+            nan_to_zero: self.nan_to_zero,
             color: None,
             output: None,
             net: None,
@@ -92,13 +125,16 @@ impl<'b> RtLightmapFilterBuilder<'b> {
 pub struct RtLightmapFilter<'b> {
     device: &'b Device,
     weights_dir: PathBuf,
+    weight_source: SourcePolicy,
+    max_memory_mb: Option<i32>,
     directional: bool,
     quality: Quality,
     user_input_scale: Option<f32>,
     user_weights: Option<Vec<u8>>,
+    nan_to_zero: bool,
 
     color: Option<OwnedImage>,
-    output: Option<OwnedImageMut>,
+    output: Option<OwnedImage>,
 
     net: Option<Net>,
     plan: Option<TilePlan>,
@@ -112,65 +148,6 @@ pub struct RtLightmapFilter<'b> {
     last_committed_dims: Option<(usize, usize, PixelFormat)>,
 }
 
-struct OwnedImage {
-    data: Vec<u8>,
-    width: usize,
-    height: usize,
-    row_stride: usize,
-    format: PixelFormat,
-}
-
-struct OwnedImageMut {
-    data: Vec<u8>,
-    width: usize,
-    height: usize,
-    row_stride: usize,
-    format: PixelFormat,
-}
-
-impl OwnedImage {
-    fn from(img: &Image<'_>) -> Self {
-        Self {
-            data: img.data.to_vec(),
-            width: img.width,
-            height: img.height,
-            row_stride: img.row_stride,
-            format: img.format,
-        }
-    }
-    fn view(&self) -> Image<'_> {
-        Image {
-            data: &self.data,
-            width: self.width,
-            height: self.height,
-            row_stride: self.row_stride,
-            format: self.format,
-        }
-    }
-}
-
-impl OwnedImageMut {
-    fn empty(width: usize, height: usize, format: PixelFormat) -> Self {
-        let row_stride = width * format.pixel_size();
-        Self {
-            data: vec![0u8; row_stride * height],
-            width,
-            height,
-            row_stride,
-            format,
-        }
-    }
-    fn view_mut(&mut self) -> ImageMut<'_> {
-        ImageMut {
-            data: &mut self.data,
-            width: self.width,
-            height: self.height,
-            row_stride: self.row_stride,
-            format: self.format,
-        }
-    }
-}
-
 impl<'b> RtLightmapFilter<'b> {
     pub fn builder(
         device: &'b Device,
@@ -179,29 +156,44 @@ impl<'b> RtLightmapFilter<'b> {
         RtLightmapFilterBuilder::new(device, weights_dir)
     }
 
-    pub fn set_color(&mut self, img: &Image<'_>) {
-        let needs_invalidate = self.color.is_none();
-        self.color = Some(OwnedImage::from(img));
-        if needs_invalidate {
+    pub fn set_color(&mut self, img: &Image<'_>) -> Result<(), OidnError> {
+        let image = OwnedImage::from(img)?;
+        let changed = self.color.as_ref().is_none_or(|old| {
+            (old.width, old.height, old.format) != (img.width, img.height, img.format)
+        });
+        self.color = Some(image);
+        if changed {
             self.committed = false;
         }
+        Ok(())
     }
 
     /// Reserve a host-side output buffer at the requested shape. Identical
     /// shape + format as the previous commit leaves `committed` intact so
     /// the UNet weights and tile plan are reused across frames; only a
     /// genuine shape change forces a rebuild. Mirrors `RtFilter::allocate_output`.
-    pub fn allocate_output(&mut self, width: usize, height: usize, format: PixelFormat) {
+    pub fn allocate_output(
+        &mut self,
+        width: usize,
+        height: usize,
+        format: PixelFormat,
+    ) -> Result<(), OidnError> {
         let same_dims = self.last_committed_dims == Some((width, height, format));
-        self.output = Some(OwnedImageMut::empty(width, height, format));
+        self.output = Some(OwnedImage::empty(width, height, format)?);
         if !same_dims {
             self.committed = false;
         }
+        Ok(())
     }
 
     pub fn take_output(&mut self) -> Option<(Vec<u8>, usize, usize, PixelFormat)> {
         let o = self.output.take()?;
         Some((o.data, o.width, o.height, o.format))
+    }
+
+    /// Update the optional stronger sanitation policy between passes.
+    pub fn set_nan_to_zero(&mut self, enabled: bool) {
+        self.nan_to_zero = enabled;
     }
 
     pub fn model_key(&self) -> Option<&ModelKey> {
@@ -234,6 +226,7 @@ impl<'b> Filter for RtLightmapFilter<'b> {
     }
 
     fn commit(&mut self) -> Result<(), OidnError> {
+        self.committed = false;
         if self.color.is_none() {
             return Err(OidnError::Unset("color"));
         }
@@ -241,42 +234,39 @@ impl<'b> Filter for RtLightmapFilter<'b> {
         let key = self.select_model();
         let _ = self.quality; // single-variant filter — no quality routing
 
-        // User weights override the registry/file lookup, matching
-        // `RtFilter`'s contract.
-        let bytes: Vec<u8> = if let Some(user) = self.user_weights.clone() {
-            user
-        } else {
-            let path = self.weights_dir.join(key.filename());
-            std::fs::read(&path).map_err(|e| {
-                if e.kind() == std::io::ErrorKind::NotFound {
-                    OidnError::MissingModel(path.clone())
-                } else {
-                    OidnError::Io(e)
-                }
-            })?
-        };
-        self.model_key = Some(key);
-        let tensors = oidn_tza::parse(&bytes)?;
-
-        // Lightmap models always take 3 colour channels → 3 channels out.
-        let unet = UNet::new(3, 3, Variant::Base, self.device);
-        let unet = load_tza(unet, &tensors, self.device)?;
-        self.net = Some(Net::Base(unet));
-
         let out = self.output.as_ref().ok_or(OidnError::Unset("output"))?;
-        let plan = tile::plan(
-            out.width as i32,
-            out.height as i32,
-            RECEPTIVE_FIELD_BASE,
-            MIN_TILE_ALIGNMENT,
-            DEFAULT_MAX_TILE_SIZE,
-        );
-        self.plan = Some(plan);
-
-        let color = self.color.as_ref().unwrap();
+        out.view().validate()?;
+        super::validate_execution(out.width, out.height, self.user_input_scale)?;
+        let color = self.color.as_ref().ok_or(OidnError::Unset("color"))?;
+        color.view().validate()?;
         if color.width != out.width || color.height != out.height {
             return Err(OidnError::Inconsistent("color"));
         }
+        let bytes = if let Some(user) = &self.user_weights {
+            user.clone()
+        } else {
+            // Native lightmap selection has one model regardless of quality.
+            weights::resolve(
+                &key,
+                Quality::Balanced,
+                Some(&self.weights_dir),
+                self.weight_source,
+            )?
+            .ok_or_else(|| OidnError::MissingModel(self.weights_dir.join(key.filename())))?
+            .bytes
+        };
+        let (net, plan) = super::build_commit_artifacts(
+            self.device,
+            &bytes,
+            3,
+            out.width,
+            out.height,
+            self.max_memory_mb,
+            self.user_input_scale,
+        )?;
+        self.model_key = Some(key);
+        self.net = Some(net);
+        self.plan = Some(plan);
 
         self.committed = true;
         self.last_committed_dims = Some((out.width, out.height, out.format));
@@ -311,10 +301,14 @@ impl<'b> Filter for RtLightmapFilter<'b> {
             None,
             None,
             &mut out_view,
-            transfer,
-            is_hdr,
-            self.user_input_scale,
-            true, // nan_to_zero: match reference contract by default
+            RunOptions {
+                transfer,
+                hdr: is_hdr,
+                signed: self.directional,
+                input_scale: self.user_input_scale,
+                sanitize_nonfinite: self.nan_to_zero,
+                output_channels: 3,
+            },
             progress,
         )
     }

@@ -1,0 +1,107 @@
+{
+  "date": "2026-10-02",
+  "scope": "Synthetic frozen PFM host CLI contracts only; original progressive scene noise not reproduced.",
+  "commands": [
+    {
+      "command": "python",
+      "args": [
+        "bughunt/native-verification/postfix/compare_runtime.py",
+        "--rust",
+        "target/debug/oidn-rs.exe",
+        "--rust-device",
+        "both"
+      ],
+      "exitCode": 0,
+      "milliseconds": 78217
+    },
+    {
+      "command": "python",
+      "args": [
+        "bughunt/native-verification/postfix/compare_runtime.py",
+        "--rust",
+        "target/debug/oidn-rs.exe",
+        "--rust-device",
+        "wgpu",
+        "--seams"
+      ],
+      "exitCode": 0,
+      "milliseconds": 4617
+    }
+  ],
+  "matrix": {
+    "runs": 108,
+    "failures": 0,
+    "finiteValues": 302958,
+    "rustSha256": "1a898451b3d81f57507a3900a9e3d227827bb6f833ec95893fca3c7ffb1e0693",
+    "largestRustWgpuNativeCpuMaxAbsolute": 0.0003814697265625,
+    "largestRustCpuNativeCpuMaxAbsolute": 0.00031280517578125,
+    "largestNativeCudaNativeCpuMaxAbsolute": 1.2774772644042969
+  },
+  "changes": [
+    {
+      "case": "odd33x19 auto",
+      "before": 1.7249717712402344,
+      "after": 0.000141143798828125
+    },
+    {
+      "case": "tiny8x8 auto",
+      "before": 3.218883514404297,
+      "after": 0.0000286102294921875
+    },
+    {
+      "case": "AOV33x19 scale1",
+      "before": 0.9775581359863281,
+      "after": 0.0001964569091796875
+    },
+    {
+      "case": "AOV33x19 scale.02",
+      "before": 4.665126800537109,
+      "after": 0.000125885009765625
+    },
+    {
+      "case": "AOV32x19 scale.02",
+      "before": 3.6860580444335938,
+      "after": 0.0001068115234375
+    }
+  ],
+  "large": {
+    "runs": 6,
+    "failures": 0,
+    "finiteValues": 221472,
+    "width": 769,
+    "height": 16,
+    "scale": 0.02,
+    "model": "rt_hdr_calb_cnrm_large.tza",
+    "quality": "high",
+    "cleanAux": true,
+    "tiledVsFullMaxAbsolute": 0,
+    "rustWgpuNativeCpuMaxAbsolute": 0.000152587890625,
+    "tileCount": 2,
+    "tileWidth": 768,
+    "tileHeight": 16,
+    "rf": 202,
+    "tileEvidence": [
+      "large_plan.stdout.log:2",
+      "large_plan.stdout.log:2136",
+      "large_native_plan.stdout.log:24-26"
+    ]
+  },
+  "limits": [
+    "Native CUDA uses half intermediate storage and quality-dependent arithmetic; comparisons are not clean-target denoising quality scores.",
+    "Large seam fixture tests one wide/thin geometry, not exhaustive tile topology."
+  ],
+  "publicCpu": {
+    "command": "cargo test --locked -p oidn-rs --test pipeline_contracts -- --test-threads=1",
+    "exitCode": 0,
+    "totalMilliseconds": 252608,
+    "testSeconds": 4.58,
+    "passed": 6,
+    "failed": 0,
+    "logs": [
+      "pipeline_contracts.stdout.log",
+      "pipeline_contracts.stderr.log"
+    ],
+    "stderr": "88 build progress lines, no failing test"
+  },
+  "pendingGpuRegression": "multi_tile_wgpu::large_two_tiles_match_full_image_wgpu added; actual callback count1/2, validated RF202 overlap112, finite/HDRsignal/full-vs-tiled1e-4; execution pending."
+}

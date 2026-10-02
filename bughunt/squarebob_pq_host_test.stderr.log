@@ -1,0 +1,10 @@
+error[E0433]: cannot find module or crate `half` in this scope
+   --> crates\render-core\src\lib.rs:768:37
+    |
+768 |                         let value = half::f16::from_bits(u16::from_le_bytes([
+    |                                     ^^^^ use of unresolved module or unlinked crate `half`
+    |
+    = help: if you wanted to use a crate named `half`, use `cargo add half` to add it to your `Cargo.toml`
+
+For more information about this error, try `rustc --explain E0433`.
+error: could not compile `render-core` (lib) due to 1 previous error

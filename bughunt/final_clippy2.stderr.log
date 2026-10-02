@@ -1,0 +1,11 @@
+error: manual implementation of `.is_multiple_of()`
+   --> crates\oidn-tza\tests\validation.rs:104:20
+    |
+104 |         .find(|&n| (backing.as_ptr() as usize + n) % 4 != 0)
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: replace with: `!(backing.as_ptr() as usize + n).is_multiple_of(4)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#manual_is_multiple_of
+    = note: `-D clippy::manual-is-multiple-of` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::manual_is_multiple_of)]`
+
+error: could not compile `oidn-tza` (test "validation") due to 1 previous error

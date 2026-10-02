@@ -1,0 +1,48 @@
+Initializing device
+
+Intel(R) Open Image Denoise 2.5.0
+  Compiler  : Clang 20.0.0git (https://github.com/intel/llvm 7a46d932da5104a13a50760260ed78eae60eb976)
+  Build     : Release
+  OS        : Windows (x86-64)
+  Device    : AMD Ryzen 9 5900X 12-Core Processor            
+    Type    : CPU
+    ISA     : AVX2
+  Tasking   : TBB2023.0 TBB_header_interface_12180 TBB_lib_interface_12180
+    Threads : 12 (affinitized)
+
+  device=CPU, version=2.5.0, msec=217.549
+Loading input
+Resolution: 32x32
+Loading filter weights
+Initializing filter
+  filter=RT, msec=4.5875
+
+Denoising 0% 
+Denoising 3% 
+Denoising 7% 
+Denoising 11% 
+Denoising 15% 
+Denoising 19% 
+Denoising 23% 
+Denoising 26% 
+Denoising 30% 
+Denoising 34% 
+Denoising 38% 
+Denoising 42% 
+Denoising 46% 
+Denoising 50% 
+Denoising 53% 
+Denoising 57% 
+Denoising 61% 
+Denoising 65% 
+Denoising 69% 
+Denoising 73% 
+Denoising 76% 
+Denoising 80% 
+Denoising 84% 
+Denoising 88% 
+Denoising 92% 
+Denoising 96% 
+Denoising 100% 
+  msec=6.4003
+Saving output

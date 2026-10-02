@@ -1,0 +1,19 @@
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.24
+   Compiling quote v1.0.47
+   Compiling zerocopy v0.8.55
+   Compiling thiserror v2.0.19
+   Compiling cfg-if v1.0.4
+   Compiling syn v2.0.119
+   Compiling syn v3.0.3
+   Compiling thiserror-impl v2.0.19
+   Compiling zerocopy-derive v0.8.55
+   Compiling bytemuck_derive v1.11.0
+   Compiling bytemuck v1.25.2
+   Compiling half v2.7.1
+   Compiling oidn-tza v0.1.0 (C:\projects\projects.rust.cg\cglibs\oidn-rs\crates\oidn-tza)
+    Finished `test` profile [optimized + debuginfo] target(s) in 11.61s
+     Running unittests src\lib.rs (target\debug\deps\oidn_tza-28f40b05c4f0bd13.exe)
+     Running tests\parse_all_weights.rs (target\debug\deps\parse_all_weights-0282159303f2f1e3.exe)
+     Running tests\validation.rs (target\debug\deps\validation-d42bd1223b76fbfe.exe)
+   Doc-tests oidn_tza

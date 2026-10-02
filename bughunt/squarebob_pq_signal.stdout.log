@@ -1,0 +1,13 @@
+adapter=AdapterInfo { name: "NVIDIA GeForce RTX 3080 Ti", vendor: 4318, device: 8712, device_type: DiscreteGpu, device_pci_bus_id: "0000:0c:00.0", driver: "NVIDIA", driver_info: "616.64", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 32, transient_saves_memory: Some(false), limit_bucket: None }
+nits=0.00 canvas_gamma=0.000000 pq=0.000000 pq_expected=0.000001 pq_error=0.000001 sdr_error=0.000000 scrgb_error=0.000000
+nits=36.54 canvas_gamma=0.461426 pq=0.410559 pq_expected=0.410927 pq_error=0.000368 sdr_error=0.001319 scrgb_error=0.000599
+nits=100.00 canvas_gamma=0.730469 pq=0.508309 pq_expected=0.508078 pq_error=0.000231 sdr_error=0.001057 scrgb_error=0.000975
+nits=203.00 canvas_gamma=1.000000 pq=0.580652 pq_expected=0.580690 pq_error=0.000039 sdr_error=0.000000 scrgb_error=0.004297
+nits=1000.00 canvas_gamma=1.995117 pq=0.751720 pq_expected=0.751815 pq_error=0.000095 sdr_error=0.000000 scrgb_error=0.006636
+primary=red nits=203 pq=[0.53275347, 0.32648203, 0.21994354] expected=[0.5325463, 0.32702377, 0.22006987] max_error=0.000542
+primary=red nits=1000 pq=[0.70087737, 0.47116807, 0.34016937] expected=[0.7011234, 0.4714561, 0.34001988] max_error=0.000288
+primary=green nits=203 pq=[0.4682231, 0.5718471, 0.3470207] expected=[0.46823037, 0.5719384, 0.3473326] max_error=0.000312
+primary=green nits=1000 pq=[0.6314794, 0.742916, 0.49559778] expected=[0.63176346, 0.7426794, 0.49530894] max_error=0.000289
+primary=blue nits=203 pq=[0.28934157, 0.19647516, 0.5689174] expected=[0.28964734, 0.19681048, 0.5691947] max_error=0.000335
+primary=blue nits=1000 pq=[0.42717633, 0.30986497, 0.73998624] expected=[0.42671016, 0.3098536, 0.73980165] max_error=0.000466
+display_probe_passed=true pq_white=0.580652 pq_highlight=0.751720

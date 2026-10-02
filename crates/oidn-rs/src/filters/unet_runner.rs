@@ -4,8 +4,8 @@
 //!
 //! - [`run_tensors`] is the primary impl. Inputs and outputs are
 //!   `[1, 3, H, W]` (NCHW) Burn tensors that already live on the target
-//!   device. No host roundtrip anywhere — this is what the Phase I.5 +
-//!   I.6 squarebob bridge calls into.
+//!   device. HDR exposure reads back reduced scalars; explicitly enabled tensor
+//!   diagnostics read back pixels. Squarebob uses this numerical core.
 //! - [`run`] is the legacy `Image<'_>` ↔ `ImageMut<'_>` entry point used
 //!   by the CLI and tests. It does the host upload / download bookends
 //!   around `run_tensors` so callers that don't have a wgpu pipeline
@@ -28,6 +28,18 @@ use crate::{
 /// Returning `false` aborts execution with `OidnError::Cancelled`.
 pub type ProgressFn<'a> = dyn FnMut(f32) -> bool + 'a;
 
+/// Shared execution semantics for both image and tensor frontends.
+#[derive(Clone, Copy, Debug)]
+pub struct RunOptions {
+    pub transfer: TransferFunction,
+    pub hdr: bool,
+    pub signed: bool,
+    pub input_scale: Option<f32>,
+    /// Optional stronger policy; reference NaN sanitation remains mandatory.
+    pub sanitize_nonfinite: bool,
+    pub output_channels: usize,
+}
+
 /// Tensor-native UNet forward pass. All inputs (`color`, `albedo`,
 /// `normal`) are `[1, 3, H, W]` (NCHW) `f32` tensors on `device`. The
 /// returned tensor has the same shape. No data crosses to host except
@@ -46,17 +58,45 @@ pub fn run_tensors(
     normal: Option<Tensor<4>>,
     output_w: usize,
     output_h: usize,
-    transfer_kind: TransferFunction,
-    hdr: bool,
-    user_input_scale: Option<f32>,
-    nan_to_zero: bool,
+    options: RunOptions,
     mut progress: Option<&mut ProgressFn<'_>>,
 ) -> Result<Tensor<4>, OidnError> {
-    // Canonical sanitisation point: NaN/Inf -> 0 is applied here once on
-    // each whole input tensor. `preprocess_input` / `postprocess_color`
-    // also call `nan_to_zero` internally to match the reference's
-    // per-kernel contract, but for the colour path the upstream pass is
-    // what catches user-provided non-finite samples before tiling.
+    let RunOptions {
+        transfer: transfer_kind,
+        hdr,
+        signed,
+        input_scale: user_input_scale,
+        sanitize_nonfinite: nan_to_zero,
+        output_channels,
+    } = options;
+    if !(1..=3).contains(&output_channels) || (signed && hdr) {
+        return Err(OidnError::InvalidArgument(
+            "invalid output channels or signed HDR mode",
+        ));
+    }
+    super::validate_execution(output_w, output_h, user_input_scale)?;
+    crate::image::validate_dimensions(output_w, output_h, output_channels)?;
+    if output_w == 0 || output_h == 0 {
+        return Err(OidnError::InvalidArgument("empty execution geometry"));
+    }
+    plan.validate(output_w, output_h)?;
+    let inputs = [&color, &albedo, &normal];
+    let roles = inputs.iter().filter(|input| input.is_some()).count();
+    if roles == 0 || net.in_channels() != roles * 3 || net.out_channels() != 3 {
+        return Err(OidnError::InvalidArgument("model/input channel mismatch"));
+    }
+    for tensor in inputs.into_iter().flatten() {
+        if tensor.device() != *device {
+            return Err(OidnError::InvalidArgument(
+                "input tensor must be on the selected device",
+            ));
+        }
+        if tensor.dims() != [1, 3, output_h, output_w] {
+            return Err(OidnError::InvalidArgument("input must match [1,3,H,W]"));
+        }
+    }
+    // Optional stronger input policy executes once before exposure and packing.
+    // Kernel-local native NaN-only sanitation after scale remains mandatory.
     let sanitize = |t: Tensor<4>| -> Tensor<4> {
         if nan_to_zero {
             let finite_mask = t.clone().is_finite();
@@ -66,9 +106,9 @@ pub fn run_tensors(
             t
         }
     };
-    let color = color.map(&sanitize);
-    let albedo = albedo.map(&sanitize);
-    let normal = normal.map(&sanitize);
+    let color = color.map(sanitize);
+    let albedo = albedo.map(sanitize);
+    let normal = normal.map(sanitize);
     let w = output_w;
     let h = output_h;
     log::debug!(
@@ -91,12 +131,17 @@ pub fn run_tensors(
         s
     } else if hdr {
         match color.as_ref() {
-            Some(c) => autoexposure::compute_scale_tensor(c.clone()),
+            Some(c) => autoexposure::compute_scale_tensor(c.clone())?,
             None => 1.0,
         }
     } else {
         1.0
     };
+    if !scale.is_finite() || scale <= 0.0 || !scale.recip().is_finite() {
+        return Err(OidnError::InvalidArgument(
+            "input scale must be positive and finite",
+        ));
+    }
     tf.set_input_scale(scale);
     log::debug!(
         "unet_runner: autoexposure scale={:.6} (hdr={}, user_scale={:?})",
@@ -137,6 +182,7 @@ pub fn run_tensors(
     // Output accumulator: starts at zeros, slice_assign per tile.
     let mut accum: Tensor<4> = Tensor::zeros([1, 3, h, w], device);
 
+    let auxiliary_transfer = TransferState::new(TransferFunction::Linear);
     let total_jobs = plan.jobs.len();
     let tile_w = plan.tile_w as usize;
     let tile_h = plan.tile_h as usize;
@@ -158,45 +204,35 @@ pub fn run_tensors(
         debug_assert!(pad_left + src_w <= tile_w);
         debug_assert!(pad_top + src_h <= tile_h);
 
-        let zero_pad = |src: &Tensor<4>, channels: usize| -> Tensor<4> {
-            let rect = src.clone().slice([
-                0..1,
-                0..channels,
-                src_y..src_y + src_h,
-                src_x..src_x + src_w,
-            ]);
-            let dst: Tensor<4> = Tensor::zeros([1, channels, tile_h, tile_w], device);
-            dst.slice_assign(
+        // Transform only real source values. Padding stays exactly zero in
+        // every role, including signed normals whose valid zero maps to 0.5.
+        let mut channel_parts = Vec::with_capacity(3);
+        for (index, src) in [color.as_ref(), albedo.as_ref(), normal.as_ref()]
+            .into_iter()
+            .enumerate()
+        {
+            let Some(src) = src else { continue };
+            let rect = src
+                .clone()
+                .slice([0..1, 0..3, src_y..src_y + src_h, src_x..src_x + src_w]);
+            let primary = channel_parts.is_empty();
+            let processed = gpu_ops::preprocess_input(
+                rect,
+                if primary { scale } else { 1.0 },
+                primary && hdr,
+                if primary { signed } else { index == 2 },
+                if primary { &tf } else { &auxiliary_transfer },
+            );
+            let dst = Tensor::<4>::zeros([1, 3, tile_h, tile_w], device);
+            channel_parts.push(dst.slice_assign(
                 [
                     0..1,
-                    0..channels,
+                    0..3,
                     pad_top..pad_top + src_h,
                     pad_left..pad_left + src_w,
                 ],
-                rect,
-            )
-        };
-
-        let mut channel_parts: Vec<Tensor<4>> = Vec::with_capacity(3);
-
-        if let Some(src) = color.as_ref() {
-            let padded = zero_pad(src, 3);
-            // hdr=false here is benign: the colour path is governed by
-            // the outer `hdr` flag; preserve it via the helper.
-            channel_parts.push(gpu_ops::preprocess_input(padded, scale, hdr, false, &tf));
-        }
-        if let Some(src) = albedo.as_ref() {
-            let padded = zero_pad(src, 3);
-            channel_parts.push(padded.clamp(0.0, 1.0));
-        }
-        if let Some(src) = normal.as_ref() {
-            let padded = zero_pad(src, 3);
-            // Reference getNormal(): clamp(-1, 1) → *0.5 + 0.5.
-            let normalized = padded
-                .clamp(-1.0, 1.0)
-                .mul_scalar(0.5_f32)
-                .add_scalar(0.5_f32);
-            channel_parts.push(normalized);
+                processed,
+            ));
         }
 
         // 2. Concat along channel dim → [1, in_c, tile_h, tile_w].
@@ -209,7 +245,14 @@ pub fn run_tensors(
         //    [ldr clamp] -> *output_scale) then crop + slice_assign.
         //    Handles Linear correctly: the inverse curve is identity and
         //    the surrounding clamp/scale still apply per reference.
-        let post = gpu_ops::postprocess_color(output_tensor, &tf, hdr, false, tf.output_scale);
+        let post = gpu_ops::postprocess_color(
+            output_tensor,
+            &tf,
+            hdr,
+            signed,
+            tf.output_scale,
+            output_channels,
+        );
 
         let Rect {
             x: ox,
@@ -271,18 +314,28 @@ pub fn run(
     albedo: Option<&Image<'_>>,
     normal: Option<&Image<'_>>,
     output: &mut ImageMut<'_>,
-    transfer_kind: TransferFunction,
-    hdr: bool,
-    user_input_scale: Option<f32>,
-    nan_to_zero: bool,
+    options: RunOptions,
     progress: Option<&mut ProgressFn<'_>>,
 ) -> Result<(), OidnError> {
     let w = output.width;
     let h = output.height;
 
-    let color_buf = color.map(|img| img.to_rgb_f32());
-    let albedo_buf = albedo.map(|img| img.to_rgb_f32());
-    let normal_buf = normal.map(|img| img.to_rgb_f32());
+    output.validate()?;
+    super::validate_execution(w, h, options.input_scale)?;
+    plan.validate(w, h)?;
+    for image in [color, albedo, normal].into_iter().flatten() {
+        image.validate()?;
+        if image.width != w || image.height != h {
+            return Err(OidnError::Inconsistent("input/output dimensions"));
+        }
+    }
+    let options = RunOptions {
+        output_channels: output.format.channels(),
+        ..options
+    };
+    let color_buf = color.map(|img| img.to_rgb_f32()).transpose()?;
+    let albedo_buf = albedo.map(|img| img.to_rgb_f32()).transpose()?;
+    let normal_buf = normal.map(|img| img.to_rgb_f32()).transpose()?;
 
     if let Some(c) = color_buf.as_deref() {
         let (cmin, cmax, cmean) = quick_stats(c);
@@ -291,39 +344,30 @@ pub fn run(
 
     let color_t = color_buf
         .as_deref()
-        .map(|buf| upload_hwc_as_chw_tensor(buf, w, h, device));
+        .map(|buf| upload_hwc_as_chw_tensor(buf, w, h, device))
+        .transpose()?;
     let albedo_t = albedo_buf
         .as_deref()
-        .map(|buf| upload_hwc_as_chw_tensor(buf, w, h, device));
+        .map(|buf| upload_hwc_as_chw_tensor(buf, w, h, device))
+        .transpose()?;
     let normal_t = normal_buf
         .as_deref()
-        .map(|buf| upload_hwc_as_chw_tensor(buf, w, h, device));
+        .map(|buf| upload_hwc_as_chw_tensor(buf, w, h, device))
+        .transpose()?;
 
     let accum = run_tensors(
-        net,
-        device,
-        plan,
-        color_t,
-        albedo_t,
-        normal_t,
-        w,
-        h,
-        transfer_kind,
-        hdr,
-        user_input_scale,
-        nan_to_zero,
-        progress,
+        net, device, plan, color_t, albedo_t, normal_t, w, h, options, progress,
     )?;
 
-    let (chw_vec, dims) = image_tensor::tensor_to_chw_vec(accum);
+    let (chw_vec, dims) = image_tensor::tensor_to_chw_vec(accum)?;
     debug_assert_eq!(dims, [1, 3, h, w]);
-    let hwc_vec = image_tensor::chw_to_hwc(&chw_vec, 3, h, w);
+    let hwc_vec = image_tensor::chw_to_hwc(&chw_vec, 3, h, w)?;
 
     let (omin_post, omax_post, omean_post) = quick_stats(&hwc_vec);
     log::debug!(
         "unet_runner output (after inverse transfer): min={omin_post:.4} max={omax_post:.4} mean={omean_post:.4}"
     );
-    output.write_rgb_f32(&hwc_vec);
+    output.write_rgb_f32(&hwc_vec)?;
     Ok(())
 }
 
@@ -333,30 +377,14 @@ fn upload_hwc_as_chw_tensor(
     width: usize,
     height: usize,
     device: &Device,
-) -> Tensor<4> {
-    let chw = image_tensor::hwc_to_chw(buf_hwc, 3, height, width);
+) -> Result<Tensor<4>, OidnError> {
+    let chw = image_tensor::hwc_to_chw(buf_hwc, 3, height, width)?;
     image_tensor::chw_vec_to_tensor(chw, 3, height, width, device)
 }
 
 fn quick_stats(data: &[f32]) -> (f32, f32, f32) {
-    if data.is_empty() {
-        return (0.0, 0.0, 0.0);
-    }
-    let mut min = f32::INFINITY;
-    let mut max = f32::NEG_INFINITY;
-    let mut sum = 0.0f64;
-    for &v in data {
-        if v.is_finite() {
-            if v < min {
-                min = v;
-            }
-            if v > max {
-                max = v;
-            }
-            sum += v as f64;
-        }
-    }
-    (min, max, (sum / data.len() as f64) as f32)
+    let stats = TensorStats::from_slice(data);
+    (stats.min, stats.max, stats.mean)
 }
 
 fn tensor_diagnostics_enabled() -> bool {

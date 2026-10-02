@@ -1,0 +1,13 @@
+[2026-10-02T19:24:44.252Z WARN  wgpu_hal::vulkan::instance] GENERAL [Loader Message (0x0)]
+    	Layer VK_LAYER_bandicam_helper uses API version 1.2 which is older than the application specified API version of 1.3. May cause issues.
+[2026-10-02T19:24:44.252Z WARN  wgpu_hal::vulkan::instance] 	objects: (type: INSTANCE, hndl: 0x1b520ac7980, name: ?)
+[2026-10-02T19:24:46.117Z WARN  wgpu_hal::vulkan::instance] PERFORMANCE [WARNING-Shader-OutputNotConsumed (0xc81ad50e)]
+    	vkCreateGraphicsPipelines(): pCreateInfos[0].pVertexInputState Vertex attribute at location 9 not consumed by vertex shader.
+[2026-10-02T19:24:46.118Z WARN  wgpu_hal::vulkan::instance] 	objects: (type: SHADER_MODULE, hndl: 0x7a000000007a, name: ?)
+[2026-10-02T19:24:46.133Z WARN  wgpu_hal::vulkan::instance] PERFORMANCE [WARNING-Shader-OutputNotConsumed (0xc81ad50e)]
+    	vkCreateGraphicsPipelines(): pCreateInfos[0].pVertexInputState Vertex attribute at location 9 not consumed by vertex shader.
+[2026-10-02T19:24:46.134Z WARN  wgpu_hal::vulkan::instance] 	objects: (type: SHADER_MODULE, hndl: 0x7e000000007e, name: ?)
+
+thread 'main' (38552) panicked at C:\Users\joss1\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\epaint-0.36.2\src\textures.rs:337:9:
+Dropped TexturesDelta with 1 unapplied deltas. Deltas need to be handled. If you want to drop this intentionally call `clear` before dropping.
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

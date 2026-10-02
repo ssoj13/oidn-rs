@@ -1,0 +1,7 @@
+
+[96m============================================================
+INSTALL
+============================================================[0m
+  [97mcargo install --path C:\projects\projects.rust.cg\cglibs\oidn-rs\crates\oidn-cli --bin oidn-rs[0m
+  [92moidn-rs installed (1ms)[0m
+  [97mcargo check[0m

@@ -1,5 +1,7 @@
 use crate::error::TzaError;
 use crate::types::{DType, Layout, Tensor, TensorDesc, TensorMap};
+use bytes::Bytes;
+use std::collections::BTreeMap;
 
 const MAGIC: u16 = 0x41D7;
 const SUPPORTED_MAJOR: u8 = 2;
@@ -102,7 +104,8 @@ fn decode_dtype(c: char) -> Result<DType, TzaError> {
 /// Parse a TZA archive from a byte buffer.
 ///
 /// Returns a `TensorMap` (`BTreeMap<String, Tensor>`) containing every named
-/// tensor, with data copied out of the source buffer (so the result is `'static`).
+/// tensor. Payloads share ranges of one owned archive allocation, so aliased
+/// source ranges do not multiply allocation size and the result is `'static`.
 pub fn parse(bytes: &[u8]) -> Result<TensorMap, TzaError> {
     let mut cur = Cursor::new(bytes);
 
@@ -117,17 +120,22 @@ pub fn parse(bytes: &[u8]) -> Result<TensorMap, TzaError> {
         return Err(TzaError::UnsupportedVersion { got: major });
     }
 
-    let table_offset = cur.read_u64()? as usize;
+    let table_offset = cur.read_u64()?;
+    let table_offset =
+        usize::try_from(table_offset).map_err(|_| TzaError::InvalidOffset(table_offset))?;
     cur.seek(table_offset)?;
 
     let n_tensors = cur.read_u32()? as usize;
-    let mut map = TensorMap::new();
+    let mut map = BTreeMap::new();
 
     for _ in 0..n_tensors {
         // Name
         let name_len = cur.read_u16()? as usize;
         let name_bytes = cur.read_bytes(name_len)?.to_vec();
         let name = String::from_utf8(name_bytes)?;
+        if map.contains_key(&name) {
+            return Err(TzaError::DuplicateName(name));
+        }
 
         // Dims
         let ndim = cur.read_u8()? as usize;
@@ -156,14 +164,16 @@ pub fn parse(bytes: &[u8]) -> Result<TensorMap, TzaError> {
         let dtype = decode_dtype(dtype_byte as char)?;
 
         // Tensor data offset
-        let data_offset = cur.read_u64()? as usize;
+        let data_offset = cur.read_u64()?;
+        let data_offset =
+            usize::try_from(data_offset).map_err(|_| TzaError::InvalidOffset(data_offset))?;
 
         let desc = TensorDesc {
             dims,
             layout,
             dtype,
         };
-        let byte_size = desc.byte_size();
+        let byte_size = desc.byte_size()?;
 
         // Bounds-check raw data without consuming the cursor's position
         if data_offset
@@ -177,10 +187,22 @@ pub fn parse(bytes: &[u8]) -> Result<TensorMap, TzaError> {
                 have: bytes.len().saturating_sub(data_offset),
             });
         }
-        let data = bytes[data_offset..data_offset + byte_size].to_vec();
-
-        map.insert(name, Tensor { desc, data });
+        map.insert(name, (desc, data_offset..data_offset + byte_size));
     }
 
-    Ok(map)
+    // Copy only after the complete table is valid. All ranges share this owned
+    // backing buffer, including overlapping/aliased ranges supported by TZA.
+    let storage = Bytes::copy_from_slice(bytes);
+    Ok(map
+        .into_iter()
+        .map(|(name, (desc, range))| {
+            (
+                name,
+                Tensor {
+                    desc,
+                    data: storage.slice(range),
+                },
+            )
+        })
+        .collect())
 }

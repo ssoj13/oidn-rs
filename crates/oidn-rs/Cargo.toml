@@ -51,9 +51,5 @@ burn       = { workspace = true, features = ["wgpu"] }
 half       = { workspace = true }
 bytemuck   = { workspace = true }
 thiserror  = { workspace = true }
-tracing    = { workspace = true }
-memmap2    = { workspace = true }
-# `log` macros are used by the temporary debug-trace in `unet_runner.rs`
-# (added to diagnose the all-zero-output bug). Squarebob's `env_logger`
-# picks them up directly.
+# Runtime diagnostics are shared with renderer log subscribers.
 log        = "0.4"

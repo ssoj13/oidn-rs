@@ -33,7 +33,6 @@ Examples:
 """
 from __future__ import annotations
 
-import argparse
 import json
 import os
 import platform
@@ -44,6 +43,7 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).parent.resolve()
+VERBOSE = False
 
 
 class C:
@@ -74,9 +74,25 @@ def fmt_time(ms: float) -> str:
 
 def run(args: list[str], capture: bool = False) -> tuple[int, str, float]:
     t0 = time.perf_counter()
-    r = subprocess.run(args, cwd=ROOT, capture_output=capture, text=True, encoding="utf-8", errors="replace")
-    ms = (time.perf_counter() - t0) * 1000
-    return r.returncode, ((r.stdout or "") + (r.stderr or "") if capture else ""), ms
+    if VERBOSE:
+        step(" ".join(args))
+        if args[0] == "cargo":
+            args = [args[0], "--verbose"] + args[1:]
+    if capture and VERBOSE:
+        with subprocess.Popen(args, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                              text=True, encoding="utf-8", errors="replace") as child:
+            lines = []
+            for line in child.stdout:
+                print(line, end="")
+                lines.append(line)
+            code = child.wait()
+        output = "".join(lines)
+    else:
+        result = subprocess.run(args, cwd=ROOT, capture_output=capture,
+                                text=True, encoding="utf-8", errors="replace")
+        code = result.returncode
+        output = (result.stdout or "") + (result.stderr or "") if capture else ""
+    return code, output, (time.perf_counter() - t0) * 1000
 
 
 def has(tool: str) -> bool:
@@ -90,12 +106,16 @@ _META: dict | None = None
 def meta() -> dict:
     global _META
     if _META is None:
-        try:
-            r = subprocess.run(["cargo", "metadata", "--format-version", "1", "--no-deps"],
-                               cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace")
-            _META = json.loads(r.stdout) if r.returncode == 0 else {}
-        except Exception:
-            _META = {}
+        r = subprocess.run(["cargo", "metadata", "--format-version", "1", "--no-deps"],
+                           cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        if r.returncode != 0:
+            raise RuntimeError(f"cargo metadata failed: {r.stderr.strip()}")
+        candidate = json.loads(r.stdout)
+        if (not isinstance(candidate, dict)
+                or not isinstance(candidate.get("packages"), list)
+                or not isinstance(candidate.get("workspace_members"), list)):
+            raise RuntimeError("cargo metadata returned an invalid workspace description")
+        _META = candidate
     return _META
 
 
@@ -116,8 +136,9 @@ def pyo3_manifests() -> list[Path]:
     return out
 
 
-def bin_packages() -> list[str]:
-    return sorted({p["name"] for p in local_pkgs()
+def bin_packages() -> list[tuple[Path, str]]:
+    """Keep the owning manifest directory and executable target name."""
+    return sorted({(Path(p["manifest_path"]).parent, t["name"]) for p in local_pkgs()
                    for t in p.get("targets", []) if "bin" in t.get("kind", [])})
 
 
@@ -220,10 +241,10 @@ def install(debug: bool, py: bool) -> int:
     if not py:
         bins = bin_packages()
         if bins:
-            for b in bins:
-                step(f"cargo install --path . --bin {b}")
-                code, _, ms = run(["cargo", "install", "--path", ".", "--bin", b, "--force"]
-                                  + ([] if debug else []))
+            for directory, b in bins:
+                step(f"cargo install --path {directory} --bin {b}")
+                code, _, ms = run(["cargo", "install", "--path", str(directory), "--bin", b, "--force"]
+                                  + (["--debug"] if debug else []))
                 (ok if code == 0 else err)(f"{b} {'installed' if code == 0 else 'FAILED'} ({fmt_time(ms)})")
                 rc = rc or code
         else:
@@ -250,6 +271,8 @@ def xtask(rest: list[str]) -> int:
 
 
 def main() -> int:
+    global VERBOSE
+    VERBOSE = False
     C.init()
     argv = sys.argv[1:]
     debug = False
@@ -258,7 +281,7 @@ def main() -> int:
         if a in ("-d", "--debug"):
             debug = True
         elif a in ("-v", "--verbose"):
-            pass
+            VERBOSE = True
         else:
             rest.append(a)
     cmd = rest[0] if rest else "help"
@@ -271,9 +294,16 @@ def main() -> int:
     if cmd in ("m", "module"): return module(debug)
     if cmd in ("x", "xtask"): return xtask(rest[1:])
     if cmd in ("cl", "clean"): return clean()
+    if cmd not in ("h", "help"):
+        err(f"unknown command: {cmd}")
+        return 1
     print(__doc__)
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except (RuntimeError, OSError, ValueError) as error:
+        err(str(error))
+        sys.exit(1)

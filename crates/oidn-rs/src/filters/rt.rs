@@ -5,22 +5,21 @@
 //! (`Device::wgpu(..)`) in the CLI — the choice is the device, not a type
 //! parameter.
 //!
-//! Supports three network topologies via the `Net` enum dispatcher:
-//! base / small `UNet` and the wider `UNetLarge`. Variant is detected from
-//! the model filename suffix (`_large` / `_small`) after quality-based
-//! candidate selection.
+//! Supports two network topologies via the `Net` enum dispatcher:
+//! Base/Small `UNet` and Large/XL `UNetLarge`. A validated archive descriptor
+//! derives topology, all channel widths and RF; filenames are selection metadata.
 //!
 //! ## Two parallel I/O modes
 //!
-//! - **Legacy `Image<'_>` mode.** [`Self::set_color`] / [`Self::set_albedo`]
-//!   / [`Self::set_normal`] take byte-backed images; [`Self::allocate_output`]
-//!   reserves a host-side buffer; [`Self::take_output`] returns those bytes.
+//! - **Legacy `Image<'_>` mode.** [`RtFilter::set_color`] / [`RtFilter::set_albedo`]
+//!   / [`RtFilter::set_normal`] take byte-backed images; [`RtFilter::allocate_output`]
+//!   reserves a host-side buffer; [`RtFilter::take_output`] returns those bytes.
 //!   Used by the CLI and the test fixtures.
-//! - **Tensor mode.** [`Self::set_color_tensor`] etc. take a Burn
-//!   `Tensor<4>` (`[1, 3, H, W]` NCHW). [`Self::allocate_output_tensor`]
-//!   declares the output shape; [`Self::take_output_tensor`] returns the
-//!   denoised accumulator. Used by squarebob's wgpu bridge to keep pixels
-//!   on-device end-to-end.
+//! - **Tensor mode.** [`RtFilter::set_color_tensor`] etc. take a Burn
+//!   `Tensor<4>` (`[1, 3, H, W]` NCHW). [`RtFilter::allocate_output_tensor`]
+//!   declares the output shape; [`RtFilter::take_output_tensor`] returns the
+//!   denoised accumulator. The shared tensor core also serves immutable
+//!   [`CommittedRtFilter`], used by squarebob's wgpu bridge.
 //!
 //! [`Filter::execute`] dispatches between the two paths based on which
 //! input slot is populated. Mixing modes within one `commit() / execute()`
@@ -29,21 +28,23 @@
 use std::path::PathBuf;
 
 use burn::tensor::{Device, Tensor};
-use oidn_model::{Net, UNet, UNetLarge, Variant, load_tza, load_tza_large};
+use oidn_model::Net;
 
 use crate::{
     color::TransferFunction,
     error::OidnError,
     filter::{Filter, Quality},
-    filters::unet_runner::{self, ProgressFn},
-    image::{Image, ImageMut, PixelFormat},
-    registry::{ModelKey, quality_candidates, select_rt},
-    tile::{self, DEFAULT_MAX_TILE_SIZE, MIN_TILE_ALIGNMENT, RECEPTIVE_FIELD_BASE, TilePlan},
+    filters::unet_runner::{self, ProgressFn, RunOptions},
+    image::{Image, OwnedImage, PixelFormat},
+    registry::{ModelKey, select_rt},
+    tile::TilePlan,
+    weights::{self, SourcePolicy},
 };
 
 pub struct RtFilterBuilder<'b> {
     device: &'b Device,
     weights_dir: PathBuf,
+    weight_source: SourcePolicy,
     hdr: bool,
     srgb: bool,
     clean_aux: bool,
@@ -56,9 +57,16 @@ pub struct RtFilterBuilder<'b> {
 
 impl<'b> RtFilterBuilder<'b> {
     pub fn new(device: &'b Device, weights_dir: impl Into<PathBuf>) -> Self {
+        let weights_dir = weights_dir.into();
+        let weight_source = if weights_dir.as_os_str().is_empty() {
+            SourcePolicy::EmbeddedFirst
+        } else {
+            SourcePolicy::DiskFirst
+        };
         Self {
             device,
-            weights_dir: weights_dir.into(),
+            weights_dir,
+            weight_source,
             hdr: false,
             srgb: false,
             clean_aux: false,
@@ -68,6 +76,12 @@ impl<'b> RtFilterBuilder<'b> {
             max_memory_mb: None,
             nan_to_zero: true,
         }
+    }
+
+    /// Choose embedded/filesystem source precedence without hiding I/O errors.
+    pub fn weight_source(mut self, policy: SourcePolicy) -> Self {
+        self.weight_source = policy;
+        self
     }
 
     pub fn hdr(mut self, v: bool) -> Self {
@@ -92,7 +106,7 @@ impl<'b> RtFilterBuilder<'b> {
     }
 
     /// Use the caller-supplied TZA blob instead of looking up a model in
-    /// `weights_dir`. Bypasses [`crate::registry::select_rt`] completely —
+    /// `weights_dir`. Bypasses built-in candidate selection, while retaining mode validation —
     /// callers are responsible for matching the blob's channel counts to
     /// the input set. Variant (`UNet` vs `UNetLarge`) is auto-detected from
     /// tensor names.
@@ -101,20 +115,18 @@ impl<'b> RtFilterBuilder<'b> {
         self
     }
 
-    /// Memory budget in MB. The tile planner will subdivide the image until
-    /// the largest intermediate tensor fits below this budget. Pass `-1` (or
-    /// don't call this) to use the default `DEFAULT_MAX_TILE_SIZE` cap.
+    /// Best-effort logical memory budget in MiB. Accounts for parameters,
+    /// full-image input/output and a conservative activation estimate. Backend
+    /// workspaces/allocator overhead are additional; the minimum tile may exceed
+    /// an infeasible budget and is logged. Negative values restore the default.
     pub fn max_memory_mb(mut self, mb: i32) -> Self {
         self.max_memory_mb = (mb >= 0).then_some(mb);
         self
     }
 
-    /// Enable replacement of non-finite (`NaN` / ±`Inf`) input samples
-    /// with `0` before clamp / transfer. Mirrors the reference C++
-    /// OIDN kernel contract (`nan_to_zero` at the head of every
-    /// `getInput` / `getAlbedo` / `getNormal` body). Default: `true`
-    /// — strongly recommended; disabling it lets bad path-tracer
-    /// samples poison the entire output through PU/exp expansion.
+    /// Optional stronger policy replacing NaN and infinities before scaling.
+    /// Default true. When disabled, the shared kernels still apply native
+    /// NaN-only sanitation after scale, followed by range clamps.
     pub fn nan_to_zero(mut self, v: bool) -> Self {
         self.nan_to_zero = v;
         self
@@ -124,6 +136,7 @@ impl<'b> RtFilterBuilder<'b> {
         RtFilter {
             device: self.device,
             weights_dir: self.weights_dir,
+            weight_source: self.weight_source,
             hdr: self.hdr,
             srgb: self.srgb,
             clean_aux: self.clean_aux,
@@ -147,6 +160,7 @@ impl<'b> RtFilterBuilder<'b> {
             progress: None,
             committed: false,
             last_committed_dims: None,
+            input_signature: [None; 3],
         }
     }
 }
@@ -154,6 +168,7 @@ impl<'b> RtFilterBuilder<'b> {
 pub struct RtFilter<'b> {
     device: &'b Device,
     weights_dir: PathBuf,
+    weight_source: SourcePolicy,
     hdr: bool,
     srgb: bool,
     clean_aux: bool,
@@ -167,16 +182,16 @@ pub struct RtFilter<'b> {
     color: Option<OwnedImage>,
     albedo: Option<OwnedImage>,
     normal: Option<OwnedImage>,
-    output: Option<OwnedImageMut>,
+    output: Option<OwnedImage>,
 
     // --- Tensor path (zero host-roundtrip; Phase I.5/I.6) ---
     color_tensor: Option<Tensor<4>>,
     albedo_tensor: Option<Tensor<4>>,
     normal_tensor: Option<Tensor<4>>,
     /// Populated by `execute()` in tensor mode; consumed by
-    /// [`Self::take_output_tensor`].
+    /// [`RtFilter::take_output_tensor`].
     output_tensor: Option<Tensor<4>>,
-    /// `(width, height)` declared by [`Self::allocate_output_tensor`].
+    /// `(width, height)` declared by [`RtFilter::allocate_output_tensor`].
     /// Doubles as the tile-plan / shape source when the tensor path is
     /// active.
     output_tensor_dims: Option<(usize, usize)>,
@@ -190,6 +205,7 @@ pub struct RtFilter<'b> {
     /// legacy mode. Tensor mode tracks its own dims via
     /// `output_tensor_dims`; both feed [`Self::output_dims`].
     last_committed_dims: Option<(usize, usize, PixelFormat)>,
+    input_signature: [Option<[usize; 4]>; 3],
 }
 
 /// Immutable RT denoise state for tensor-native callers.
@@ -219,73 +235,8 @@ struct RtCommitArtifacts {
     model_key: ModelKey,
 }
 
-/// Owned copy of an image's bytes plus geometry. Storing borrowed lifetimes
-/// across `commit()` / `execute()` becomes invasive; copying once at set time
-/// is simpler and the cost is dominated by GPU transfer anyway.
-struct OwnedImage {
-    data: Vec<u8>,
-    width: usize,
-    height: usize,
-    row_stride: usize,
-    format: PixelFormat,
-}
-
-struct OwnedImageMut {
-    data: Vec<u8>,
-    width: usize,
-    height: usize,
-    row_stride: usize,
-    format: PixelFormat,
-}
-
-impl OwnedImage {
-    fn from(img: &Image<'_>) -> Self {
-        Self {
-            data: img.data.to_vec(),
-            width: img.width,
-            height: img.height,
-            row_stride: img.row_stride,
-            format: img.format,
-        }
-    }
-    fn view(&self) -> Image<'_> {
-        Image {
-            data: &self.data,
-            width: self.width,
-            height: self.height,
-            row_stride: self.row_stride,
-            format: self.format,
-        }
-    }
-}
-
-impl OwnedImageMut {
-    fn empty(width: usize, height: usize, format: PixelFormat) -> Self {
-        let row_stride = width * format.pixel_size();
-        Self {
-            data: vec![0u8; row_stride * height],
-            width,
-            height,
-            row_stride,
-            format,
-        }
-    }
-    fn view_mut(&mut self) -> ImageMut<'_> {
-        ImageMut {
-            data: &mut self.data,
-            width: self.width,
-            height: self.height,
-            row_stride: self.row_stride,
-            format: self.format,
-        }
-    }
-}
-
 impl<'b> RtFilter<'b> {
-    pub fn builder(
-        device: &'b Device,
-        weights_dir: impl Into<PathBuf>,
-    ) -> RtFilterBuilder<'b> {
+    pub fn builder(device: &'b Device, weights_dir: impl Into<PathBuf>) -> RtFilterBuilder<'b> {
         RtFilterBuilder::new(device, weights_dir)
     }
 
@@ -296,26 +247,38 @@ impl<'b> RtFilter<'b> {
     /// dimensions, same input set), `execute()` reuses the cached UNet
     /// and tile plan. Only mode/quality/dims changes need a fresh
     /// `commit()`.
-    pub fn set_color(&mut self, img: &Image<'_>) {
-        let needs_invalidate = self.color.is_none();
-        self.color = Some(OwnedImage::from(img));
+    pub fn set_color(&mut self, img: &Image<'_>) -> Result<(), OidnError> {
+        let image = OwnedImage::from(img)?;
+        let needs_invalidate = self.color.as_ref().is_none_or(|old| {
+            (old.width, old.height, old.format) != (img.width, img.height, img.format)
+        });
+        self.color = Some(image);
         if needs_invalidate {
             self.committed = false;
         }
+        Ok(())
     }
-    pub fn set_albedo(&mut self, img: &Image<'_>) {
-        let needs_invalidate = self.albedo.is_none();
-        self.albedo = Some(OwnedImage::from(img));
+    pub fn set_albedo(&mut self, img: &Image<'_>) -> Result<(), OidnError> {
+        let image = OwnedImage::from(img)?;
+        let needs_invalidate = self.albedo.as_ref().is_none_or(|old| {
+            (old.width, old.height, old.format) != (img.width, img.height, img.format)
+        });
+        self.albedo = Some(image);
         if needs_invalidate {
             self.committed = false;
         }
+        Ok(())
     }
-    pub fn set_normal(&mut self, img: &Image<'_>) {
-        let needs_invalidate = self.normal.is_none();
-        self.normal = Some(OwnedImage::from(img));
+    pub fn set_normal(&mut self, img: &Image<'_>) -> Result<(), OidnError> {
+        let image = OwnedImage::from(img)?;
+        let needs_invalidate = self.normal.as_ref().is_none_or(|old| {
+            (old.width, old.height, old.format) != (img.width, img.height, img.format)
+        });
+        self.normal = Some(image);
         if needs_invalidate {
             self.committed = false;
         }
+        Ok(())
     }
 
     // ----- Tensor-native inputs (zero host roundtrip) -----
@@ -324,36 +287,63 @@ impl<'b> RtFilter<'b> {
     /// The tensor is stored by reference (Burn tensors are cheap to
     /// `clone()`); no data crosses to host. `execute()` runs the
     /// tensor-native pipeline when *any* `set_*_tensor` was used.
-    pub fn set_color_tensor(&mut self, t: Tensor<4>) {
-        debug_assert_tensor_chw_3(&t, "set_color_tensor");
-        let needs_invalidate =
-            self.color_tensor.is_none() || tensor_dims_changed(&self.color_tensor, &t);
+    pub fn set_color_tensor(&mut self, t: Tensor<4>) -> Result<(), OidnError> {
+        if t.device() != *self.device {
+            return Err(OidnError::InvalidArgument(
+                "input tensor must be on the selected device",
+            ));
+        }
+        let d = t.dims();
+        crate::image::validate_dimensions(d[3], d[2], d[1])?;
+        if d[0] != 1 || d[1] != 3 {
+            return Err(OidnError::InvalidArgument("input tensor expects [1,3,H,W]"));
+        }
+        let needs_invalidate = self.input_signature[0] != Some(d);
         self.color_tensor = Some(t);
         if needs_invalidate {
             self.committed = false;
         }
+        Ok(())
     }
 
-    /// Tensor-native albedo input. See [`Self::set_color_tensor`].
-    pub fn set_albedo_tensor(&mut self, t: Tensor<4>) {
-        debug_assert_tensor_chw_3(&t, "set_albedo_tensor");
-        let needs_invalidate =
-            self.albedo_tensor.is_none() || tensor_dims_changed(&self.albedo_tensor, &t);
+    /// Tensor-native albedo input. See [`RtFilter::set_color_tensor`].
+    pub fn set_albedo_tensor(&mut self, t: Tensor<4>) -> Result<(), OidnError> {
+        if t.device() != *self.device {
+            return Err(OidnError::InvalidArgument(
+                "input tensor must be on the selected device",
+            ));
+        }
+        let d = t.dims();
+        crate::image::validate_dimensions(d[3], d[2], d[1])?;
+        if d[0] != 1 || d[1] != 3 {
+            return Err(OidnError::InvalidArgument("input tensor expects [1,3,H,W]"));
+        }
+        let needs_invalidate = self.input_signature[1] != Some(d);
         self.albedo_tensor = Some(t);
         if needs_invalidate {
             self.committed = false;
         }
+        Ok(())
     }
 
-    /// Tensor-native normal input. See [`Self::set_color_tensor`].
-    pub fn set_normal_tensor(&mut self, t: Tensor<4>) {
-        debug_assert_tensor_chw_3(&t, "set_normal_tensor");
-        let needs_invalidate =
-            self.normal_tensor.is_none() || tensor_dims_changed(&self.normal_tensor, &t);
+    /// Tensor-native normal input. See [`RtFilter::set_color_tensor`].
+    pub fn set_normal_tensor(&mut self, t: Tensor<4>) -> Result<(), OidnError> {
+        if t.device() != *self.device {
+            return Err(OidnError::InvalidArgument(
+                "input tensor must be on the selected device",
+            ));
+        }
+        let d = t.dims();
+        crate::image::validate_dimensions(d[3], d[2], d[1])?;
+        if d[0] != 1 || d[1] != 3 {
+            return Err(OidnError::InvalidArgument("input tensor expects [1,3,H,W]"));
+        }
+        let needs_invalidate = self.input_signature[2] != Some(d);
         self.normal_tensor = Some(t);
         if needs_invalidate {
             self.committed = false;
         }
+        Ok(())
     }
 
     /// Take ownership of the denoised output as a `[1, 3, H, W]` (NCHW)
@@ -361,36 +351,42 @@ impl<'b> RtFilter<'b> {
     ///
     /// Returns `None` if `execute()` has not been called yet or the
     /// output slot was already consumed. Re-invoking the filter at the
-    /// same shape requires a fresh [`Self::allocate_output_tensor`]
-    /// (idempotent — cached model and plan are reused when shape
-    /// matches).
+    /// same shape uses the retained output declaration and fresh input handles;
+    /// [`RtFilter::allocate_output_tensor`] remains idempotent.
     pub fn take_output_tensor(&mut self) -> Option<Tensor<4>> {
         self.output_tensor.take()
     }
 
     // ----- Output allocation (legacy + tensor) -----
 
-    pub fn allocate_output(&mut self, width: usize, height: usize, format: PixelFormat) {
+    pub fn allocate_output(
+        &mut self,
+        width: usize,
+        height: usize,
+        format: PixelFormat,
+    ) -> Result<(), OidnError> {
         // Skip `committed = false` when the requested output dims/format
         // match the previously-committed ones. `take_output()` leaves
         // `self.output = None` even when the renderer wants to denoise
         // again at the same dims — without this check we'd rebuild the
         // UNet and tile plan every single call.
         let same_dims = self.last_committed_dims == Some((width, height, format));
-        self.output = Some(OwnedImageMut::empty(width, height, format));
+        self.output = Some(OwnedImage::empty(width, height, format)?);
         // Clear any tensor-mode shape so the dispatcher picks the legacy
         // path next time.
         self.output_tensor_dims = None;
         if !same_dims {
             self.committed = false;
         }
+        Ok(())
     }
 
     /// Declare the output shape for tensor-mode execution. No tensor is
     /// allocated up-front — `execute()` builds the accumulator with
     /// `Tensor::zeros([1, 3, h, w], device)` and hands it back via
-    /// [`Self::take_output_tensor`].
-    pub fn allocate_output_tensor(&mut self, width: usize, height: usize) {
+    /// [`RtFilter::take_output_tensor`].
+    pub fn allocate_output_tensor(&mut self, width: usize, height: usize) -> Result<(), OidnError> {
+        crate::image::validate_dimensions(width, height, 3)?;
         let same_dims = self.output_tensor_dims == Some((width, height));
         self.output_tensor_dims = Some((width, height));
         // Drop the legacy buffer; we're going tensor.
@@ -398,6 +394,7 @@ impl<'b> RtFilter<'b> {
         if !same_dims {
             self.committed = false;
         }
+        Ok(())
     }
 
     pub fn take_output(&mut self) -> Option<(Vec<u8>, usize, usize, PixelFormat)> {
@@ -434,7 +431,7 @@ impl<'b> RtFilter<'b> {
         Ok(CommittedRtFilter {
             device: self.device,
             hdr: self.hdr,
-            transfer: self.transfer_kind(has_color),
+            transfer: self.transfer_kind(has_color, has_normal),
             user_input_scale: self.user_input_scale,
             nan_to_zero: self.nan_to_zero,
             has_color,
@@ -464,7 +461,10 @@ impl<'b> RtFilter<'b> {
     /// True when at least one tensor input slot is populated. Used by
     /// [`Filter::execute`] to dispatch between the two pipelines.
     fn tensor_mode(&self) -> bool {
-        self.color_tensor.is_some() || self.albedo_tensor.is_some() || self.normal_tensor.is_some()
+        self.output_tensor_dims.is_some()
+            || self.color_tensor.is_some()
+            || self.albedo_tensor.is_some()
+            || self.normal_tensor.is_some()
     }
 
     /// `(width, height)` of the active output target, regardless of mode.
@@ -477,17 +477,13 @@ impl<'b> RtFilter<'b> {
     }
 
     /// Reference: `_ref/oidn/core/rt_filter.cpp:55-68` — transfer kind depends
-    /// on both mode flags and which inputs are present. When no color image is
-    /// supplied (albedo-only or normal-only filtering), the transfer is always
-    /// `Linear` regardless of `hdr`/`srgb`.
-    fn transfer_kind(&self, has_color: bool) -> TransferFunction {
-        if !has_color {
-            return TransferFunction::Linear;
-        }
-        if self.hdr {
-            TransferFunction::PU
-        } else if self.srgb {
+    /// on primary role and mode flags. Normal-only or explicitly encoded sRGB
+    /// input uses Linear; HDR color uses PU; linear LDR/albedo uses SRGB.
+    fn transfer_kind(&self, has_color: bool, has_normal: bool) -> TransferFunction {
+        if self.srgb || (!has_color && has_normal) {
             TransferFunction::Linear
+        } else if self.hdr {
+            TransferFunction::PU
         } else {
             TransferFunction::SRGB
         }
@@ -501,9 +497,10 @@ impl<'b> RtFilter<'b> {
         has_albedo: bool,
         has_normal: bool,
     ) -> Result<RtCommitArtifacts, OidnError> {
-        // User-supplied weights override the registry/quality lookup entirely.
-        let (stem, bytes): (String, Vec<u8>) = if let Some(bytes) = self.user_weights.clone() {
-            ("user".to_string(), bytes)
+        super::validate_execution(out_w, out_h, self.user_input_scale)?;
+        crate::registry::validate_rt(has_color, has_albedo, has_normal, self.hdr, self.srgb)?;
+        let (stem, bytes) = if let Some(bytes) = &self.user_weights {
+            ("user".to_owned(), bytes.clone())
         } else {
             let base_key = select_rt(
                 has_color,
@@ -514,105 +511,37 @@ impl<'b> RtFilter<'b> {
                 self.clean_aux,
                 self.quality,
             )?;
-
-            // Quality-based candidates: try _large / _small first, fall back to base.
-            let candidates = quality_candidates(&base_key, self.quality);
-
-            let mut chosen: Option<(String, Vec<u8>)> = None;
-            let mut last_path: Option<PathBuf> = None;
-            for stem in &candidates {
-                let p = self.weights_dir.join(format!("{stem}.tza"));
-                last_path = Some(p.clone());
-                match std::fs::read(&p) {
-                    Ok(bytes) => {
-                        chosen = Some((stem.clone(), bytes));
-                        break;
-                    }
-                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
-                    Err(e) => return Err(OidnError::Io(e)),
-                }
-            }
-            chosen.ok_or_else(|| {
-                OidnError::MissingModel(
-                    last_path.unwrap_or_else(|| self.weights_dir.join(base_key.filename())),
-                )
-            })?
+            let resolved = weights::resolve(
+                &base_key,
+                self.quality,
+                Some(&self.weights_dir),
+                self.weight_source,
+            )?
+            .ok_or_else(|| OidnError::MissingModel(self.weights_dir.join(base_key.filename())))?;
+            log::debug!(
+                "resolved model={} source={:?}",
+                resolved.stem,
+                resolved.source
+            );
+            (resolved.stem, resolved.bytes)
         };
-
-        let tensors = oidn_tza::parse(&bytes)?;
         let in_channels =
-            has_color as usize * 3 + has_albedo as usize * 3 + has_normal as usize * 3;
-        let out_channels = 3;
-
-        // Variant detection: when we're loading user weights, we can't trust
-        // the filename, so consult tensor names directly. Otherwise the
-        // resolved stem suffix is authoritative.
-        let variant = if self.user_weights.is_some() {
-            Variant::from_tensor_names(tensors.keys())
-        } else {
-            variant_from_stem(&stem)
-        };
-        let net = match variant {
-            Variant::Base | Variant::Small => {
-                let unet = UNet::new(in_channels, out_channels, variant, self.device);
-                Net::Base(load_tza(unet, &tensors, self.device)?)
-            }
-            Variant::Large | Variant::XLarge => {
-                let unet = UNetLarge::new(in_channels, out_channels, self.device);
-                Net::Large(load_tza_large(unet, &tensors, self.device)?)
-            }
-        };
-
-        let max_tile_pixels = match self.max_memory_mb {
-            None => DEFAULT_MAX_TILE_SIZE,
-            Some(mb) => {
-                let bytes_per_pixel: i64 = match variant {
-                    Variant::Large | Variant::XLarge => 256 * 4 * 4,
-                    _ => 96 * 4 * 4,
-                };
-                let budget_bytes = (mb as i64) * 1024 * 1024;
-                let cap = (budget_bytes / bytes_per_pixel).clamp(1, i32::MAX as i64) as i32;
-                cap.min(DEFAULT_MAX_TILE_SIZE)
-            }
-        };
-        let plan = tile::plan(
-            out_w as i32,
-            out_h as i32,
-            RECEPTIVE_FIELD_BASE,
-            MIN_TILE_ALIGNMENT,
-            max_tile_pixels,
-        );
+            (usize::from(has_color) + usize::from(has_albedo) + usize::from(has_normal)) * 3;
+        let (net, plan) = super::build_commit_artifacts(
+            self.device,
+            &bytes,
+            in_channels,
+            out_w,
+            out_h,
+            self.max_memory_mb,
+            self.user_input_scale,
+        )?;
 
         Ok(RtCommitArtifacts {
             net,
             plan,
             model_key: ModelKey::new(stem),
         })
-    }
-}
-
-fn tensor_dims_changed(slot: &Option<Tensor<4>>, new: &Tensor<4>) -> bool {
-    match slot {
-        None => true,
-        Some(existing) => existing.dims() != new.dims(),
-    }
-}
-
-fn debug_assert_tensor_chw_3(t: &Tensor<4>, who: &'static str) {
-    let dims = t.dims();
-    debug_assert_eq!(dims[0], 1, "{who}: batch size must be 1, got {:?}", dims);
-    debug_assert_eq!(dims[1], 3, "{who}: must be 3-channel CHW, got {:?}", dims);
-}
-
-/// Pick the variant (UNet topology) from the resolved model filename stem.
-/// `_large` ⇒ Large; `_small` ⇒ Small; otherwise Base.
-fn variant_from_stem(stem: &str) -> Variant {
-    if stem.ends_with("_large") {
-        Variant::Large
-    } else if stem.ends_with("_small") {
-        Variant::Small
-    } else {
-        Variant::Base
     }
 }
 
@@ -684,12 +613,14 @@ impl<'b> CommittedRtFilter<'b> {
             normal,
             self.width,
             self.height,
-            self.transfer,
-            // NB: positional — see run_tensors signature.
-            //   hdr, user_input_scale, nan_to_zero, progress
-            self.hdr,
-            self.user_input_scale,
-            self.nan_to_zero,
+            RunOptions {
+                transfer: self.transfer,
+                hdr: self.hdr,
+                signed: !self.has_color && self.has_normal,
+                input_scale: self.user_input_scale,
+                sanitize_nonfinite: self.nan_to_zero,
+                output_channels: 3,
+            },
             progress,
         )
     }
@@ -707,9 +638,8 @@ fn validate_tensor_slot(
         (false, Some(_)) => Err(OidnError::Inconsistent(name)),
         (false, None) => Ok(()),
         (true, Some(t)) => {
-            debug_assert_tensor_chw_3(t, name);
             let d = t.dims();
-            if d[3] == width && d[2] == height {
+            if d == [1, 3, height, width] {
                 Ok(())
             } else {
                 Err(OidnError::Inconsistent(name))
@@ -728,9 +658,18 @@ impl<'b> Filter for RtFilter<'b> {
     }
 
     fn commit(&mut self) -> Result<(), OidnError> {
+        self.committed = false;
+        if let Some(output) = &self.output {
+            output.view().validate()?;
+        }
         let any_input_legacy =
             self.color.is_some() || self.albedo.is_some() || self.normal.is_some();
         let any_input_tensor = self.tensor_mode();
+        if any_input_legacy && any_input_tensor {
+            return Err(OidnError::InvalidArgument(
+                "host and tensor modes cannot be mixed",
+            ));
+        }
         if !any_input_legacy && !any_input_tensor {
             return Err(OidnError::Unset("color/albedo/normal"));
         }
@@ -748,12 +687,6 @@ impl<'b> Filter for RtFilter<'b> {
         let has_albedo = self.albedo.is_some() || self.albedo_tensor.is_some();
         let has_normal = self.normal.is_some() || self.normal_tensor.is_some();
         let (out_w, out_h) = self.output_dims().ok_or(OidnError::Unset("output"))?;
-        let artifacts =
-            self.build_commit_artifacts(out_w, out_h, has_color, has_albedo, has_normal)?;
-        self.model_key = Some(artifacts.model_key);
-        self.net = Some(artifacts.net);
-        self.plan = Some(artifacts.plan);
-
         // Cross-check that every populated input matches the declared
         // output geometry — applies to both modes.
         let check_dims = |w: usize, h: usize, name: &'static str| -> Result<(), OidnError> {
@@ -764,12 +697,15 @@ impl<'b> Filter for RtFilter<'b> {
             }
         };
         if let Some(c) = &self.color {
+            c.view().validate()?;
             check_dims(c.width, c.height, "color")?;
         }
         if let Some(a) = &self.albedo {
+            a.view().validate()?;
             check_dims(a.width, a.height, "albedo")?;
         }
         if let Some(n) = &self.normal {
+            n.view().validate()?;
             check_dims(n.width, n.height, "normal")?;
         }
         if let Some(t) = &self.color_tensor {
@@ -785,6 +721,17 @@ impl<'b> Filter for RtFilter<'b> {
             check_dims(d[3], d[2], "normal_tensor")?;
         }
 
+        let artifacts =
+            self.build_commit_artifacts(out_w, out_h, has_color, has_albedo, has_normal)?;
+        self.model_key = Some(artifacts.model_key);
+        self.net = Some(artifacts.net);
+        self.plan = Some(artifacts.plan);
+
+        self.input_signature = [
+            self.color_tensor.as_ref().map(Tensor::dims),
+            self.albedo_tensor.as_ref().map(Tensor::dims),
+            self.normal_tensor.as_ref().map(Tensor::dims),
+        ];
         self.committed = true;
         // last_committed_dims is only meaningful for the legacy path
         // (which queries it via `allocate_output`); tensor-mode dims
@@ -802,8 +749,17 @@ impl<'b> Filter for RtFilter<'b> {
         let net = self.net.as_ref().ok_or(OidnError::Unset("model"))?;
         let plan = self.plan.as_ref().ok_or(OidnError::Unset("plan"))?;
 
-        let has_color = self.color.is_some() || self.color_tensor.is_some();
-        let transfer = self.transfer_kind(has_color);
+        let has_color = self.color.is_some() || self.input_signature[0].is_some();
+        let has_normal = self.normal.is_some() || self.input_signature[2].is_some();
+        let transfer = self.transfer_kind(has_color, has_normal);
+        let options = RunOptions {
+            transfer,
+            hdr: self.hdr,
+            signed: !has_color && has_normal,
+            input_scale: self.user_input_scale,
+            sanitize_nonfinite: self.nan_to_zero,
+            output_channels: 3,
+        };
 
         if self.tensor_mode() {
             let (out_w, out_h) = self
@@ -819,23 +775,12 @@ impl<'b> Filter for RtFilter<'b> {
                 self.normal_tensor.clone(),
                 out_w,
                 out_h,
-                transfer,
-                self.hdr,
-                self.user_input_scale,
-                self.nan_to_zero,
+                options,
                 progress,
             )?;
             self.output_tensor = Some(result);
-            // Release input tensor handles now that `run_tensors` has
-            // consumed (cloned) them. Keeping them on `self` across
-            // calls forces the caller's buffers to live until the next
-            // `set_*_tensor` reassignment. With CubeCL's lazy kernel
-            // submission, that retention overlaps the caller's buffer
-            // pool with our UNet reads — a classic read-after-free if
-            // the caller recycles the buffer before the GPU drains.
-            // Dropping refs here lets the caller (and the pool) treat
-            // the input buffers as "owned only as long as execute()
-            // ran" — the safe contract.
+            // Per-pass handles are released; committed layout signatures remain.
+            // Backend submission/resource ownership governs device lifetimes.
             self.color_tensor = None;
             self.albedo_tensor = None;
             self.normal_tensor = None;
@@ -856,12 +801,96 @@ impl<'b> Filter for RtFilter<'b> {
                 albedo.as_ref(),
                 normal.as_ref(),
                 &mut out_view,
-                transfer,
-                self.hdr,
-                self.user_input_scale,
-                self.nan_to_zero,
+                options,
                 progress,
             )
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn invalid_contracts_fail_before_model_io() {
+        let device = Device::ndarray();
+        for (hdr, srgb, color, albedo, normal) in [
+            (true, true, true, false, false),
+            (true, false, false, true, false),
+            (false, true, false, false, true),
+            (false, false, false, true, true),
+        ] {
+            let filter = RtFilter::builder(&device, "missing-model-directory")
+                .hdr(hdr)
+                .srgb(srgb)
+                .weights([0u8])
+                .build();
+            assert!(matches!(
+                filter.commit_tensor_model(16, 16, color, albedo, normal),
+                Err(OidnError::InvalidArgument(_))
+            ));
+        }
+        let filter = RtFilter::builder(&device, "missing-model-directory").build();
+        assert!(matches!(
+            filter.commit_tensor_model(usize::MAX, 16, true, false, false),
+            Err(OidnError::InvalidArgument(_))
+        ));
+        for scale in [0.0, -1.0, f32::NAN, f32::INFINITY] {
+            let filter = RtFilter::builder(&device, "missing-model-directory")
+                .input_scale(Some(scale))
+                .build();
+            assert!(matches!(
+                filter.commit_tensor_model(16, 16, true, false, false),
+                Err(OidnError::InvalidArgument(_))
+            ));
+        }
+    }
+
+    #[test]
+    fn auxiliary_primary_transfer_matches_native_modes() {
+        let device = Device::ndarray();
+        let filter = RtFilter::builder(&device, "").build();
+        assert_eq!(filter.transfer_kind(false, false), TransferFunction::SRGB);
+        assert_eq!(filter.transfer_kind(false, true), TransferFunction::Linear);
+        let filter = RtFilter::builder(&device, "").srgb(true).build();
+        assert_eq!(filter.transfer_kind(false, false), TransferFunction::Linear);
+    }
+
+    #[test]
+    fn fresh_tensor_handles_reuse_parameters_and_shape_changes_rebuild() {
+        let device = Device::ndarray();
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/weights");
+        let mut filter = RtFilter::builder(&device, dir)
+            .hdr(true)
+            .quality(Quality::Fast)
+            .input_scale(Some(1.0))
+            .build();
+        let id = |filter: &RtFilter<'_>| match filter.net.as_ref().unwrap() {
+            Net::Base(model) => model.enc_conv0.weight.id,
+            Net::Large(model) => model.enc_conv1a.weight.id,
+        };
+        filter
+            .set_color_tensor(Tensor::full([1, 3, 16, 16], 0.5, &device))
+            .unwrap();
+        filter.allocate_output_tensor(16, 16).unwrap();
+        filter.execute().unwrap();
+        let first = id(&filter);
+        filter.take_output_tensor().unwrap();
+        filter
+            .set_color_tensor(Tensor::full([1, 3, 16, 16], 0.6, &device))
+            .unwrap();
+        filter.allocate_output_tensor(16, 16).unwrap();
+        filter.execute().unwrap();
+        assert_eq!(
+            id(&filter),
+            first,
+            "same layout must retain model parameters"
+        );
+        filter
+            .set_color_tensor(Tensor::full([1, 3, 16, 32], 0.6, &device))
+            .unwrap();
+        filter.allocate_output_tensor(32, 16).unwrap();
+        filter.execute().unwrap();
+        assert_ne!(id(&filter), first, "geometry change must rebuild artifacts");
     }
 }

@@ -1,4 +1,7 @@
+use bytes::Bytes;
 use std::collections::BTreeMap;
+
+use crate::TzaError;
 
 /// Tensor memory layout — port of `_ref/oidn/core/tensor_layout.h`.
 /// We only support the subset that appears in shipped TZA files: `x` (1-D bias)
@@ -35,45 +38,94 @@ pub struct TensorDesc {
 }
 
 impl TensorDesc {
-    pub fn num_elements(&self) -> usize {
-        self.dims.iter().map(|&d| d as usize).product()
+    /// Validate the layout and dimensions and calculate their checked product.
+    pub fn num_elements(&self) -> Result<usize, TzaError> {
+        let (layout, expected) = match self.layout {
+            Layout::X => ("x", 1),
+            Layout::Oihw => ("oihw", 4),
+        };
+        if self.dims.len() != expected {
+            return Err(TzaError::LayoutNdimMismatch {
+                layout: layout.to_owned(),
+                expected,
+                got: self.dims.len(),
+            });
+        }
+        self.dims
+            .iter()
+            .enumerate()
+            .try_fold(1usize, |n, (axis, &value)| {
+                if value == 0 {
+                    return Err(TzaError::InvalidDimension { axis, value });
+                }
+                n.checked_mul(value as usize).ok_or(TzaError::SizeOverflow)
+            })
     }
 
-    pub fn byte_size(&self) -> usize {
-        self.num_elements() * self.dtype.byte_size()
+    pub fn byte_size(&self) -> Result<usize, TzaError> {
+        self.num_elements()?
+            .checked_mul(self.dtype.byte_size())
+            .ok_or(TzaError::SizeOverflow)
     }
 }
 
-/// A single tensor with its raw data buffer (owned, copied out of the source).
+/// A tensor owning a shared immutable little-endian payload.
+/// Parsed tensors borrow ranges of one owned archive allocation. Construct custom
+/// payloads with `Vec<u8>::into()` and replace the whole payload to modify data.
 #[derive(Debug, Clone)]
 pub struct Tensor {
     pub desc: TensorDesc,
-    pub data: Vec<u8>,
+    pub data: Bytes,
 }
 
 impl Tensor {
-    /// Reinterpret the data as f32 slice. Returns `None` if dtype is not f32.
+    /// Borrow an aligned little-endian f32 payload when its descriptor is valid.
+    /// Use `to_f32_vec` for portable decoding independent of alignment.
     pub fn as_f32(&self) -> Option<&[f32]> {
-        match self.desc.dtype {
-            DType::Float32 => Some(bytemuck::cast_slice(&self.data)),
-            DType::Float16 => None,
+        if !cfg!(target_endian = "little") || self.desc.dtype != DType::Float32 {
+            return None;
         }
+        self.validate().ok()?;
+        bytemuck::try_cast_slice(&self.data).ok()
     }
 
-    /// Reinterpret the data as f16 slice. Returns `None` if dtype is not f16.
+    /// Borrow an aligned little-endian f16 payload when its descriptor is valid.
     pub fn as_f16(&self) -> Option<&[half::f16]> {
-        match self.desc.dtype {
-            DType::Float16 => Some(bytemuck::cast_slice(&self.data)),
-            DType::Float32 => None,
+        if !cfg!(target_endian = "little") || self.desc.dtype != DType::Float16 {
+            return None;
         }
+        self.validate().ok()?;
+        bytemuck::try_cast_slice(&self.data).ok()
     }
 
-    /// Decode the tensor as `Vec<f32>`, converting from f16 if needed.
-    pub fn to_f32_vec(&self) -> Vec<f32> {
-        match self.desc.dtype {
-            DType::Float32 => self.as_f32().unwrap().to_vec(),
-            DType::Float16 => self.as_f16().unwrap().iter().map(|h| h.to_f32()).collect(),
+    /// Validate both the public descriptor and its raw payload length.
+    pub fn validate(&self) -> Result<(), TzaError> {
+        let expected = self.desc.byte_size()?;
+        if self.data.len() != expected {
+            return Err(TzaError::DataLengthMismatch {
+                expected,
+                got: self.data.len(),
+            });
         }
+        Ok(())
+    }
+
+    /// Iterate validated little-endian values without allocation or alignment assumptions.
+    pub fn iter_f32(&self) -> Result<impl ExactSizeIterator<Item = f32> + '_, TzaError> {
+        self.validate()?;
+        let dtype = self.desc.dtype;
+        Ok(self
+            .data
+            .chunks_exact(dtype.byte_size())
+            .map(move |b| match dtype {
+                DType::Float32 => f32::from_le_bytes([b[0], b[1], b[2], b[3]]),
+                DType::Float16 => half::f16::from_bits(u16::from_le_bytes([b[0], b[1]])).to_f32(),
+            }))
+    }
+
+    /// Decode little-endian values through the same fallible iterator.
+    pub fn to_f32_vec(&self) -> Result<Vec<f32>, TzaError> {
+        Ok(self.iter_f32()?.collect())
     }
 }
 

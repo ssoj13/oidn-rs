@@ -48,24 +48,7 @@ pub fn select_rt(
     quality: Quality,
 ) -> Result<ModelKey, OidnError> {
     let _ = quality; // base key is independent of quality
-
-    // Reject combinations that the reference filter rejects in
-    // `unet_filter.cpp::checkParams` before even consulting the weight table.
-    if !has_color && has_albedo && !has_normal && hdr {
-        return Err(OidnError::InvalidArgument(
-            "hdr mode not supported for albedo-only filtering",
-        ));
-    }
-    if !has_color && !has_albedo && has_normal && (hdr || srgb) {
-        return Err(OidnError::InvalidArgument(
-            "hdr/srgb not supported for normal-only filtering",
-        ));
-    }
-    if !has_color && has_albedo && has_normal {
-        return Err(OidnError::InvalidArgument(
-            "invalid combination of input features",
-        ));
-    }
+    validate_rt(has_color, has_albedo, has_normal, hdr, srgb)?;
 
     let base: &'static str = match (has_color, has_albedo, has_normal, hdr, srgb, clean_aux) {
         (true, false, false, true, _, _) => "rt_hdr",
@@ -102,4 +85,43 @@ pub fn quality_candidates(base: &ModelKey, quality: Quality) -> Vec<String> {
         Quality::Balanced => vec![s.to_string()],
         Quality::Fast => vec![format!("{s}_small"), s.to_string()],
     }
+}
+
+/// Validate input semantics independently of built-in weight availability.
+/// Custom weights may support a valid color+normal layout absent in the registry.
+pub(crate) fn validate_rt(
+    has_color: bool,
+    has_albedo: bool,
+    has_normal: bool,
+    hdr: bool,
+    srgb: bool,
+) -> Result<(), OidnError> {
+    if !has_color && !has_albedo && !has_normal {
+        return Err(OidnError::Unset("color/albedo/normal"));
+    }
+    if hdr && srgb {
+        return Err(OidnError::InvalidArgument(
+            "hdr and srgb are mutually exclusive",
+        ));
+    }
+
+    // Reject combinations that the reference filter rejects in
+    // `unet_filter.cpp::checkParams` before even consulting the weight table.
+    if !has_color && has_albedo && !has_normal && hdr {
+        return Err(OidnError::InvalidArgument(
+            "hdr mode not supported for albedo-only filtering",
+        ));
+    }
+    if !has_color && !has_albedo && has_normal && (hdr || srgb) {
+        return Err(OidnError::InvalidArgument(
+            "hdr/srgb not supported for normal-only filtering",
+        ));
+    }
+    if !has_color && has_albedo && has_normal {
+        return Err(OidnError::InvalidArgument(
+            "invalid combination of input features",
+        ));
+    }
+
+    Ok(())
 }

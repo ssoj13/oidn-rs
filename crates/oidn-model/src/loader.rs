@@ -9,7 +9,7 @@ use burn::{
     nn::conv::Conv2d,
     tensor::{Device, Tensor, TensorData},
 };
-use oidn_tza::{DType, Layout, Tensor as TzaTensor, TensorMap};
+use oidn_tza::{Layout, Tensor as TzaTensor, TensorMap};
 use thiserror::Error;
 
 use crate::unet::UNet;
@@ -17,6 +17,12 @@ use crate::unet_large::UNetLarge;
 
 #[derive(Debug, Error)]
 pub enum LoadError {
+    #[error("invalid tensor payload: {0}")]
+    InvalidTensor(#[from] oidn_tza::TzaError),
+    #[error("unsupported or inconsistent model schema: {0}")]
+    InvalidSchema(String),
+    #[error("tensor {0:?} contains a non-finite parameter")]
+    NonFiniteTensor(String),
     #[error("missing tensor in archive: {0:?}")]
     MissingTensor(String),
 
@@ -40,61 +46,41 @@ fn fetch<'a>(map: &'a TensorMap, name: &str) -> Result<&'a TzaTensor, LoadError>
         .ok_or_else(|| LoadError::MissingTensor(name.to_owned()))
 }
 
-/// Build a 4-D Burn `Param` from an `oihw` TZA tensor.
-fn into_param4(
+/// Decode a validated archive parameter through the shared little-endian path.
+fn into_param<const D: usize>(
     name: &str,
     src: &TzaTensor,
-    expected_shape: [usize; 4],
+    expected_shape: [usize; D],
     device: &Device,
-) -> Result<Param<Tensor<4>>, LoadError> {
-    if src.desc.layout != Layout::Oihw {
+) -> Result<Param<Tensor<D>>, LoadError> {
+    let (layout, layout_name) = if D == 1 {
+        (Layout::X, "x")
+    } else {
+        (Layout::Oihw, "oihw")
+    };
+    if src.desc.layout != layout {
         return Err(LoadError::BadLayout {
             name: name.to_owned(),
-            expected: "oihw",
+            expected: layout_name,
             got: src.desc.layout,
         });
     }
-    if src.desc.dims.len() != 4 || (0..4).any(|i| src.desc.dims[i] as usize != expected_shape[i]) {
+    if src.desc.dims.len() != D
+        || src
+            .desc
+            .dims
+            .iter()
+            .zip(expected_shape)
+            .any(|(&a, b)| a as usize != b)
+    {
         return Err(LoadError::ShapeMismatch {
             name: name.to_owned(),
             expected: expected_shape.to_vec(),
             got: src.desc.dims.clone(),
         });
     }
-    let data: Vec<f32> = match src.desc.dtype {
-        DType::Float32 => src.as_f32().unwrap().to_vec(),
-        DType::Float16 => src.as_f16().unwrap().iter().map(|h| h.to_f32()).collect(),
-    };
-    let tensor = Tensor::<4>::from_data(TensorData::new(data, expected_shape), device);
-    Ok(Param::initialized(ParamId::new(), tensor))
-}
-
-/// Build a 1-D Burn `Param` (bias) from an `x` TZA tensor.
-fn into_param1(
-    name: &str,
-    src: &TzaTensor,
-    expected_len: usize,
-    device: &Device,
-) -> Result<Param<Tensor<1>>, LoadError> {
-    if src.desc.layout != Layout::X {
-        return Err(LoadError::BadLayout {
-            name: name.to_owned(),
-            expected: "x",
-            got: src.desc.layout,
-        });
-    }
-    if src.desc.dims.len() != 1 || src.desc.dims[0] as usize != expected_len {
-        return Err(LoadError::ShapeMismatch {
-            name: name.to_owned(),
-            expected: vec![expected_len],
-            got: src.desc.dims.clone(),
-        });
-    }
-    let data: Vec<f32> = match src.desc.dtype {
-        DType::Float32 => src.as_f32().unwrap().to_vec(),
-        DType::Float16 => src.as_f16().unwrap().iter().map(|h| h.to_f32()).collect(),
-    };
-    let tensor = Tensor::<1>::from_data(TensorData::new(data, [expected_len]), device);
+    let data = src.to_f32_vec()?;
+    let tensor = Tensor::<D>::from_data(TensorData::new(data, expected_shape), device);
     Ok(Param::initialized(ParamId::new(), tensor))
 }
 
@@ -119,37 +105,50 @@ fn load_conv(
     let w_src = fetch(map, &w_name)?;
     let b_src = fetch(map, &b_name)?;
 
-    conv.weight = into_param4(&w_name, w_src, w_shape, device)?;
-    conv.bias = Some(into_param1(&b_name, b_src, b_len, device)?);
+    conv.weight = into_param(&w_name, w_src, w_shape, device)?;
+    conv.bias = Some(into_param(&b_name, b_src, [b_len], device)?);
     Ok(conv)
 }
 
 /// Load all weights from a TZA `TensorMap` into the given U-Net.
-pub fn load_tza(
-    unet: UNet,
-    map: &TensorMap,
-    device: &Device,
-) -> Result<UNet, LoadError> {
-    Ok(UNet {
-        enc_conv0: load_conv(unet.enc_conv0, "enc_conv0", map, device)?,
-        enc_conv1: load_conv(unet.enc_conv1, "enc_conv1", map, device)?,
-        enc_conv2: load_conv(unet.enc_conv2, "enc_conv2", map, device)?,
-        enc_conv3: load_conv(unet.enc_conv3, "enc_conv3", map, device)?,
-        enc_conv4: load_conv(unet.enc_conv4, "enc_conv4", map, device)?,
-        enc_conv5a: load_conv(unet.enc_conv5a, "enc_conv5a", map, device)?,
-        enc_conv5b: load_conv(unet.enc_conv5b, "enc_conv5b", map, device)?,
-        dec_conv4a: load_conv(unet.dec_conv4a, "dec_conv4a", map, device)?,
-        dec_conv4b: load_conv(unet.dec_conv4b, "dec_conv4b", map, device)?,
-        dec_conv3a: load_conv(unet.dec_conv3a, "dec_conv3a", map, device)?,
-        dec_conv3b: load_conv(unet.dec_conv3b, "dec_conv3b", map, device)?,
-        dec_conv2a: load_conv(unet.dec_conv2a, "dec_conv2a", map, device)?,
-        dec_conv2b: load_conv(unet.dec_conv2b, "dec_conv2b", map, device)?,
-        dec_conv1a: load_conv(unet.dec_conv1a, "dec_conv1a", map, device)?,
-        dec_conv1b: load_conv(unet.dec_conv1b, "dec_conv1b", map, device)?,
-        dec_conv0: load_conv(unet.dec_conv0, "dec_conv0", map, device)?,
-        pool: unet.pool,
-        in_channels: unet.in_channels,
-    })
+pub fn load_tza(unet: UNet, map: &TensorMap, device: &Device) -> Result<UNet, LoadError> {
+    let desc = crate::ModelDescriptor::from_tza(map)?;
+    if matches!(
+        desc.variant(),
+        crate::Variant::Large | crate::Variant::XLarge
+    ) {
+        return Err(LoadError::InvalidSchema(
+            "large topology cannot load into UNet".into(),
+        ));
+    }
+    unet.load(map, device)
+}
+
+impl UNet {
+    // Called only after complete schema validation while borrowing the archive immutably.
+    pub(crate) fn load(self, map: &TensorMap, device: &Device) -> Result<Self, LoadError> {
+        let unet = self;
+        Ok(UNet {
+            enc_conv0: load_conv(unet.enc_conv0, "enc_conv0", map, device)?,
+            enc_conv1: load_conv(unet.enc_conv1, "enc_conv1", map, device)?,
+            enc_conv2: load_conv(unet.enc_conv2, "enc_conv2", map, device)?,
+            enc_conv3: load_conv(unet.enc_conv3, "enc_conv3", map, device)?,
+            enc_conv4: load_conv(unet.enc_conv4, "enc_conv4", map, device)?,
+            enc_conv5a: load_conv(unet.enc_conv5a, "enc_conv5a", map, device)?,
+            enc_conv5b: load_conv(unet.enc_conv5b, "enc_conv5b", map, device)?,
+            dec_conv4a: load_conv(unet.dec_conv4a, "dec_conv4a", map, device)?,
+            dec_conv4b: load_conv(unet.dec_conv4b, "dec_conv4b", map, device)?,
+            dec_conv3a: load_conv(unet.dec_conv3a, "dec_conv3a", map, device)?,
+            dec_conv3b: load_conv(unet.dec_conv3b, "dec_conv3b", map, device)?,
+            dec_conv2a: load_conv(unet.dec_conv2a, "dec_conv2a", map, device)?,
+            dec_conv2b: load_conv(unet.dec_conv2b, "dec_conv2b", map, device)?,
+            dec_conv1a: load_conv(unet.dec_conv1a, "dec_conv1a", map, device)?,
+            dec_conv1b: load_conv(unet.dec_conv1b, "dec_conv1b", map, device)?,
+            dec_conv0: load_conv(unet.dec_conv0, "dec_conv0", map, device)?,
+            pool: unet.pool,
+            in_channels: unet.in_channels,
+        })
+    }
 }
 
 /// Same as `load_tza`, but for the `UNetLarge` topology.
@@ -161,27 +160,41 @@ pub fn load_tza_large(
     map: &TensorMap,
     device: &Device,
 ) -> Result<UNetLarge, LoadError> {
-    Ok(UNetLarge {
-        enc_conv1a: load_conv(unet.enc_conv1a, "enc_conv1a", map, device)?,
-        enc_conv1b: load_conv(unet.enc_conv1b, "enc_conv1b", map, device)?,
-        enc_conv2a: load_conv(unet.enc_conv2a, "enc_conv2a", map, device)?,
-        enc_conv2b: load_conv(unet.enc_conv2b, "enc_conv2b", map, device)?,
-        enc_conv3a: load_conv(unet.enc_conv3a, "enc_conv3a", map, device)?,
-        enc_conv3b: load_conv(unet.enc_conv3b, "enc_conv3b", map, device)?,
-        enc_conv4a: load_conv(unet.enc_conv4a, "enc_conv4a", map, device)?,
-        enc_conv4b: load_conv(unet.enc_conv4b, "enc_conv4b", map, device)?,
-        enc_conv5a: load_conv(unet.enc_conv5a, "enc_conv5a", map, device)?,
-        enc_conv5b: load_conv(unet.enc_conv5b, "enc_conv5b", map, device)?,
-        dec_conv4a: load_conv(unet.dec_conv4a, "dec_conv4a", map, device)?,
-        dec_conv4b: load_conv(unet.dec_conv4b, "dec_conv4b", map, device)?,
-        dec_conv3a: load_conv(unet.dec_conv3a, "dec_conv3a", map, device)?,
-        dec_conv3b: load_conv(unet.dec_conv3b, "dec_conv3b", map, device)?,
-        dec_conv2a: load_conv(unet.dec_conv2a, "dec_conv2a", map, device)?,
-        dec_conv2b: load_conv(unet.dec_conv2b, "dec_conv2b", map, device)?,
-        dec_conv1a: load_conv(unet.dec_conv1a, "dec_conv1a", map, device)?,
-        dec_conv1b: load_conv(unet.dec_conv1b, "dec_conv1b", map, device)?,
-        dec_conv1c: load_conv(unet.dec_conv1c, "dec_conv1c", map, device)?,
-        pool: unet.pool,
-        in_channels: unet.in_channels,
-    })
+    let desc = crate::ModelDescriptor::from_tza(map)?;
+    if matches!(desc.variant(), crate::Variant::Base | crate::Variant::Small) {
+        return Err(LoadError::InvalidSchema(
+            "base topology cannot load into UNetLarge".into(),
+        ));
+    }
+    unet.load(map, device)
+}
+
+impl UNetLarge {
+    // Same validated, immutable archive boundary as UNet::load.
+    pub(crate) fn load(self, map: &TensorMap, device: &Device) -> Result<Self, LoadError> {
+        let unet = self;
+        Ok(UNetLarge {
+            enc_conv1a: load_conv(unet.enc_conv1a, "enc_conv1a", map, device)?,
+            enc_conv1b: load_conv(unet.enc_conv1b, "enc_conv1b", map, device)?,
+            enc_conv2a: load_conv(unet.enc_conv2a, "enc_conv2a", map, device)?,
+            enc_conv2b: load_conv(unet.enc_conv2b, "enc_conv2b", map, device)?,
+            enc_conv3a: load_conv(unet.enc_conv3a, "enc_conv3a", map, device)?,
+            enc_conv3b: load_conv(unet.enc_conv3b, "enc_conv3b", map, device)?,
+            enc_conv4a: load_conv(unet.enc_conv4a, "enc_conv4a", map, device)?,
+            enc_conv4b: load_conv(unet.enc_conv4b, "enc_conv4b", map, device)?,
+            enc_conv5a: load_conv(unet.enc_conv5a, "enc_conv5a", map, device)?,
+            enc_conv5b: load_conv(unet.enc_conv5b, "enc_conv5b", map, device)?,
+            dec_conv4a: load_conv(unet.dec_conv4a, "dec_conv4a", map, device)?,
+            dec_conv4b: load_conv(unet.dec_conv4b, "dec_conv4b", map, device)?,
+            dec_conv3a: load_conv(unet.dec_conv3a, "dec_conv3a", map, device)?,
+            dec_conv3b: load_conv(unet.dec_conv3b, "dec_conv3b", map, device)?,
+            dec_conv2a: load_conv(unet.dec_conv2a, "dec_conv2a", map, device)?,
+            dec_conv2b: load_conv(unet.dec_conv2b, "dec_conv2b", map, device)?,
+            dec_conv1a: load_conv(unet.dec_conv1a, "dec_conv1a", map, device)?,
+            dec_conv1b: load_conv(unet.dec_conv1b, "dec_conv1b", map, device)?,
+            dec_conv1c: load_conv(unet.dec_conv1c, "dec_conv1c", map, device)?,
+            pool: unet.pool,
+            in_channels: unet.in_channels,
+        })
+    }
 }

@@ -1,6 +1,13 @@
 name: CI
 
 on:
+  workflow_dispatch:
+    inputs:
+      gpu:
+        description: "Run dedicated tests on a self-hosted runner labelled gpu"
+        required: false
+        default: false
+        type: boolean
   push:
     branches: [main]
   pull_request:
@@ -44,14 +51,42 @@ jobs:
         if: matrix.profile == 'check' && matrix.os == 'ubuntu-latest'
         run: cargo fmt --all -- --check
 
+      - name: Require shipped weight archives
+        if: matrix.profile == 'test'
+        shell: python
+        run: |
+          from pathlib import Path
+          weights = list(Path("data/weights").glob("*.tza"))
+          assert len(weights) == 23, f"Expected 23 weight archives, found {len(weights)}"
+          assert all(p.read_bytes()[:3] == bytes.fromhex("d74102") for p in weights), "Weights must be binary TZA v2 archives"
+
+
       - name: cargo test (no-GPU lanes)
         if: matrix.profile == 'test'
-        # The GPU-touching tests are gated by submodule presence; on CI runners
-        # without GPU access we still exercise oidn-tza, oidn-model, color, tile.
-        run: cargo test --workspace --release
+        run: |
+          cargo test --workspace --lib --bins --release
+          cargo test -p oidn-cli --release --test cli
+          cargo test -p oidn-rs --release --example bench
+          cargo test -p oidn-tza --release --tests
+          cargo test -p oidn-model --release --tests
+          cargo test -p oidn-rs --release --test api_surface --test e2e_ndarray --test all_models_smoke --test formats --test geometry_boundaries --test pipeline_contracts --test unit_color_tile
+          python -m unittest discover -s crates/oidn-cli/tests -p "test_*.py"
 
       - name: cargo doc
         if: matrix.profile == 'check' && matrix.os == 'ubuntu-latest'
         env:
           RUSTDOCFLAGS: "-D warnings"
         run: cargo doc --workspace --no-deps
+
+  gpu-test:
+    name: Explicit GPU verification
+    if: github.event_name == 'workflow_dispatch' && inputs.gpu
+    runs-on: [self-hosted, gpu]
+    env:
+      OIDN_REQUIRE_GPU: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: GPU filter tests
+        run: cargo test -p oidn-rs --release --test e2e_wgpu --test e2e_ldr --test multi_tile_wgpu -- --ignored --nocapture

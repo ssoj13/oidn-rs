@@ -1,0 +1,24 @@
+Repository: C:\projects\projects.rust.cg\cglibs\squarebob-rs
+Index:      C:\projects\projects.rust.cg\cglibs\squarebob-rs\.gitnexus\lbug
+Schema:     v2
+Generator:  gitnexus-rs@0.1.0
+Total:      5589 nodes
+
+  Label               Count
+  -------------- ----------
+  Module                138
+  Folder                 64
+  File                  233
+  Class                   1
+  Function              728
+  Method               1640
+  Enum                   73
+  Community             203
+  Process               300
+  Struct                219
+  Trait                   4
+  TypeAlias               7
+  Const                 154
+  Static                  3
+  Property             1571
+  Section               251

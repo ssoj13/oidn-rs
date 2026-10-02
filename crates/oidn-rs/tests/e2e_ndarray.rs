@@ -2,7 +2,7 @@
 //!
 //! Runs the full pipeline (TZA load → tile plan → UNet forward → write output)
 //! on a small synthetic image without touching any GPU. This proves all
-//! glue is correct; the wgpu backend swaps in transparently.
+//! host glue executes; separate tests measure backend numerical behavior.
 
 use std::path::PathBuf;
 
@@ -15,7 +15,8 @@ fn weights_dir() -> Option<PathBuf> {
         .join("..")
         .join("data")
         .join("weights");
-    if p.is_dir() { Some(p) } else { None }
+    assert!(p.is_dir(), "required shipped weights are missing");
+    Some(p)
 }
 
 #[test]
@@ -50,8 +51,8 @@ fn denoise_small_hdr_color_only_ndarray() {
         .quality(Quality::High)
         .input_scale(Some(1.0)) // skip autoexposure to keep test deterministic
         .build();
-    filter.set_color(&in_img);
-    filter.allocate_output(w, h, PixelFormat::Rgb32f);
+    filter.set_color(&in_img).unwrap();
+    filter.allocate_output(w, h, PixelFormat::Rgb32f).unwrap();
     filter.commit().expect("commit");
     filter.execute().expect("execute");
 
@@ -68,6 +69,7 @@ fn denoise_small_hdr_color_only_ndarray() {
     for x in &output {
         assert!(x.is_finite(), "non-finite output value");
     }
+    assert!(mean_out > mean_in * 0.25, "nontrivial output required");
     assert!(
         (mean_out - mean_in).abs() < 1.0,
         "output mean ({mean_out}) drifted too far from input ({mean_in})"
@@ -91,10 +93,10 @@ fn rt_filter_picks_correct_model_key() {
         .hdr(true)
         .input_scale(Some(1.0))
         .build();
-    filter.set_color(&img);
-    filter.set_albedo(&img);
-    filter.set_normal(&img);
-    filter.allocate_output(w, h, PixelFormat::Rgb32f);
+    filter.set_color(&img).unwrap();
+    filter.set_albedo(&img).unwrap();
+    filter.set_normal(&img).unwrap();
+    filter.allocate_output(w, h, PixelFormat::Rgb32f).unwrap();
     filter.commit().expect("commit");
     assert_eq!(filter.model_key().unwrap().0, "rt_hdr_alb_nrm");
 }

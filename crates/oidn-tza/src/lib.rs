@@ -10,6 +10,7 @@ mod error;
 mod parser;
 mod types;
 
+pub use bytes::Bytes;
 pub use error::TzaError;
 pub use parser::parse;
 pub use types::{DType, Layout, Tensor, TensorDesc, TensorMap};

@@ -1,25 +1,23 @@
 //! Verify that the TZA parser successfully reads every shipped weights file.
 //!
-//! Skipped silently if the `data` submodule isn't initialised.
+//! Shipped weights are mandatory repository assets.
 
 use std::path::PathBuf;
 
-fn weights_dir() -> Option<PathBuf> {
+fn weights_dir() -> PathBuf {
     // Tests run from the crate root (crates/oidn-tza/), so weights live up two levels.
     let p = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("..")
         .join("..")
         .join("data")
         .join("weights");
-    if p.is_dir() { Some(p) } else { None }
+    assert!(p.is_dir(), "required shipped weights directory is absent");
+    p
 }
 
 #[test]
 fn parse_all_shipped_tza_files() {
-    let Some(dir) = weights_dir() else {
-        eprintln!("skipping: data not initialised (run `git submodule update --init`)");
-        return;
-    };
+    let dir = weights_dir();
 
     let mut count = 0usize;
     for entry in std::fs::read_dir(&dir).unwrap() {
@@ -34,14 +32,12 @@ fn parse_all_shipped_tza_files() {
         assert!(!map.is_empty(), "{} has no tensors", path.display());
         count += 1;
     }
-    assert!(count >= 20, "expected ~24 tza files, found {count}");
+    assert_eq!(count, 23, "required shipped TZA inventory");
 }
 
 #[test]
 fn rt_hdr_has_expected_layer_set() {
-    let Some(dir) = weights_dir() else {
-        return;
-    };
+    let dir = weights_dir();
     let bytes = std::fs::read(dir.join("rt_hdr.tza")).unwrap();
     let map = oidn_tza::parse(&bytes).unwrap();
 

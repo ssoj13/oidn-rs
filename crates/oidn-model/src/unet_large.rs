@@ -10,27 +10,15 @@
 use burn::{
     module::Module,
     nn::{
-        PaddingConfig2d,
-        conv::{Conv2d, Conv2dConfig},
+        conv::Conv2d,
         pool::{MaxPool2d, MaxPool2dConfig},
     },
-    tensor::{
-        Device,
-        Tensor,
-        activation::relu,
-        module::interpolate,
-        ops::{InterpolateMode, InterpolateOptions},
-    },
+    tensor::{Device, Tensor, activation::relu},
 };
 
-fn conv3(in_ch: usize, out_ch: usize, device: &Device) -> Conv2d {
-    Conv2dConfig::new([in_ch, out_ch], [3, 3])
-        .with_padding(PaddingConfig2d::Explicit(1, 1, 1, 1))
-        .with_bias(true)
-        .init(device)
-}
+use crate::unet::{conv3, upsample2x};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ChannelConfigLarge {
     pub ec1: usize,
     pub ec2: usize,
@@ -186,13 +174,4 @@ impl UNetLarge {
         let x = relu(self.dec_conv1b.forward(x));
         relu(self.dec_conv1c.forward(x))
     }
-}
-
-fn upsample2x(x: Tensor<4>) -> Tensor<4> {
-    let [_, _, h, w] = x.dims();
-    interpolate(
-        x,
-        [h * 2, w * 2],
-        InterpolateOptions::new(InterpolateMode::Nearest),
-    )
 }

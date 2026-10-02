@@ -3,9 +3,9 @@
 //! In burn 0.22 the backend is dynamic (device-selected): a single
 //! backend-erased [`burn::tensor::Device`] carries the backend identity, and
 //! tensors/modules run on whichever device they were built with. The wgpu
-//! variant is provided by burn's `wgpu` feature via [`Device::wgpu`]. We pick
-//! `f32` precision by relying on the default device settings — wgpu's
-//! `shader-f16` extension is still inconsistent across vendors as of 2026.
+//! variant is provided by burn's `wgpu` feature via [`Device::wgpu`]. Model
+//! loading and image staging use f32 values; backend convolution arithmetic
+//! must be measured separately from native OIDN precision policies.
 
 use burn::tensor::{Device, DeviceKind};
 

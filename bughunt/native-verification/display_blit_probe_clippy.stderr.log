@@ -1,0 +1,269 @@
+warning: useless conversion to the same type: `u64`
+   --> crates\render-core\src\lib.rs:234:28
+    |
+234 |     let max_binding_size = u64::from(limits.max_storage_buffer_binding_size);
+    |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: consider removing `u64::from()`: `limits.max_storage_buffer_binding_size`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#useless_conversion
+    = note: `#[warn(clippy::useless_conversion)]` on by default
+
+warning: this function has too many arguments (8/7)
+   --> crates\render-core\src\lib.rs:652:5
+    |
+652 | /     pub fn readback_texture_bytes(
+653 | |         ctx: &GpuContext,
+654 | |         encoder: &mut wgpu::CommandEncoder,
+655 | |         texture: &wgpu::Texture,
+...   |
+660 | |         staging: &mut TextureReadback,
+661 | |     ) -> Result<(), ReadbackError> {
+    | |__________________________________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#too_many_arguments
+    = note: `#[warn(clippy::too_many_arguments)]` on by default
+
+warning: this `if` statement can be collapsed
+    --> crates\pt-megakernel\src\compute.rs:3265:9
+     |
+3265 | /         if restir_active {
+3266 | |             if let Some(restir_bgs) = self.restir_bind_groups.as_ref() {
+3267 | |                 let frame = self.frame_count;
+3268 | |                 let curr_vp = self.last_view_proj.unwrap_or([[0.0; 4]; 4]);
+...    |
+3418 | |         }
+     | |_________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#collapsible_if
+     = note: `#[warn(clippy::collapsible_if)]` on by default
+help: collapse nested if block
+     |
+3265 ~         if restir_active
+3266 ~             && let Some(restir_bgs) = self.restir_bind_groups.as_ref() {
+3267 |                 let frame = self.frame_count;
+ ...
+3416 |                 );
+3417 ~             }
+     |
+
+warning: this `if` statement can be collapsed
+    --> crates\pt-megakernel\src\compute.rs:3559:17
+     |
+3559 | /                 if pathguide_enabled && !restir_enabled {
+3560 | |                     if let (Some(pg), Some(pg_bgs)) = (&self.pathguide, &self.pathguide_bind_groups)
+3561 | |                     {
+3562 | |                         let (_, sample_pl) = pg.pipelines();
+...    |
+3573 | |                 }
+     | |_________________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#collapsible_if
+help: collapse nested if block
+     |
+3559 ~                 if pathguide_enabled && !restir_enabled
+3560 ~                     && let (Some(pg), Some(pg_bgs)) = (&self.pathguide, &self.pathguide_bind_groups)
+3561 |                     {
+ ...
+3571 |                         log::trace!("WF pathguide sample: wg={}", wg);
+3572 ~                     }
+     |
+
+warning: this `if` statement can be collapsed
+    --> crates\pt-megakernel\src\compute.rs:3748:21
+     |
+3748 | /                     if pathguide_enabled {
+3749 | |                         if let (Some(pg), Some(pg_bgs)) =
+3750 | |                             (&self.pathguide, &self.pathguide_bind_groups)
+...    |
+3786 | |                     }
+     | |_____________________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#collapsible_if
+help: collapse nested if block
+     |
+3748 ~                     if pathguide_enabled
+3749 ~                         && let (Some(pg), Some(pg_bgs)) =
+3750 |                             (&self.pathguide, &self.pathguide_bind_groups)
+ ...
+3784 |                             log::trace!("WF pathguide update: wg={}", wg);
+3785 ~                         }
+     |
+
+warning: this `if` statement can be collapsed
+    --> crates\pt-megakernel\src\compute.rs:3815:9
+     |
+3815 | /         if restir_enabled {
+3816 | |             if let (Some(rs), Some(restir_bgs)) = (&self.restir, &self.restir_bind_groups) {
+3817 | |                 let (_, _, spatial_pl, shade_pl) = rs.pipelines();
+3818 | |                 let raygen_pl = wf.pipelines().0;
+...    |
+4043 | |         }
+     | |_________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#collapsible_if
+help: collapse nested if block
+     |
+3815 ~         if restir_enabled
+3816 ~             && let (Some(rs), Some(restir_bgs)) = (&self.restir, &self.restir_bind_groups) {
+3817 |                 let (_, _, spatial_pl, shade_pl) = rs.pipelines();
+ ...
+4041 |                 );
+4042 ~             }
+     |
+
+warning: this `if` statement can be collapsed
+    --> crates\pt-megakernel\src\compute.rs:3975:25
+     |
+3975 | /                         if pathguide_enabled {
+3976 | |                             if let (Some(pg), Some(pg_bgs)) =
+3977 | |                                 (&self.pathguide, &self.pathguide_bind_groups)
+...    |
+4012 | |                         }
+     | |_________________________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#collapsible_if
+help: collapse nested if block
+     |
+3975 ~                         if pathguide_enabled
+3976 ~                             && let (Some(pg), Some(pg_bgs)) =
+3977 |                                 (&self.pathguide, &self.pathguide_bind_groups)
+ ...
+4010 |                                 pass.dispatch_workgroups(wg, 1, 1);
+4011 ~                             }
+     |
+
+warning: this `if` statement can be collapsed
+    --> crates\pt-megakernel\src\compute.rs:4073:9
+     |
+4073 | /         if adaptive_enabled {
+4074 | |             if let (Some(ad), Some(ad_bgs)) = (&self.adaptive, &self.adaptive_bind_groups) {
+4075 | |                 #[repr(C)]
+4076 | |                 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+...    |
+4146 | |         }
+     | |_________^
+     |
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#collapsible_if
+help: collapse nested if block
+     |
+4073 ~         if adaptive_enabled
+4074 ~             && let (Some(ad), Some(ad_bgs)) = (&self.adaptive, &self.adaptive_bind_groups) {
+4075 |                 #[repr(C)]
+ ...
+4144 |                 }
+4145 ~             }
+     |
+
+warning: this `if` has identical blocks
+    --> crates\media-encoder\src\dialogs\encode\encode.rs:1849:78
+     |
+1849 |               let output_format = if settings.bit_depth == OutputBitDepth::U16 {
+     |  ______________________________________________________________________________^
+1850 | |                 PixelFormat::RgbaF32
+1851 | |             } else if settings.format.is_hdr() {
+     | |_____________^
+     |
+note: same as this
+    --> crates\media-encoder\src\dialogs\encode\encode.rs:1851:48
+     |
+1851 |               } else if settings.format.is_hdr() {
+     |  ________________________________________________^
+1852 | |                 PixelFormat::RgbaF32
+1853 | |             } else {
+     | |_____________^
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#if_same_then_else
+     = note: `#[warn(clippy::if_same_then_else)]` on by default
+
+warning: this `if` statement can be collapsed
+   --> crates\color-pipeline\src\lib.rs:692:9
+    |
+692 | /         if let Some(look) = settings.ocio_look.as_deref() {
+693 | |             if !look.is_empty() {
+694 | |                 dvt = dvt.with_looks_override(look);
+695 | |             }
+696 | |         }
+    | |_________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#collapsible_if
+    = note: `#[warn(clippy::collapsible_if)]` on by default
+help: collapse nested if block
+    |
+692 ~         if let Some(look) = settings.ocio_look.as_deref()
+693 ~             && !look.is_empty() {
+694 |                 dvt = dvt.with_looks_override(look);
+695 ~             }
+    |
+
+warning: unnecessary closure used with `bool::then`
+   --> crates\color-pipeline\src\lib.rs:885:9
+    |
+885 | /         self.lut_upload_pending
+886 | |             .then(|| self.lut_3d.as_ref())
+    | |__________________________________________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#unnecessary_lazy_evaluations
+    = note: `#[warn(clippy::unnecessary_lazy_evaluations)]` on by default
+help: use `then_some` instead
+    |
+886 -             .then(|| self.lut_3d.as_ref())
+886 +             .then_some(self.lut_3d.as_ref())
+    |
+
+warning: this `if` statement can be collapsed
+   --> crates\render-3d\src\renderer3d\material_cache.rs:482:5
+    |
+482 | /     if let Some(entry) = cache_slot {
+483 | |         if entry.key == key && entry.material_ids.len() == instances.len() {
+484 | |             let pt_instances = build_pt_instances(instances, &entry.material_ids);
+485 | |             return (Arc::clone(&entry.materials), pt_instances);
+486 | |         }
+487 | |     }
+    | |_____^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#collapsible_if
+    = note: `#[warn(clippy::collapsible_if)]` on by default
+help: collapse nested if block
+    |
+482 ~     if let Some(entry) = cache_slot
+483 ~         && entry.key == key && entry.material_ids.len() == instances.len() {
+484 |             let pt_instances = build_pt_instances(instances, &entry.material_ids);
+485 |             return (Arc::clone(&entry.materials), pt_instances);
+486 ~         }
+    |
+
+warning: this function has too many arguments (8/7)
+  --> crates\render-3d\src\renderer3d\render.rs:18:5
+   |
+18 | /     pub fn render_to_view(
+19 | |         &mut self,
+20 | |         root: &DirEntry,
+21 | |         width: u32,
+...  |
+26 | |         selected_ids: Option<&mut std::collections::HashSet<u32>>,
+27 | |     ) -> Result<(), render_core::ReadbackError> {
+   | |_______________________________________________^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#too_many_arguments
+   = note: `#[warn(clippy::too_many_arguments)]` on by default
+
+warning: this `if` statement can be collapsed
+  --> crates\render-3d\src\renderer3d\render.rs:71:9
+   |
+71 | /         if !opts.path_tracing && cache_valid && self.instance_count > 0 {
+72 | |             if let Some((px, py)) = self.picking.pending_pick {
+73 | |                 self.picking.ensure_readback(&self.ctx.device, width)?;
+74 | |                 self.pick_from_existing()?;
+...  |
+77 | |         }
+   | |_________^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#collapsible_if
+help: collapse nested if block
+   |
+71 ~         if !opts.path_tracing && cache_valid && self.instance_count > 0
+72 ~             && let Some((px, py)) = self.picking.pending_pick {
+73 |                 self.picking.ensure_readback(&self.ctx.device, width)?;
+74 |                 self.pick_from_existing()?;
+75 |                 self.picking.request_pick(px, py);
+76 ~             }
+   |
+

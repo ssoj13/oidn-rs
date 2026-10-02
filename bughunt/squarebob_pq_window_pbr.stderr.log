@@ -1,0 +1,136 @@
+[2026-10-02T19:33:38.022Z INFO  squarebob] squarebob-rs starting (log level: info)
+[2026-10-02T19:33:38.022Z INFO  squarebob] CLI mode: Mode3D
+[2026-10-02T19:33:38.022Z INFO  squarebob] Screenshot mode: delay=20s, path="C:/projects/projects.rust.cg/cglibs/oidn-rs/bughunt/squarebob_pq_window_pbr.png"
+[2026-10-02T19:33:38.185Z WARN  wgpu_hal::vulkan::instance] GENERAL [Loader Message (0x0)]
+    	Layer VK_LAYER_bandicam_helper uses API version 1.2 which is older than the application specified API version of 1.3. May cause issues.
+[2026-10-02T19:33:38.185Z WARN  wgpu_hal::vulkan::instance] 	objects: (type: INSTANCE, hndl: 0x1be9c07b7f0, name: ?)
+[2026-10-02T19:33:39.493Z INFO  squarebob::app::presets] Loaded 8 presets from C:\Users\joss1\.squarebob\presets.json
+[2026-10-02T19:33:39.495Z INFO  squarebob::app] wgpu limits: max_storage_buffer_binding_size=2147483644, max_storage_buffers_per_shader_stage=524288, max_uniform_buffers_per_shader_stage=524288, max_bind_groups=8, max_texture_dimension_2d=32768, max_buffer_size=4294967295, min_uniform_buffer_offset_alignment=64, min_storage_buffer_offset_alignment=32
+[2026-10-02T19:33:39.496Z INFO  squarebob::scanner] Scan started: "\\\\?\\C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\display_window_fixture"
+[2026-10-02T19:33:39.496Z INFO  squarebob::cache] Cache loaded: "C:\\Users\\joss1\\AppData\\Local\\squarebob-rs\\cache\\a6bfad3668456e2c3ef2410ad4e2eb104626f5f8ce5577df8f2305fd6ece0ae4.bin" (12 files)
+[2026-10-02T19:33:39.548Z INFO  squarebob::display_host] Display output: HDR10 (PQ) (Rgb10a2Unorm, Bt2100Pq)
+[2026-10-02T19:33:39.623Z INFO  squarebob::app::scan_orchestration] Loaded cache preview for generation 1: 12 files
+[2026-10-02T19:33:39.623Z INFO  squarebob::app::scan_orchestration] Scan generation 1 complete: 12 files
+[2026-10-02T19:33:39.625Z INFO  squarebob::cache] Cache saved: "C:\\Users\\joss1\\AppData\\Local\\squarebob-rs\\cache\\a6bfad3668456e2c3ef2410ad4e2eb104626f5f8ce5577df8f2305fd6ece0ae4.bin" (2483 bytes)
+[2026-10-02T19:33:39.819Z WARN  wgpu_hal::vulkan::instance] PERFORMANCE [WARNING-Shader-OutputNotConsumed (0xc81ad50e)]
+    	vkCreateGraphicsPipelines(): pCreateInfos[0].pVertexInputState Vertex attribute at location 9 not consumed by vertex shader.
+[2026-10-02T19:33:39.819Z WARN  wgpu_hal::vulkan::instance] 	objects: (type: SHADER_MODULE, hndl: 0x7a000000007a, name: ?)
+[2026-10-02T19:33:39.821Z WARN  wgpu_hal::vulkan::instance] PERFORMANCE [WARNING-Shader-OutputNotConsumed (0xc81ad50e)]
+    	vkCreateGraphicsPipelines(): pCreateInfos[0].pVertexInputState Vertex attribute at location 9 not consumed by vertex shader.
+[2026-10-02T19:33:39.821Z WARN  wgpu_hal::vulkan::instance] 	objects: (type: SHADER_MODULE, hndl: 0x7e000000007e, name: ?)
+[2026-10-02T19:33:42.473Z INFO  squarebob::app::treemap_view] 3D frame: render=55.7ms tex=0.3ms total=56.0ms
+[2026-10-02T19:33:42.695Z INFO  squarebob::app::treemap_view] 3D frame: render=8.2ms tex=0.3ms total=8.5ms
+[2026-10-02T19:33:42.721Z INFO  squarebob::display_host] Display output: HDR10 (PQ) (Rgb10a2Unorm, Bt2100Pq)
+[2026-10-02T19:33:43.030Z INFO  squarebob::app::treemap_view] 3D frame: render=5.4ms tex=0.0ms total=5.4ms
+[2026-10-02T19:33:44.057Z INFO  squarebob::display_host] Display output: HDR10 (PQ) (Rgb10a2Unorm, Bt2100Pq)
+[2026-10-02T19:33:44.073Z INFO  squarebob::display_host] Display output: HDR10 (PQ) (Rgb10a2Unorm, Bt2100Pq)
+[2026-10-02T19:33:44.092Z INFO  squarebob::display_host] Display output: HDR10 (PQ) (Rgb10a2Unorm, Bt2100Pq)
+[2026-10-02T19:33:44.109Z INFO  squarebob::display_host] Display output: HDR10 (PQ) (Rgb10a2Unorm, Bt2100Pq)
+[2026-10-02T19:33:44.127Z INFO  squarebob::display_host] Display output: HDR10 (PQ) (Rgb10a2Unorm, Bt2100Pq)
+[2026-10-02T19:33:44.144Z INFO  squarebob::display_host] Display output: HDR10 (PQ) (Rgb10a2Unorm, Bt2100Pq)
+[2026-10-02T19:33:44.163Z INFO  squarebob::display_host] Display output: HDR10 (PQ) (Rgb10a2Unorm, Bt2100Pq)
+[2026-10-02T19:33:44.183Z INFO  squarebob::display_host] Display output: HDR10 (PQ) (Rgb10a2Unorm, Bt2100Pq)
+[2026-10-02T19:33:44.203Z INFO  squarebob::display_host] Display output: HDR10 (PQ) (Rgb10a2Unorm, Bt2100Pq)
+[2026-10-02T19:33:44.224Z INFO  squarebob::display_host] Display output: HDR10 (PQ) (Rgb10a2Unorm, Bt2100Pq)
+[2026-10-02T19:33:44.246Z INFO  squarebob::display_host] Display output: HDR10 (PQ) (Rgb10a2Unorm, Bt2100Pq)
+[2026-10-02T19:33:44.267Z INFO  squarebob::display_host] Display output: HDR10 (PQ) (Rgb10a2Unorm, Bt2100Pq)
+[2026-10-02T19:33:44.287Z INFO  squarebob::display_host] Display output: HDR10 (PQ) (Rgb10a2Unorm, Bt2100Pq)
+[2026-10-02T19:33:44.306Z INFO  squarebob::display_host] Display output: HDR10 (PQ) (Rgb10a2Unorm, Bt2100Pq)
+[2026-10-02T19:33:44.327Z INFO  squarebob::display_host] Display output: HDR10 (PQ) (Rgb10a2Unorm, Bt2100Pq)
+[2026-10-02T19:33:44.346Z INFO  squarebob::display_host] Display output: HDR10 (PQ) (Rgb10a2Unorm, Bt2100Pq)
+[2026-10-02T19:33:44.364Z INFO  squarebob::display_host] Display output: HDR10 (PQ) (Rgb10a2Unorm, Bt2100Pq)
+[2026-10-02T19:33:44.397Z INFO  squarebob::display_host] Display output: HDR10 (PQ) (Rgb10a2Unorm, Bt2100Pq)
+[2026-10-02T19:33:44.414Z INFO  squarebob::display_host] Display output: HDR10 (PQ) (Rgb10a2Unorm, Bt2100Pq)
+[2026-10-02T19:33:44.433Z INFO  squarebob::display_host] Display output: HDR10 (PQ) (Rgb10a2Unorm, Bt2100Pq)
+[2026-10-02T19:33:44.450Z INFO  squarebob::display_host] Display output: HDR10 (PQ) (Rgb10a2Unorm, Bt2100Pq)
+[2026-10-02T19:33:44.614Z INFO  squarebob::app::treemap_view] 3D frame: render=4.8ms tex=0.0ms total=4.9ms
+[2026-10-02T19:33:44.814Z INFO  squarebob::app::treemap_view] 3D frame: render=5.6ms tex=0.0ms total=5.6ms
+[2026-10-02T19:33:44.895Z INFO  squarebob::app::treemap_view] 3D frame: render=3.9ms tex=0.0ms total=3.9ms
+[2026-10-02T19:33:44.917Z INFO  squarebob::app::treemap_view] 3D frame: render=4.2ms tex=0.0ms total=4.2ms
+[2026-10-02T19:33:44.936Z INFO  squarebob::app::treemap_view] 3D frame: render=4.3ms tex=0.0ms total=4.4ms
+[2026-10-02T19:33:44.956Z INFO  squarebob::app::treemap_view] 3D frame: render=4.7ms tex=0.0ms total=4.7ms
+[2026-10-02T19:33:44.974Z INFO  squarebob::app::treemap_view] 3D frame: render=4.2ms tex=0.0ms total=4.2ms
+[2026-10-02T19:33:44.994Z INFO  squarebob::app::treemap_view] 3D frame: render=4.3ms tex=0.0ms total=4.3ms
+[2026-10-02T19:33:45.014Z INFO  squarebob::app::treemap_view] 3D frame: render=4.4ms tex=0.0ms total=4.4ms
+[2026-10-02T19:33:45.033Z INFO  squarebob::app::treemap_view] 3D frame: render=4.2ms tex=0.0ms total=4.2ms
+[2026-10-02T19:33:45.053Z INFO  squarebob::app::treemap_view] 3D frame: render=4.3ms tex=0.0ms total=4.3ms
+[2026-10-02T19:33:45.074Z INFO  squarebob::app::treemap_view] 3D frame: render=4.1ms tex=0.0ms total=4.2ms
+[2026-10-02T19:33:45.094Z INFO  squarebob::app::treemap_view] 3D frame: render=4.3ms tex=0.0ms total=4.3ms
+[2026-10-02T19:33:45.113Z INFO  squarebob::app::treemap_view] 3D frame: render=4.1ms tex=0.0ms total=4.1ms
+[2026-10-02T19:33:45.133Z INFO  squarebob::app::treemap_view] 3D frame: render=4.9ms tex=0.0ms total=4.9ms
+[2026-10-02T19:33:45.152Z INFO  squarebob::app::treemap_view] 3D frame: render=3.8ms tex=0.0ms total=3.8ms
+[2026-10-02T19:33:45.170Z INFO  squarebob::app::treemap_view] 3D frame: render=4.1ms tex=0.0ms total=4.1ms
+[2026-10-02T19:33:45.192Z INFO  squarebob::app::treemap_view] 3D frame: render=4.2ms tex=0.0ms total=4.2ms
+[2026-10-02T19:33:45.214Z INFO  squarebob::app::treemap_view] 3D frame: render=4.2ms tex=0.0ms total=4.2ms
+[2026-10-02T19:33:45.234Z INFO  squarebob::app::treemap_view] 3D frame: render=4.0ms tex=0.0ms total=4.0ms
+[2026-10-02T19:33:45.255Z INFO  squarebob::app::treemap_view] 3D frame: render=4.2ms tex=0.0ms total=4.2ms
+[2026-10-02T19:33:45.273Z INFO  squarebob::app::treemap_view] 3D frame: render=3.8ms tex=0.0ms total=3.8ms
+[2026-10-02T19:33:45.290Z INFO  squarebob::app::treemap_view] 3D frame: render=3.9ms tex=0.0ms total=3.9ms
+[2026-10-02T19:33:45.308Z INFO  squarebob::app::treemap_view] 3D frame: render=3.7ms tex=0.0ms total=3.7ms
+[2026-10-02T19:33:45.324Z INFO  squarebob::app::treemap_view] 3D frame: render=3.6ms tex=0.0ms total=3.6ms
+[2026-10-02T19:33:45.340Z INFO  squarebob::app::treemap_view] 3D frame: render=3.8ms tex=0.0ms total=3.8ms
+[2026-10-02T19:33:45.357Z INFO  squarebob::app::treemap_view] 3D frame: render=3.6ms tex=0.0ms total=3.7ms
+[2026-10-02T19:33:45.373Z INFO  squarebob::app::treemap_view] 3D frame: render=3.8ms tex=0.0ms total=3.8ms
+[2026-10-02T19:33:45.390Z INFO  squarebob::app::treemap_view] 3D frame: render=3.7ms tex=0.0ms total=3.7ms
+[2026-10-02T19:33:45.407Z INFO  squarebob::app::treemap_view] 3D frame: render=4.1ms tex=0.0ms total=4.1ms
+[2026-10-02T19:33:45.424Z INFO  squarebob::app::treemap_view] 3D frame: render=3.8ms tex=0.0ms total=3.8ms
+[2026-10-02T19:33:45.440Z INFO  squarebob::app::treemap_view] 3D frame: render=3.7ms tex=0.0ms total=3.7ms
+[2026-10-02T19:33:45.456Z INFO  squarebob::app::treemap_view] 3D frame: render=3.4ms tex=0.0ms total=3.4ms
+[2026-10-02T19:33:45.472Z INFO  squarebob::app::treemap_view] 3D frame: render=3.9ms tex=0.0ms total=3.9ms
+[2026-10-02T19:33:45.489Z INFO  squarebob::app::treemap_view] 3D frame: render=3.9ms tex=0.0ms total=3.9ms
+[2026-10-02T19:33:45.507Z INFO  squarebob::app::treemap_view] 3D frame: render=3.8ms tex=0.0ms total=3.8ms
+[2026-10-02T19:33:45.524Z INFO  squarebob::app::treemap_view] 3D frame: render=3.9ms tex=0.0ms total=3.9ms
+[2026-10-02T19:33:45.542Z INFO  squarebob::app::treemap_view] 3D frame: render=3.8ms tex=0.0ms total=3.8ms
+[2026-10-02T19:33:45.560Z INFO  squarebob::app::treemap_view] 3D frame: render=3.7ms tex=0.0ms total=3.7ms
+[2026-10-02T19:33:45.579Z INFO  squarebob::app::treemap_view] 3D frame: render=4.1ms tex=0.0ms total=4.1ms
+[2026-10-02T19:33:45.597Z INFO  squarebob::app::treemap_view] 3D frame: render=3.8ms tex=0.0ms total=3.8ms
+[2026-10-02T19:33:45.617Z INFO  squarebob::app::treemap_view] 3D frame: render=4.1ms tex=0.0ms total=4.1ms
+[2026-10-02T19:33:45.635Z INFO  squarebob::app::treemap_view] 3D frame: render=3.7ms tex=0.0ms total=3.7ms
+[2026-10-02T19:33:45.657Z INFO  squarebob::app::treemap_view] 3D frame: render=4.0ms tex=0.0ms total=4.0ms
+[2026-10-02T19:33:45.673Z INFO  squarebob::app::treemap_view] 3D frame: render=2.5ms tex=0.0ms total=2.5ms
+[2026-10-02T19:33:45.690Z INFO  squarebob::app::treemap_view] 3D frame: render=2.6ms tex=0.0ms total=2.7ms
+[2026-10-02T19:33:45.707Z INFO  squarebob::app::treemap_view] 3D frame: render=2.7ms tex=0.0ms total=2.7ms
+[2026-10-02T19:33:45.725Z INFO  squarebob::app::treemap_view] 3D frame: render=2.6ms tex=0.0ms total=2.6ms
+[2026-10-02T19:33:45.743Z INFO  squarebob::app::treemap_view] 3D frame: render=2.5ms tex=0.0ms total=2.5ms
+[2026-10-02T19:33:45.760Z INFO  squarebob::app::treemap_view] 3D frame: render=2.6ms tex=0.0ms total=2.7ms
+[2026-10-02T19:33:45.776Z INFO  squarebob::app::treemap_view] 3D frame: render=2.3ms tex=0.0ms total=2.3ms
+[2026-10-02T19:33:45.791Z INFO  squarebob::app::treemap_view] 3D frame: render=2.4ms tex=0.0ms total=2.4ms
+[2026-10-02T19:33:45.806Z INFO  squarebob::app::treemap_view] 3D frame: render=2.1ms tex=0.0ms total=2.2ms
+[2026-10-02T19:33:45.822Z INFO  squarebob::app::treemap_view] 3D frame: render=2.3ms tex=0.0ms total=2.3ms
+[2026-10-02T19:33:45.837Z INFO  squarebob::app::treemap_view] 3D frame: render=2.2ms tex=0.0ms total=2.2ms
+[2026-10-02T19:33:45.853Z INFO  squarebob::app::treemap_view] 3D frame: render=2.3ms tex=0.0ms total=2.3ms
+[2026-10-02T19:33:45.869Z INFO  squarebob::app::treemap_view] 3D frame: render=2.2ms tex=0.0ms total=2.2ms
+[2026-10-02T19:33:45.883Z INFO  squarebob::app::treemap_view] 3D frame: render=2.1ms tex=0.0ms total=2.1ms
+[2026-10-02T19:33:45.899Z INFO  squarebob::app::treemap_view] 3D frame: render=2.3ms tex=0.0ms total=2.3ms
+[2026-10-02T19:33:45.914Z INFO  squarebob::app::treemap_view] 3D frame: render=2.1ms tex=0.0ms total=2.1ms
+[2026-10-02T19:33:45.928Z INFO  squarebob::app::treemap_view] 3D frame: render=2.2ms tex=0.0ms total=2.2ms
+[2026-10-02T19:33:45.943Z INFO  squarebob::app::treemap_view] 3D frame: render=2.1ms tex=0.0ms total=2.1ms
+[2026-10-02T19:33:45.957Z INFO  squarebob::app::treemap_view] 3D frame: render=2.2ms tex=0.0ms total=2.2ms
+[2026-10-02T19:33:45.971Z INFO  squarebob::app::treemap_view] 3D frame: render=2.1ms tex=0.0ms total=2.1ms
+[2026-10-02T19:33:45.986Z INFO  squarebob::app::treemap_view] 3D frame: render=2.1ms tex=0.0ms total=2.1ms
+[2026-10-02T19:33:46.001Z INFO  squarebob::app::treemap_view] 3D frame: render=2.2ms tex=0.0ms total=2.2ms
+[2026-10-02T19:33:46.017Z INFO  squarebob::app::treemap_view] 3D frame: render=2.3ms tex=0.0ms total=2.3ms
+[2026-10-02T19:33:46.032Z INFO  squarebob::app::treemap_view] 3D frame: render=2.2ms tex=0.0ms total=2.2ms
+[2026-10-02T19:33:46.048Z INFO  squarebob::app::treemap_view] 3D frame: render=2.1ms tex=0.0ms total=2.1ms
+[2026-10-02T19:33:46.063Z INFO  squarebob::app::treemap_view] 3D frame: render=2.2ms tex=0.0ms total=2.3ms
+[2026-10-02T19:33:46.078Z INFO  squarebob::app::treemap_view] 3D frame: render=2.2ms tex=0.0ms total=2.2ms
+[2026-10-02T19:33:46.093Z INFO  squarebob::app::treemap_view] 3D frame: render=2.2ms tex=0.0ms total=2.2ms
+[2026-10-02T19:33:46.110Z INFO  squarebob::app::treemap_view] 3D frame: render=2.4ms tex=0.0ms total=2.4ms
+[2026-10-02T19:33:46.126Z INFO  squarebob::app::treemap_view] 3D frame: render=2.3ms tex=0.0ms total=2.3ms
+[2026-10-02T19:33:46.143Z INFO  squarebob::app::treemap_view] 3D frame: render=2.8ms tex=0.0ms total=2.8ms
+[2026-10-02T19:33:46.159Z INFO  squarebob::app::treemap_view] 3D frame: render=2.2ms tex=0.0ms total=2.2ms
+[2026-10-02T19:33:46.174Z INFO  squarebob::app::treemap_view] 3D frame: render=2.5ms tex=0.0ms total=2.5ms
+[2026-10-02T19:33:55.190Z INFO  squarebob::display_host] Display output: HDR10 (PQ) (Rgb10a2Unorm, Bt2100Pq)
+[2026-10-02T19:33:55.214Z INFO  squarebob::app::treemap_view] 3D frame: render=5.0ms tex=0.3ms total=5.3ms
+[2026-10-02T19:33:55.249Z INFO  squarebob::display_host] Display output: HDR10 (PQ) (Rgb10a2Unorm, Bt2100Pq)
+[2026-10-02T19:33:55.278Z INFO  squarebob::app::treemap_view] 3D frame: render=5.1ms tex=0.3ms total=5.4ms
+[2026-10-02T19:33:55.316Z INFO  squarebob::display_host] Display output: HDR10 (PQ) (Rgb10a2Unorm, Bt2100Pq)
+[2026-10-02T19:33:55.343Z INFO  squarebob::app::treemap_view] 3D frame: render=4.1ms tex=0.2ms total=4.4ms
+[2026-10-02T19:33:55.376Z INFO  squarebob::display_host] Display output: HDR10 (PQ) (Rgb10a2Unorm, Bt2100Pq)
+[2026-10-02T19:33:55.405Z INFO  squarebob::app::treemap_view] 3D frame: render=4.3ms tex=0.4ms total=4.7ms
+[2026-10-02T19:33:55.439Z INFO  squarebob::display_host] Display output: HDR10 (PQ) (Rgb10a2Unorm, Bt2100Pq)
+[2026-10-02T19:33:55.465Z INFO  squarebob::app::treemap_view] 3D frame: render=4.0ms tex=0.2ms total=4.2ms
+[2026-10-02T19:33:55.496Z INFO  squarebob::display_host] Display output: HDR10 (PQ) (Rgb10a2Unorm, Bt2100Pq)
+[2026-10-02T19:33:55.522Z INFO  squarebob::app::treemap_view] 3D frame: render=4.5ms tex=0.3ms total=4.8ms
+[2026-10-02T19:34:00.092Z INFO  squarebob::app::screenshot] Taking screenshot: 982x850 -> C:/projects/projects.rust.cg/cglibs/oidn-rs/bughunt/squarebob_pq_window_pbr.png
+[2026-10-02T19:34:00.641Z INFO  squarebob::app::screenshot] Screenshot saved: C:/projects/projects.rust.cg/cglibs/oidn-rs/bughunt/squarebob_pq_window_pbr.png

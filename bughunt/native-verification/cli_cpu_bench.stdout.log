@@ -1,0 +1,4 @@
+[2m2026-10-02T21:19:29.888507Z[0m [32m INFO[0m backend: Cpu
+resolution=3x2 (0.00 MP) quality=Fast iters=1
+  min=  144.56 ms  median=  144.56 ms  avg=  144.56 ms  max=  144.56 ms
+  throughput @ median: 0.00 MP/s

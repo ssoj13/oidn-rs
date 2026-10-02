@@ -5,14 +5,18 @@ use std::path::PathBuf;
 
 use oidn_rs::prelude::wgpu_prelude::*;
 use oidn_rs::prelude::*;
+#[path = "../../oidn-cli/src/support.rs"]
+pub mod support;
+use support::{add_noise, metrics};
 
-fn weights_dir() -> Option<PathBuf> {
+fn weights_dir() -> PathBuf {
     let p = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("..")
         .join("..")
         .join("data")
         .join("weights");
-    if p.is_dir() { Some(p) } else { None }
+    assert!(p.is_dir(), "required shipped weights are missing");
+    p
 }
 
 fn make_clean_ldr(w: usize, h: usize) -> Vec<f32> {
@@ -32,59 +36,43 @@ fn make_clean_ldr(w: usize, h: usize) -> Vec<f32> {
     buf
 }
 
-fn add_noise(clean: &[f32], magnitude: f32) -> Vec<f32> {
-    let mut out = clean.to_vec();
-    for (i, v) in out.iter_mut().enumerate() {
-        let mut n = (i as u32).wrapping_mul(2654435761);
-        n ^= n >> 13;
-        n = n.wrapping_mul(0x85ebca6b);
-        n ^= n >> 16;
-        let r = (n as f32 / u32::MAX as f32) * 2.0 - 1.0;
-        *v = (*v + r * magnitude).clamp(0.0, 1.0);
-    }
-    out
-}
-
-fn rmse(a: &[f32], b: &[f32]) -> f32 {
-    let n = a.len() as f32;
-    let s: f32 = a.iter().zip(b.iter()).map(|(x, y)| (x - y).powi(2)).sum();
-    (s / n).sqrt()
-}
-
 #[test]
+#[ignore = "requires explicit GPU verification; run with --ignored"]
 fn denoise_ldr_srgb_wgpu_reduces_noise() {
-    let Some(dir) = weights_dir() else {
-        eprintln!("skipping: weights submodule not initialised");
-        return;
-    };
+    let dir = weights_dir();
     let device = WgpuDevice::new().expect("wgpu init");
 
     let (w, h) = (256usize, 256usize);
     let clean = make_clean_ldr(w, h);
-    let noisy = add_noise(&clean, 0.08);
+    let noisy = add_noise(&clean, 0.08)
+        .unwrap()
+        .into_iter()
+        .map(|v| v.clamp(0.0, 1.0))
+        .collect::<Vec<_>>();
 
     let in_img = Image::from_rgb_f32(&noisy, w, h);
     let mut filter = RtFilter::builder(&device.handle, &dir)
         .hdr(false) // LDR path
-        .srgb(false) // default: input is sRGB-encoded, runner picks SRGB transfer
+        .srgb(false) // Linear input; the runner applies the sRGB forward transfer.
         .quality(Quality::High)
         .build();
-    filter.set_color(&in_img);
-    filter.allocate_output(w, h, PixelFormat::Rgb32f);
+    filter.set_color(&in_img).unwrap();
+    filter.allocate_output(w, h, PixelFormat::Rgb32f).unwrap();
     filter.commit().expect("commit");
     assert_eq!(filter.model_key().unwrap().0, "rt_ldr");
     filter.execute().expect("execute");
 
     let (raw, _, _, _) = filter.take_output().unwrap();
     let out: &[f32] = bytemuck::cast_slice(&raw);
+    assert!(out.iter().any(|v| v.abs() > 1e-6), "output lost all signal");
     let denoised = out.to_vec();
 
     for x in &denoised {
         assert!(x.is_finite());
     }
 
-    let rmse_noisy = rmse(&noisy, &clean);
-    let rmse_denoised = rmse(&denoised, &clean);
+    let rmse_noisy = metrics(&noisy, &clean).unwrap().rmse;
+    let rmse_denoised = metrics(&denoised, &clean).unwrap().rmse;
     eprintln!(
         "LDR sRGB: rmse noisy={rmse_noisy:.5} denoised={rmse_denoised:.5} improvement={:.2}x",
         rmse_noisy / rmse_denoised.max(1e-12)
@@ -96,31 +84,35 @@ fn denoise_ldr_srgb_wgpu_reduces_noise() {
 }
 
 #[test]
+#[ignore = "requires explicit GPU verification; run with --ignored"]
 fn denoise_ldr_explicit_linear_route_wgpu() {
-    // hdr=false, srgb=true → input already linear, network applies Linear transfer.
+    // hdr=false, srgb=true: input is already sRGB encoded; network transfer is Linear.
     // Still routes to rt_ldr model.
-    let Some(dir) = weights_dir() else {
-        return;
-    };
+    let dir = weights_dir();
     let device = WgpuDevice::new().expect("wgpu init");
 
     let (w, h) = (128usize, 128usize);
     let clean = make_clean_ldr(w, h);
-    let noisy = add_noise(&clean, 0.05);
+    let noisy = add_noise(&clean, 0.05)
+        .unwrap()
+        .into_iter()
+        .map(|v| v.clamp(0.0, 1.0))
+        .collect::<Vec<_>>();
 
     let in_img = Image::from_rgb_f32(&noisy, w, h);
     let mut filter = RtFilter::builder(&device.handle, &dir)
         .hdr(false)
         .srgb(true)
         .build();
-    filter.set_color(&in_img);
-    filter.allocate_output(w, h, PixelFormat::Rgb32f);
+    filter.set_color(&in_img).unwrap();
+    filter.allocate_output(w, h, PixelFormat::Rgb32f).unwrap();
     filter.commit().expect("commit");
     assert_eq!(filter.model_key().unwrap().0, "rt_ldr");
     filter.execute().expect("execute");
 
     let (raw, _, _, _) = filter.take_output().unwrap();
     let out: &[f32] = bytemuck::cast_slice(&raw);
+    assert!(out.iter().any(|v| v.abs() > 1e-6), "output lost all signal");
     for x in out {
         assert!(x.is_finite());
     }

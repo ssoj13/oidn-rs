@@ -3522,7 +3522,7 @@ dependencies = [
 name = "oidn-cli"
 version = "0.1.0"
 dependencies = [
- "bytemuck",
+ "burn",
  "clap",
  "exr",
  "half",
@@ -3530,7 +3530,7 @@ dependencies = [
  "oidn-rs",
  "oidn-tza",
  "pollster",
- "thiserror 2.0.19",
+ "serde_json",
  "tracing",
  "tracing-subscriber",
  "wgpu",
@@ -3541,7 +3541,6 @@ name = "oidn-model"
 version = "0.1.0"
 dependencies = [
  "burn",
- "half",
  "oidn-tza",
  "thiserror 2.0.19",
 ]
@@ -3554,11 +3553,9 @@ dependencies = [
  "bytemuck",
  "half",
  "log",
- "memmap2",
  "oidn-model",
  "oidn-tza",
  "thiserror 2.0.19",
- "tracing",
 ]
 
 [[package]]
@@ -3566,6 +3563,7 @@ name = "oidn-tza"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
+ "bytes",
  "half",
  "thiserror 2.0.19",
 ]

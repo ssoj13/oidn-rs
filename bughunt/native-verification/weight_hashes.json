@@ -1,0 +1,467 @@
+{
+  "referenceCommit": "f7ae1bf07b3201aaa8cfe04d71f5243f8e0f2bb7",
+  "weightsCommit": "28883d1769d5930e13cf7f1676dd852bd81ed9e7",
+  "allEqual": true,
+  "rows": [
+    {
+      "name": "rt_alb.tza",
+      "rust": {
+        "algorithm": "sha256",
+        "hash": "752c9a8d57884d660ae375a7c853cad8a44f77d559bb282f0ef39f8e758601a4",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/data/weights/rt_alb.tza",
+        "size": 1830792
+      },
+      "native": {
+        "algorithm": "sha256",
+        "hash": "752c9a8d57884d660ae375a7c853cad8a44f77d559bb282f0ef39f8e758601a4",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/bughunt/native-verification/oidn-weights/rt_alb.tza",
+        "size": 1830792
+      },
+      "equal": true
+    },
+    {
+      "name": "rt_alb_large.tza",
+      "rust": {
+        "algorithm": "sha256",
+        "hash": "a8efbe6eed511f41c8f5ff9145923214cefb0703cf91a3b00a1dc131ade1600a",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/data/weights/rt_alb_large.tza",
+        "size": 7684615
+      },
+      "native": {
+        "algorithm": "sha256",
+        "hash": "a8efbe6eed511f41c8f5ff9145923214cefb0703cf91a3b00a1dc131ade1600a",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/bughunt/native-verification/oidn-weights/rt_alb_large.tza",
+        "size": 7684615
+      },
+      "equal": true
+    },
+    {
+      "name": "rt_hdr.tza",
+      "rust": {
+        "algorithm": "sha256",
+        "hash": "a097e8fe9b1ba71ec43cde3e6df3fcf54fa4f8f2f4dd41eac01d0a76a16261e3",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/data/weights/rt_hdr.tza",
+        "size": 1830792
+      },
+      "native": {
+        "algorithm": "sha256",
+        "hash": "a097e8fe9b1ba71ec43cde3e6df3fcf54fa4f8f2f4dd41eac01d0a76a16261e3",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/bughunt/native-verification/oidn-weights/rt_hdr.tza",
+        "size": 1830792
+      },
+      "equal": true
+    },
+    {
+      "name": "rt_hdr_alb.tza",
+      "rust": {
+        "algorithm": "sha256",
+        "hash": "a8e4fbbd3a794e0098f88e23882faf5459840bda5b0ff39f22bcaaf2cfd03b5a",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/data/weights/rt_hdr_alb.tza",
+        "size": 1835976
+      },
+      "native": {
+        "algorithm": "sha256",
+        "hash": "a8e4fbbd3a794e0098f88e23882faf5459840bda5b0ff39f22bcaaf2cfd03b5a",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/bughunt/native-verification/oidn-weights/rt_hdr_alb.tza",
+        "size": 1835976
+      },
+      "equal": true
+    },
+    {
+      "name": "rt_hdr_alb_nrm.tza",
+      "rust": {
+        "algorithm": "sha256",
+        "hash": "e586ef2ff48d7fbb7611986405220ed8fc5c13ca79bfc40be4dc742fbf959e1a",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/data/weights/rt_hdr_alb_nrm.tza",
+        "size": 1841160
+      },
+      "native": {
+        "algorithm": "sha256",
+        "hash": "e586ef2ff48d7fbb7611986405220ed8fc5c13ca79bfc40be4dc742fbf959e1a",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/bughunt/native-verification/oidn-weights/rt_hdr_alb_nrm.tza",
+        "size": 1841160
+      },
+      "equal": true
+    },
+    {
+      "name": "rt_hdr_alb_nrm_small.tza",
+      "rust": {
+        "algorithm": "sha256",
+        "hash": "980ea307e7825cae23ed8b1addf8de62ece84b61094795a5631ebf1c91b2e1a7",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/data/weights/rt_hdr_alb_nrm_small.tza",
+        "size": 641480
+      },
+      "native": {
+        "algorithm": "sha256",
+        "hash": "980ea307e7825cae23ed8b1addf8de62ece84b61094795a5631ebf1c91b2e1a7",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/bughunt/native-verification/oidn-weights/rt_hdr_alb_nrm_small.tza",
+        "size": 641480
+      },
+      "equal": true
+    },
+    {
+      "name": "rt_hdr_alb_small.tza",
+      "rust": {
+        "algorithm": "sha256",
+        "hash": "1f3839dfc949e969bc5ad4d600e85bfa96187e0cb5ffee2f4715c791e6221fba",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/data/weights/rt_hdr_alb_small.tza",
+        "size": 638024
+      },
+      "native": {
+        "algorithm": "sha256",
+        "hash": "1f3839dfc949e969bc5ad4d600e85bfa96187e0cb5ffee2f4715c791e6221fba",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/bughunt/native-verification/oidn-weights/rt_hdr_alb_small.tza",
+        "size": 638024
+      },
+      "equal": true
+    },
+    {
+      "name": "rt_hdr_calb_cnrm.tza",
+      "rust": {
+        "algorithm": "sha256",
+        "hash": "d0057057bd76c64e3e67b449728ef8f4fd2f11ccfb74c1e59b9d50dafd50ee0e",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/data/weights/rt_hdr_calb_cnrm.tza",
+        "size": 1841160
+      },
+      "native": {
+        "algorithm": "sha256",
+        "hash": "d0057057bd76c64e3e67b449728ef8f4fd2f11ccfb74c1e59b9d50dafd50ee0e",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/bughunt/native-verification/oidn-weights/rt_hdr_calb_cnrm.tza",
+        "size": 1841160
+      },
+      "equal": true
+    },
+    {
+      "name": "rt_hdr_calb_cnrm_large.tza",
+      "rust": {
+        "algorithm": "sha256",
+        "hash": "08130cdc4f33b7a513d0073757f089ac830f900613bb5bad72ca42c52b934465",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/data/weights/rt_hdr_calb_cnrm_large.tza",
+        "size": 7698439
+      },
+      "native": {
+        "algorithm": "sha256",
+        "hash": "08130cdc4f33b7a513d0073757f089ac830f900613bb5bad72ca42c52b934465",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/bughunt/native-verification/oidn-weights/rt_hdr_calb_cnrm_large.tza",
+        "size": 7698439
+      },
+      "equal": true
+    },
+    {
+      "name": "rt_hdr_calb_cnrm_small.tza",
+      "rust": {
+        "algorithm": "sha256",
+        "hash": "a6c43bfdbff01bdd8a9c777e139720f9e58b872a50c8db07079bddd007482dc5",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/data/weights/rt_hdr_calb_cnrm_small.tza",
+        "size": 641480
+      },
+      "native": {
+        "algorithm": "sha256",
+        "hash": "a6c43bfdbff01bdd8a9c777e139720f9e58b872a50c8db07079bddd007482dc5",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/bughunt/native-verification/oidn-weights/rt_hdr_calb_cnrm_small.tza",
+        "size": 641480
+      },
+      "equal": true
+    },
+    {
+      "name": "rt_hdr_small.tza",
+      "rust": {
+        "algorithm": "sha256",
+        "hash": "c9171947f2bceb4367725b7a0d5b4e0d663ac44108386af42f1b49e4361952e7",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/data/weights/rt_hdr_small.tza",
+        "size": 634568
+      },
+      "native": {
+        "algorithm": "sha256",
+        "hash": "c9171947f2bceb4367725b7a0d5b4e0d663ac44108386af42f1b49e4361952e7",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/bughunt/native-verification/oidn-weights/rt_hdr_small.tza",
+        "size": 634568
+      },
+      "equal": true
+    },
+    {
+      "name": "rt_ldr.tza",
+      "rust": {
+        "algorithm": "sha256",
+        "hash": "ad35b8fe765d453ade41861e90ee1da66e0b5fe35136de7763b64098a682e3ab",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/data/weights/rt_ldr.tza",
+        "size": 1830792
+      },
+      "native": {
+        "algorithm": "sha256",
+        "hash": "ad35b8fe765d453ade41861e90ee1da66e0b5fe35136de7763b64098a682e3ab",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/bughunt/native-verification/oidn-weights/rt_ldr.tza",
+        "size": 1830792
+      },
+      "equal": true
+    },
+    {
+      "name": "rt_ldr_alb.tza",
+      "rust": {
+        "algorithm": "sha256",
+        "hash": "d7402ccf5dc632bb2a6b14917f0bc143315765e29dd2227533ce3e75546d0e4c",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/data/weights/rt_ldr_alb.tza",
+        "size": 1835976
+      },
+      "native": {
+        "algorithm": "sha256",
+        "hash": "d7402ccf5dc632bb2a6b14917f0bc143315765e29dd2227533ce3e75546d0e4c",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/bughunt/native-verification/oidn-weights/rt_ldr_alb.tza",
+        "size": 1835976
+      },
+      "equal": true
+    },
+    {
+      "name": "rt_ldr_alb_nrm.tza",
+      "rust": {
+        "algorithm": "sha256",
+        "hash": "eae7f05c02ed49c0b267454818013736a0bdd90483dae2ffd7a120acff87cc0b",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/data/weights/rt_ldr_alb_nrm.tza",
+        "size": 1841160
+      },
+      "native": {
+        "algorithm": "sha256",
+        "hash": "eae7f05c02ed49c0b267454818013736a0bdd90483dae2ffd7a120acff87cc0b",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/bughunt/native-verification/oidn-weights/rt_ldr_alb_nrm.tza",
+        "size": 1841160
+      },
+      "equal": true
+    },
+    {
+      "name": "rt_ldr_alb_nrm_small.tza",
+      "rust": {
+        "algorithm": "sha256",
+        "hash": "919609e048fe78fa1d60afe562f10daf1552872542f6eda6703d48e1c99426f1",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/data/weights/rt_ldr_alb_nrm_small.tza",
+        "size": 641480
+      },
+      "native": {
+        "algorithm": "sha256",
+        "hash": "919609e048fe78fa1d60afe562f10daf1552872542f6eda6703d48e1c99426f1",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/bughunt/native-verification/oidn-weights/rt_ldr_alb_nrm_small.tza",
+        "size": 641480
+      },
+      "equal": true
+    },
+    {
+      "name": "rt_ldr_alb_small.tza",
+      "rust": {
+        "algorithm": "sha256",
+        "hash": "1deb0b14b52368140e92cdff59469e37ff2922cda78d0872aa0a78234b879fb1",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/data/weights/rt_ldr_alb_small.tza",
+        "size": 638024
+      },
+      "native": {
+        "algorithm": "sha256",
+        "hash": "1deb0b14b52368140e92cdff59469e37ff2922cda78d0872aa0a78234b879fb1",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/bughunt/native-verification/oidn-weights/rt_ldr_alb_small.tza",
+        "size": 638024
+      },
+      "equal": true
+    },
+    {
+      "name": "rt_ldr_calb_cnrm.tza",
+      "rust": {
+        "algorithm": "sha256",
+        "hash": "165d86fe5d13de1f623d45eb9cdd2202d4b8a0e1500b136c464739020cf8f4ce",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/data/weights/rt_ldr_calb_cnrm.tza",
+        "size": 1841160
+      },
+      "native": {
+        "algorithm": "sha256",
+        "hash": "165d86fe5d13de1f623d45eb9cdd2202d4b8a0e1500b136c464739020cf8f4ce",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/bughunt/native-verification/oidn-weights/rt_ldr_calb_cnrm.tza",
+        "size": 1841160
+      },
+      "equal": true
+    },
+    {
+      "name": "rt_ldr_calb_cnrm_small.tza",
+      "rust": {
+        "algorithm": "sha256",
+        "hash": "3777cc3446e9cee4cfc0f577b717068466bc72d8a344748a01266882dd7a398a",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/data/weights/rt_ldr_calb_cnrm_small.tza",
+        "size": 641480
+      },
+      "native": {
+        "algorithm": "sha256",
+        "hash": "3777cc3446e9cee4cfc0f577b717068466bc72d8a344748a01266882dd7a398a",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/bughunt/native-verification/oidn-weights/rt_ldr_calb_cnrm_small.tza",
+        "size": 641480
+      },
+      "equal": true
+    },
+    {
+      "name": "rt_ldr_small.tza",
+      "rust": {
+        "algorithm": "sha256",
+        "hash": "d50ad6ca693ec8f2bdfac5d4657c4cb7c0763b20a9768e66f0402a00046b704c",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/data/weights/rt_ldr_small.tza",
+        "size": 634568
+      },
+      "native": {
+        "algorithm": "sha256",
+        "hash": "d50ad6ca693ec8f2bdfac5d4657c4cb7c0763b20a9768e66f0402a00046b704c",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/bughunt/native-verification/oidn-weights/rt_ldr_small.tza",
+        "size": 634568
+      },
+      "equal": true
+    },
+    {
+      "name": "rt_nrm.tza",
+      "rust": {
+        "algorithm": "sha256",
+        "hash": "fb8f7f5571332b602406f88a0b570d809dd3c06aebb530f5d048828f57490bc7",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/data/weights/rt_nrm.tza",
+        "size": 1830792
+      },
+      "native": {
+        "algorithm": "sha256",
+        "hash": "fb8f7f5571332b602406f88a0b570d809dd3c06aebb530f5d048828f57490bc7",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/bughunt/native-verification/oidn-weights/rt_nrm.tza",
+        "size": 1830792
+      },
+      "equal": true
+    },
+    {
+      "name": "rt_nrm_large.tza",
+      "rust": {
+        "algorithm": "sha256",
+        "hash": "8ac7705ec5ac303116b40ad2f0880cd741ed1f4280828bf2f18f7635c3377257",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/data/weights/rt_nrm_large.tza",
+        "size": 7684615
+      },
+      "native": {
+        "algorithm": "sha256",
+        "hash": "8ac7705ec5ac303116b40ad2f0880cd741ed1f4280828bf2f18f7635c3377257",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/bughunt/native-verification/oidn-weights/rt_nrm_large.tza",
+        "size": 7684615
+      },
+      "equal": true
+    },
+    {
+      "name": "rtlightmap_dir.tza",
+      "rust": {
+        "algorithm": "sha256",
+        "hash": "3fa8be25ea8ef4db87d2db5b85df63cfb251ca736d1075b787c56a6cc9c8541c",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/data/weights/rtlightmap_dir.tza",
+        "size": 1830792
+      },
+      "native": {
+        "algorithm": "sha256",
+        "hash": "3fa8be25ea8ef4db87d2db5b85df63cfb251ca736d1075b787c56a6cc9c8541c",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/bughunt/native-verification/oidn-weights/rtlightmap_dir.tza",
+        "size": 1830792
+      },
+      "equal": true
+    },
+    {
+      "name": "rtlightmap_hdr.tza",
+      "rust": {
+        "algorithm": "sha256",
+        "hash": "5f9757cb6a3d6c966cbd50dcd0cbffef88fe78f80cb7bf45ca99bcbd4ff1292d",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/data/weights/rtlightmap_hdr.tza",
+        "size": 1830792
+      },
+      "native": {
+        "algorithm": "sha256",
+        "hash": "5f9757cb6a3d6c966cbd50dcd0cbffef88fe78f80cb7bf45ca99bcbd4ff1292d",
+        "length": null,
+        "offset": 0,
+        "path": "C:/projects/projects.rust.cg/cglibs/oidn-rs/bughunt/native-verification/oidn-weights/rtlightmap_hdr.tza",
+        "size": 1830792
+      },
+      "equal": true
+    }
+  ]
+}

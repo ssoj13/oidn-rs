@@ -45,8 +45,7 @@ impl TransferState {
         };
         // Mirror `TransferFunction::TransferFunction(Type)` ctor from color.cpp:
         // normScale = 1 / max-component(forward(yMax)).
-        let scaled = forward_one(kind, Y_MAX, 1.0);
-        let xmax = scaled.max(forward_one(kind, Y_MAX, 1.0));
+        let xmax = forward_one(kind, Y_MAX, 1.0);
         s.norm_scale = if xmax > 0.0 { 1.0 / xmax } else { 1.0 };
         s.rcp_norm_scale = if s.norm_scale != 0.0 {
             1.0 / s.norm_scale

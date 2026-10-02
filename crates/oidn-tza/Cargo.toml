@@ -16,6 +16,7 @@ description   = "Parser for Intel OIDN's Tensor Archive (TZA) format"
 path = "src/lib.rs"
 
 [dependencies]
+bytes     = "1"
 half      = { workspace = true }
 bytemuck  = { workspace = true }
 thiserror = { workspace = true }

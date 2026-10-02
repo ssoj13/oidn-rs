@@ -1,0 +1,28 @@
+error: the borrowed expression implements the required traits
+   --> crates\oidn-rs\src\filters\unet_runner.rs:109:27
+    |
+109 |     let color = color.map(&sanitize);
+    |                           ^^^^^^^^^ help: change this to: `sanitize`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#needless_borrows_for_generic_args
+    = note: `-D clippy::needless-borrows-for-generic-args` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::needless_borrows_for_generic_args)]`
+
+error: the borrowed expression implements the required traits
+   --> crates\oidn-rs\src\filters\unet_runner.rs:110:29
+    |
+110 |     let albedo = albedo.map(&sanitize);
+    |                             ^^^^^^^^^ help: change this to: `sanitize`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#needless_borrows_for_generic_args
+
+error: the borrowed expression implements the required traits
+   --> crates\oidn-rs\src\filters\unet_runner.rs:111:29
+    |
+111 |     let normal = normal.map(&sanitize);
+    |                             ^^^^^^^^^ help: change this to: `sanitize`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#needless_borrows_for_generic_args
+
+error: could not compile `oidn-rs` (lib) due to 3 previous errors
+error: could not compile `oidn-rs` (lib test) due to 3 previous errors

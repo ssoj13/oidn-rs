@@ -1,0 +1,50 @@
+[2026-10-02T19:44:38.097Z INFO  squarebob] squarebob-rs starting (log level: info)
+[2026-10-02T19:44:38.097Z INFO  squarebob] CLI mode: Mode3D
+[2026-10-02T19:44:38.097Z INFO  squarebob] Screenshot mode: delay=20s, path="C:/projects/projects.rust.cg/cglibs/oidn-rs/bughunt/squarebob_pq_window_pt_cpu.png"
+[2026-10-02T19:44:38.259Z WARN  wgpu_hal::vulkan::instance] GENERAL [Loader Message (0x0)]
+    	Layer VK_LAYER_bandicam_helper uses API version 1.2 which is older than the application specified API version of 1.3. May cause issues.
+[2026-10-02T19:44:38.260Z WARN  wgpu_hal::vulkan::instance] 	objects: (type: INSTANCE, hndl: 0x22df3d9f070, name: ?)
+[2026-10-02T19:44:39.676Z INFO  squarebob::app::presets] Loaded 8 presets from C:\Users\joss1\.squarebob\presets.json
+[2026-10-02T19:44:39.678Z INFO  squarebob::app] wgpu limits: max_storage_buffer_binding_size=2147483644, max_storage_buffers_per_shader_stage=524288, max_uniform_buffers_per_shader_stage=524288, max_bind_groups=8, max_texture_dimension_2d=32768, max_buffer_size=4294967295, min_uniform_buffer_offset_alignment=64, min_storage_buffer_offset_alignment=32
+[2026-10-02T19:44:39.679Z INFO  squarebob::scanner] Scan started: "\\\\?\\C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\display_window_fixture"
+[2026-10-02T19:44:39.679Z INFO  squarebob::cache] Cache loaded: "C:\\Users\\joss1\\AppData\\Local\\squarebob-rs\\cache\\a6bfad3668456e2c3ef2410ad4e2eb104626f5f8ce5577df8f2305fd6ece0ae4.bin" (12 files)
+[2026-10-02T19:44:39.743Z INFO  squarebob::display_host] Display output: HDR10 (PQ) (Rgb10a2Unorm, Bt2100Pq)
+[2026-10-02T19:44:39.813Z INFO  squarebob::app::scan_orchestration] Loaded cache preview for generation 1: 12 files
+[2026-10-02T19:44:39.813Z INFO  squarebob::app::scan_orchestration] Scan generation 1 complete: 12 files
+[2026-10-02T19:44:39.816Z INFO  squarebob::cache] Cache saved: "C:\\Users\\joss1\\AppData\\Local\\squarebob-rs\\cache\\a6bfad3668456e2c3ef2410ad4e2eb104626f5f8ce5577df8f2305fd6ece0ae4.bin" (2483 bytes)
+[2026-10-02T19:44:39.986Z WARN  wgpu_hal::vulkan::instance] PERFORMANCE [WARNING-Shader-OutputNotConsumed (0xc81ad50e)]
+    	vkCreateGraphicsPipelines(): pCreateInfos[0].pVertexInputState Vertex attribute at location 9 not consumed by vertex shader.
+[2026-10-02T19:44:39.986Z WARN  wgpu_hal::vulkan::instance] 	objects: (type: SHADER_MODULE, hndl: 0x7a000000007a, name: ?)
+[2026-10-02T19:44:39.989Z WARN  wgpu_hal::vulkan::instance] PERFORMANCE [WARNING-Shader-OutputNotConsumed (0xc81ad50e)]
+    	vkCreateGraphicsPipelines(): pCreateInfos[0].pVertexInputState Vertex attribute at location 9 not consumed by vertex shader.
+[2026-10-02T19:44:39.989Z WARN  wgpu_hal::vulkan::instance] 	objects: (type: SHADER_MODULE, hndl: 0x7e000000007e, name: ?)
+[2026-10-02T19:44:43.166Z INFO  squarebob::app::treemap_view] 3D frame: render=328.0ms tex=600.8ms total=928.8ms
+[2026-10-02T19:44:43.991Z INFO  squarebob::app::treemap_view] 3D frame: render=20.4ms tex=624.1ms total=644.5ms
+[2026-10-02T19:44:44.012Z INFO  squarebob::display_host] Display output: HDR10 (PQ) (Rgb10a2Unorm, Bt2100Pq)
+[2026-10-02T19:44:44.653Z INFO  squarebob::app::treemap_view] 3D frame: render=2.7ms tex=620.9ms total=623.6ms
+[2026-10-02T19:44:45.302Z INFO  squarebob::app::treemap_view] 3D frame: render=3.3ms tex=629.2ms total=632.5ms
+[2026-10-02T19:44:45.951Z INFO  squarebob::app::treemap_view] 3D frame: render=2.9ms tex=631.0ms total=633.9ms
+[2026-10-02T19:44:46.591Z INFO  squarebob::app::treemap_view] 3D frame: render=2.5ms tex=623.3ms total=625.8ms
+[2026-10-02T19:44:47.229Z INFO  squarebob::app::treemap_view] 3D frame: render=2.6ms tex=620.2ms total=622.8ms
+[2026-10-02T19:44:47.871Z INFO  squarebob::app::treemap_view] 3D frame: render=2.4ms tex=625.8ms total=628.2ms
+[2026-10-02T19:44:48.552Z INFO  squarebob::app::treemap_view] 3D frame: render=2.4ms tex=664.2ms total=666.6ms
+[2026-10-02T19:44:49.233Z INFO  squarebob::app::treemap_view] 3D frame: render=2.5ms tex=664.6ms total=667.1ms
+[2026-10-02T19:44:49.916Z INFO  squarebob::app::treemap_view] 3D frame: render=2.6ms tex=664.4ms total=667.0ms
+[2026-10-02T19:44:50.599Z INFO  squarebob::app::treemap_view] 3D frame: render=2.5ms tex=665.9ms total=668.5ms
+[2026-10-02T19:44:51.281Z INFO  squarebob::app::treemap_view] 3D frame: render=2.4ms tex=665.1ms total=667.4ms
+[2026-10-02T19:44:51.962Z INFO  squarebob::app::treemap_view] 3D frame: render=2.8ms tex=664.1ms total=667.0ms
+[2026-10-02T19:44:52.602Z INFO  squarebob::app::treemap_view] 3D frame: render=2.4ms tex=622.4ms total=624.8ms
+[2026-10-02T19:44:53.241Z INFO  squarebob::app::treemap_view] 3D frame: render=2.3ms tex=622.6ms total=624.9ms
+[2026-10-02T19:44:53.879Z INFO  squarebob::app::treemap_view] 3D frame: render=2.4ms tex=622.0ms total=624.4ms
+[2026-10-02T19:44:54.506Z INFO  squarebob::app::treemap_view] 3D frame: render=2.1ms tex=611.1ms total=613.1ms
+[2026-10-02T19:44:55.135Z INFO  squarebob::app::treemap_view] 3D frame: render=2.1ms tex=612.7ms total=614.8ms
+[2026-10-02T19:44:55.764Z INFO  squarebob::app::treemap_view] 3D frame: render=2.1ms tex=612.9ms total=615.0ms
+[2026-10-02T19:44:56.393Z INFO  squarebob::app::treemap_view] 3D frame: render=2.1ms tex=612.2ms total=614.3ms
+[2026-10-02T19:44:57.021Z INFO  squarebob::app::treemap_view] 3D frame: render=2.0ms tex=612.1ms total=614.1ms
+[2026-10-02T19:44:57.650Z INFO  squarebob::app::treemap_view] 3D frame: render=2.2ms tex=612.5ms total=614.8ms
+[2026-10-02T19:44:58.291Z INFO  squarebob::app::treemap_view] 3D frame: render=2.2ms tex=625.2ms total=627.3ms
+[2026-10-02T19:44:58.967Z INFO  squarebob::app::treemap_view] 3D frame: render=2.1ms tex=657.4ms total=659.5ms
+[2026-10-02T19:44:59.596Z INFO  squarebob::app::treemap_view] 3D frame: render=2.2ms tex=611.6ms total=613.8ms
+[2026-10-02T19:45:00.223Z INFO  squarebob::app::treemap_view] 3D frame: render=2.1ms tex=610.4ms total=612.5ms
+[2026-10-02T19:45:00.477Z INFO  squarebob::app::screenshot] Taking screenshot: 695x681 -> C:/projects/projects.rust.cg/cglibs/oidn-rs/bughunt/squarebob_pq_window_pt_cpu.png
+[2026-10-02T19:45:00.870Z INFO  squarebob::app::screenshot] Screenshot saved: C:/projects/projects.rust.cg/cglibs/oidn-rs/bughunt/squarebob_pq_window_pt_cpu.png

@@ -7,18 +7,24 @@ use std::sync::{Arc, Mutex};
 use burn::tensor::Device;
 use oidn_rs::{Filter, Image, OidnError, PixelFormat, Quality, RtFilter, tile};
 
-fn weights_dir() -> Option<PathBuf> {
+fn weights_dir() -> PathBuf {
     let p = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("..")
         .join("..")
         .join("data")
         .join("weights");
-    if p.is_dir() { Some(p) } else { None }
+    assert!(
+        p.is_dir(),
+        "required shipped weights directory is missing: {}",
+        p.display()
+    );
+    p
 }
 
-fn weights_bytes(name: &str) -> Option<Vec<u8>> {
-    let dir = weights_dir()?;
-    std::fs::read(dir.join(format!("{name}.tza"))).ok()
+fn weights_bytes(name: &str) -> Vec<u8> {
+    let path = weights_dir().join(format!("{name}.tza"));
+    std::fs::read(&path)
+        .unwrap_or_else(|error| panic!("required shipped model {}: {error}", path.display()))
 }
 
 fn synth_color(w: usize, h: usize) -> Vec<f32> {
@@ -36,9 +42,7 @@ fn synth_color(w: usize, h: usize) -> Vec<f32> {
 
 #[test]
 fn progress_callback_fires_per_tile() {
-    let Some(dir) = weights_dir() else {
-        return;
-    };
+    let dir = weights_dir();
     let device = Device::ndarray();
 
     let (w, h) = (256usize, 256usize);
@@ -49,8 +53,10 @@ fn progress_callback_fires_per_tile() {
         .quality(Quality::Balanced)
         .input_scale(Some(1.0))
         .build();
-    filter.set_color(&Image::from_rgb_f32(&color, w, h));
-    filter.allocate_output(w, h, PixelFormat::Rgb32f);
+    filter
+        .set_color(&Image::from_rgb_f32(&color, w, h))
+        .unwrap();
+    filter.allocate_output(w, h, PixelFormat::Rgb32f).unwrap();
 
     let calls = Arc::new(Mutex::new(Vec::<f32>::new()));
     let calls_cb = Arc::clone(&calls);
@@ -80,24 +86,31 @@ fn progress_callback_fires_per_tile() {
 
 #[test]
 fn progress_callback_cancels() {
-    let Some(dir) = weights_dir() else {
-        return;
-    };
+    let dir = weights_dir();
     let device = Device::ndarray();
 
     // Force multi-tile workload so cancellation triggers on the first tile
     // but the result is still aborted.
-    let (w, h) = (3200usize, 3200usize);
+    let (w, h) = (769usize, 16usize);
     let color = vec![0.5f32; w * h * 3];
 
     let mut filter = RtFilter::builder(&device, &dir)
         .hdr(true)
-        .quality(Quality::Balanced)
+        .quality(Quality::Fast)
+        .max_memory_mb(0)
         .input_scale(Some(1.0))
         .build();
-    filter.set_color(&Image::from_rgb_f32(&color, w, h));
-    filter.allocate_output(w, h, PixelFormat::Rgb32f);
-    filter.set_progress(|_| false); // cancel immediately
+    filter
+        .set_color(&Image::from_rgb_f32(&color, w, h))
+        .unwrap();
+    filter.allocate_output(w, h, PixelFormat::Rgb32f).unwrap();
+    filter.set_progress(|fraction| {
+        assert!(
+            (fraction - 0.5).abs() < 1e-6,
+            "must cancel after the first of two tiles"
+        );
+        false
+    });
 
     filter.commit().expect("commit");
 
@@ -109,9 +122,7 @@ fn progress_callback_cancels() {
 
 #[test]
 fn user_weights_blob_bypasses_registry() {
-    let Some(bytes) = weights_bytes("rt_hdr") else {
-        return;
-    };
+    let bytes = weights_bytes("rt_hdr");
     let device = Device::ndarray();
 
     // Pass an empty weights_dir — should never be consulted since we provide blob.
@@ -123,8 +134,10 @@ fn user_weights_blob_bypasses_registry() {
         .input_scale(Some(1.0))
         .weights(bytes)
         .build();
-    filter.set_color(&Image::from_rgb_f32(&color, w, h));
-    filter.allocate_output(w, h, PixelFormat::Rgb32f);
+    filter
+        .set_color(&Image::from_rgb_f32(&color, w, h))
+        .unwrap();
+    filter.allocate_output(w, h, PixelFormat::Rgb32f).unwrap();
     filter
         .commit()
         .expect("commit must succeed with user weights");
@@ -143,9 +156,7 @@ fn input_scale_explicit_vs_unscaled() {
     // Setting explicit input_scale=1.0 ⇒ identity scaling; same as no
     // autoexposure on a low-dynamic-range scene. This test pins the
     // user-override codepath as live.
-    let Some(dir) = weights_dir() else {
-        return;
-    };
+    let dir = weights_dir();
     let device = Device::ndarray();
 
     let (w, h) = (64usize, 64usize);
@@ -156,8 +167,8 @@ fn input_scale_explicit_vs_unscaled() {
         .quality(Quality::Balanced)
         .input_scale(Some(1.0))
         .build();
-    a.set_color(&Image::from_rgb_f32(&color, w, h));
-    a.allocate_output(w, h, PixelFormat::Rgb32f);
+    a.set_color(&Image::from_rgb_f32(&color, w, h)).unwrap();
+    a.allocate_output(w, h, PixelFormat::Rgb32f).unwrap();
     a.execute().expect("execute a");
     let (ra, _, _, _) = a.take_output().unwrap();
     let out_a: &[f32] = bytemuck::cast_slice(&ra);
@@ -167,8 +178,8 @@ fn input_scale_explicit_vs_unscaled() {
         .quality(Quality::Balanced)
         .input_scale(Some(2.0))
         .build();
-    b.set_color(&Image::from_rgb_f32(&color, w, h));
-    b.allocate_output(w, h, PixelFormat::Rgb32f);
+    b.set_color(&Image::from_rgb_f32(&color, w, h)).unwrap();
+    b.allocate_output(w, h, PixelFormat::Rgb32f).unwrap();
     b.execute().expect("execute b");
     let (rb, _, _, _) = b.take_output().unwrap();
     let out_b: &[f32] = bytemuck::cast_slice(&rb);
@@ -200,7 +211,8 @@ fn memory_budget_forces_more_tiles() {
         tile::RECEPTIVE_FIELD_BASE,
         tile::MIN_TILE_ALIGNMENT,
         tile::DEFAULT_MAX_TILE_SIZE,
-    );
+    )
+    .unwrap();
 
     // 8 MB cap is tight enough to force more than the default 4 tiles.
     // Per-pixel bytes for UNet base ≈ 96 ch × 4 (f32) × 4 (safety) = 1536.
@@ -211,7 +223,8 @@ fn memory_budget_forces_more_tiles() {
         tile::RECEPTIVE_FIELD_BASE,
         tile::MIN_TILE_ALIGNMENT,
         5461,
-    );
+    )
+    .unwrap();
     assert!(
         plan_8mb.jobs.len() >= plan_no_budget.jobs.len(),
         "tighter budget should not produce fewer tiles"

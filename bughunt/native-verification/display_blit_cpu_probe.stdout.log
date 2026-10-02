@@ -1,0 +1,2 @@
+cpu_display_source_preservation=true repeated_cpu_display=true
+{"adapter":"NVIDIA GeForce RTX 3080 Ti","backend":"Vulkan","format":"Rgba16Float","linear_input":[0.18,1.0,4.0,-0.18],"maximum_absolute_error":0.0005774497985839844,"raster_pipeline_creation":"passed","rgba_output":[0.461181640625,0.461181640625,0.461181640625,1.0,0.99951171875,0.99951171875,0.99951171875,1.0,1.82421875,1.82421875,1.82421875,1.0,-0.461181640625,-0.461181640625,-0.461181640625,1.0],"validation":"passed"}

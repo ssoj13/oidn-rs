@@ -6,7 +6,9 @@ use std::path::PathBuf;
 use burn::prelude::*;
 
 fn weights_path(name: &str) -> Option<PathBuf> {
-    let p = PathBuf::from(format!("../../data/weights/{name}.tza"));
+    let p = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../data/weights")
+        .join(format!("{name}.tza"));
     if p.is_file() { Some(p) } else { None }
 }
 

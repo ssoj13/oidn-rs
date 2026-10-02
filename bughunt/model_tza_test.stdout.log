@@ -1,0 +1,25 @@
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 2 tests
+test rt_hdr_has_expected_layer_set ... ok
+test parse_all_shipped_tza_files ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+
+running 3 tests
+test every_truncation_of_a_valid_archive_is_an_error ... ok
+test malformed_shapes_offsets_and_duplicates_return_errors ... ok
+test public_tensor_payloads_are_fallible_and_little_endian ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

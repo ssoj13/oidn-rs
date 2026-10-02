@@ -17,14 +17,14 @@ name = "oidn-rs"
 path = "src/main.rs"
 
 [dependencies]
+burn      = { workspace = true }
 oidn-tza  = { path = "../oidn-tza", version = "0.1.0" }
 oidn-rs   = { path = "../oidn-rs",  version = "0.1.0" }
 clap      = { workspace = true }
 exr       = { workspace = true }
 image     = { workspace = true }
 half      = { workspace = true }
-bytemuck  = { workspace = true }
-thiserror = { workspace = true }
+serde_json = "1"
 tracing   = { workspace = true }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 wgpu      = "30"

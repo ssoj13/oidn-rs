@@ -12,3 +12,5 @@
 *.otf binary
 *.woff binary
 *.woff2 binary
+# Preserve diagnostic receipts; whitespace in tool output is not source formatting.
+bughunt/**/*.log whitespace=-blank-at-eol,-blank-at-eof

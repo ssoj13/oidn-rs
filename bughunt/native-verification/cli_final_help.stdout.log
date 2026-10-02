@@ -1,0 +1,15 @@
+Pure Rust port of Intel OIDN
+
+Usage: oidn-rs.exe [OPTIONS] <COMMAND>
+
+Commands:
+  probe         Print the tensor list of a TZA weights file
+  denoise       Denoise an image (EXR / PFM / PHM / HDR / TIFF / PNG / JPG / BMP)
+  bench         Benchmark denoising throughput on a synthetic HDR scene
+  list-devices  List wgpu adapters visible on this system
+  help          Print this message or the help of the given subcommand(s)
+
+Options:
+      --device <DEVICE>  Execution backend; CPU never initializes a GPU [default: wgpu] [possible values: cpu, wgpu]
+  -h, --help             Print help
+  -V, --version          Print version

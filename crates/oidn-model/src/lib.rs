@@ -6,12 +6,16 @@
 
 #![forbid(unsafe_op_in_unsafe_fn)]
 
+mod descriptor;
 mod loader;
 mod net;
 mod unet;
 mod unet_large;
 mod variants;
 
+pub use descriptor::{
+    MIN_TILE_ALIGNMENT, ModelDescriptor, RECEPTIVE_FIELD_BASE, RECEPTIVE_FIELD_LARGE,
+};
 pub use loader::{LoadError, load_tza, load_tza_large};
 pub use net::Net;
 pub use unet::UNet;

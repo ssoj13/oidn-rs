@@ -1,0 +1,5423 @@
+{
+  "format": "PFM RGB f32 little-endian unit magnitude LF header; top-down comparisons",
+  "fixturePolicy": "deterministic finite HDR and optional raw linear albedo/signed normals",
+  "confounders": [
+    "native high can change execution precision despite forced identical Base weights",
+    "CLI mutable host adapter, not Squarebob immutable bridge"
+  ],
+  "elapsedSeconds": 28.973960161209106,
+  "runs": [
+    {
+      "case": "uniform",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 1,
+      "engine": "rust",
+      "device": "wgpu",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 1.8046295642852783,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\squarebob-rs\\target\\debug\\oidn-rs.exe",
+        "denoise",
+        "--input",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\uniform.pfm",
+        "--output",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\uniform_scale1_rust_wgpu_balanced.pfm",
+        "--hdr",
+        "--quality",
+        "balanced",
+        "--weights",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "--verbose",
+        "0",
+        "--input_scale",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\uniform_scale1_rust_wgpu_balanced.pfm",
+      "count": 3072,
+      "finiteCount": 3072,
+      "nonfiniteCount": 0,
+      "min": 2.816746711730957,
+      "max": 10.636139869689941,
+      "mean": 6.684375079581514,
+      "sha256": "d5ae950c578dfe8fca347dc24addc5319d1284639de4205e2ec9b35969cbc25f"
+    },
+    {
+      "case": "uniform",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 1,
+      "engine": "native",
+      "device": "cpu",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.1363050937652588,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cpu",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\uniform.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\uniform_scale1_native_cpu_balanced.pfm",
+        "-q",
+        "balanced",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\uniform_scale1_native_cpu_balanced.pfm",
+      "count": 3072,
+      "finiteCount": 3072,
+      "nonfiniteCount": 0,
+      "min": 2.816746711730957,
+      "max": 10.63611125946045,
+      "mean": 6.684375896972294,
+      "sha256": "d71fccb36c8776a6532443f29101bca97cecd9b198880441be186f7d1bcf0d15"
+    },
+    {
+      "case": "uniform",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 1,
+      "engine": "native",
+      "device": "cuda",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.37635087966918945,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cuda",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\uniform.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\uniform_scale1_native_cuda_balanced.pfm",
+        "-q",
+        "balanced",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\uniform_scale1_native_cuda_balanced.pfm",
+      "count": 3072,
+      "finiteCount": 3072,
+      "nonfiniteCount": 0,
+      "min": 2.8178560733795166,
+      "max": 10.597429275512695,
+      "mean": 6.667952634471779,
+      "sha256": "d4b96e0bdaef0dbe32cddf7ce176fe3ae52c42f150d476f107acf8265d7a1405"
+    },
+    {
+      "case": "uniform",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 1,
+      "engine": "native",
+      "device": "cpu",
+      "quality": "high",
+      "exitCode": 0,
+      "seconds": 0.15203642845153809,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cpu",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\uniform.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\uniform_scale1_native_cpu_high.pfm",
+        "-q",
+        "high",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\uniform_scale1_native_cpu_high.pfm",
+      "count": 3072,
+      "finiteCount": 3072,
+      "nonfiniteCount": 0,
+      "min": 2.816746711730957,
+      "max": 10.63611125946045,
+      "mean": 6.684375896972294,
+      "sha256": "d71fccb36c8776a6532443f29101bca97cecd9b198880441be186f7d1bcf0d15"
+    },
+    {
+      "case": "uniform",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 1,
+      "engine": "native",
+      "device": "cuda",
+      "quality": "high",
+      "exitCode": 0,
+      "seconds": 0.38117408752441406,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cuda",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\uniform.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\uniform_scale1_native_cuda_high.pfm",
+        "-q",
+        "high",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\uniform_scale1_native_cuda_high.pfm",
+      "count": 3072,
+      "finiteCount": 3072,
+      "nonfiniteCount": 0,
+      "min": 2.8178560733795166,
+      "max": 10.597429275512695,
+      "mean": 6.679042169824243,
+      "sha256": "f63ee845489db83fe9c003e4ac1687bbb30cb20e0226ba5bcd8332da8e536c6e"
+    },
+    {
+      "case": "uniform",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 0.02,
+      "engine": "rust",
+      "device": "wgpu",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.8763039112091064,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\squarebob-rs\\target\\debug\\oidn-rs.exe",
+        "denoise",
+        "--input",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\uniform.pfm",
+        "--output",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\uniform_scale0.02_rust_wgpu_balanced.pfm",
+        "--hdr",
+        "--quality",
+        "balanced",
+        "--weights",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "--verbose",
+        "0",
+        "--input_scale",
+        "0.02"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\uniform_scale0.02_rust_wgpu_balanced.pfm",
+      "count": 3072,
+      "finiteCount": 3072,
+      "nonfiniteCount": 0,
+      "min": 2.85444712638855,
+      "max": 10.401936531066895,
+      "mean": 6.670151079228769,
+      "sha256": "871b789b9023370509d0188fcafcf8739a59c0dd73739612b749a5ac16bda2ab"
+    },
+    {
+      "case": "uniform",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 0.02,
+      "engine": "native",
+      "device": "cpu",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.1446061134338379,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cpu",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\uniform.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\uniform_scale0.02_native_cpu_balanced.pfm",
+        "-q",
+        "balanced",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "0.02"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\uniform_scale0.02_native_cpu_balanced.pfm",
+      "count": 3072,
+      "finiteCount": 3072,
+      "nonfiniteCount": 0,
+      "min": 2.854447364807129,
+      "max": 10.401945114135742,
+      "mean": 6.670149526325986,
+      "sha256": "1af2b74520d1e56f770dc0708b025522b3a18586f7a2918f9b15c54a620f3d97"
+    },
+    {
+      "case": "uniform",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 0.02,
+      "engine": "native",
+      "device": "cuda",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.3812131881713867,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cuda",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\uniform.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\uniform_scale0.02_native_cuda_balanced.pfm",
+        "-q",
+        "balanced",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "0.02"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\uniform_scale0.02_native_cuda_balanced.pfm",
+      "count": 3072,
+      "finiteCount": 3072,
+      "nonfiniteCount": 0,
+      "min": 2.8579156398773193,
+      "max": 10.488568305969238,
+      "mean": 6.667604484440138,
+      "sha256": "15d141181cbf614073b95a66666395e9bcac9443edce160d9ad1830227cd78a1"
+    },
+    {
+      "case": "uniform",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 0.02,
+      "engine": "native",
+      "device": "cpu",
+      "quality": "high",
+      "exitCode": 0,
+      "seconds": 0.16669964790344238,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cpu",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\uniform.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\uniform_scale0.02_native_cpu_high.pfm",
+        "-q",
+        "high",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "0.02"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\uniform_scale0.02_native_cpu_high.pfm",
+      "count": 3072,
+      "finiteCount": 3072,
+      "nonfiniteCount": 0,
+      "min": 2.854447364807129,
+      "max": 10.401945114135742,
+      "mean": 6.670149526325986,
+      "sha256": "1af2b74520d1e56f770dc0708b025522b3a18586f7a2918f9b15c54a620f3d97"
+    },
+    {
+      "case": "uniform",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 0.02,
+      "engine": "native",
+      "device": "cuda",
+      "quality": "high",
+      "exitCode": 0,
+      "seconds": 0.38524389266967773,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cuda",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\uniform.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\uniform_scale0.02_native_cuda_high.pfm",
+        "-q",
+        "high",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "0.02"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\uniform_scale0.02_native_cuda_high.pfm",
+      "count": 3072,
+      "finiteCount": 3072,
+      "nonfiniteCount": 0,
+      "min": 2.8516228199005127,
+      "max": 10.40307903289795,
+      "mean": 6.674453643616289,
+      "sha256": "cf7c5becf6a2260b895f5d9aee1a2e300b529d1ae4304eb13830dc9a6f0c2f8d"
+    },
+    {
+      "case": "ramp",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 1,
+      "engine": "rust",
+      "device": "wgpu",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.8397426605224609,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\squarebob-rs\\target\\debug\\oidn-rs.exe",
+        "denoise",
+        "--input",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\ramp.pfm",
+        "--output",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\ramp_scale1_rust_wgpu_balanced.pfm",
+        "--hdr",
+        "--quality",
+        "balanced",
+        "--weights",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "--verbose",
+        "0",
+        "--input_scale",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\ramp_scale1_rust_wgpu_balanced.pfm",
+      "count": 3072,
+      "finiteCount": 3072,
+      "nonfiniteCount": 0,
+      "min": 0.030603408813476562,
+      "max": 52.20764923095703,
+      "mean": 16.78953986126544,
+      "sha256": "42aa805e8e30a099bf2505467e20acc2b1f0303da1544a091ee8dc17ba1d6ce5"
+    },
+    {
+      "case": "ramp",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 1,
+      "engine": "native",
+      "device": "cpu",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.15792584419250488,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cpu",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\ramp.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\ramp_scale1_native_cpu_balanced.pfm",
+        "-q",
+        "balanced",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\ramp_scale1_native_cpu_balanced.pfm",
+      "count": 3072,
+      "finiteCount": 3072,
+      "nonfiniteCount": 0,
+      "min": 0.0306035578250885,
+      "max": 52.20767593383789,
+      "mean": 16.789541292426293,
+      "sha256": "30bb5465041f547069556e29f48adc4071216124e1298b979ca6c38064ae514b"
+    },
+    {
+      "case": "ramp",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 1,
+      "engine": "native",
+      "device": "cuda",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.37840700149536133,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cuda",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\ramp.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\ramp_scale1_native_cuda_balanced.pfm",
+        "-q",
+        "balanced",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\ramp_scale1_native_cuda_balanced.pfm",
+      "count": 3072,
+      "finiteCount": 3072,
+      "nonfiniteCount": 0,
+      "min": 0.03056362457573414,
+      "max": 52.572811126708984,
+      "mean": 16.74547537694828,
+      "sha256": "dc2d43dce913d028e905d4acdc6a3be88146c63ba68f5661b9e4cb248695425e"
+    },
+    {
+      "case": "ramp",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 1,
+      "engine": "native",
+      "device": "cpu",
+      "quality": "high",
+      "exitCode": 0,
+      "seconds": 0.13715314865112305,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cpu",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\ramp.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\ramp_scale1_native_cpu_high.pfm",
+        "-q",
+        "high",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\ramp_scale1_native_cpu_high.pfm",
+      "count": 3072,
+      "finiteCount": 3072,
+      "nonfiniteCount": 0,
+      "min": 0.0306035578250885,
+      "max": 52.20767593383789,
+      "mean": 16.789541292426293,
+      "sha256": "30bb5465041f547069556e29f48adc4071216124e1298b979ca6c38064ae514b"
+    },
+    {
+      "case": "ramp",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 1,
+      "engine": "native",
+      "device": "cuda",
+      "quality": "high",
+      "exitCode": 0,
+      "seconds": 0.39104795455932617,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cuda",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\ramp.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\ramp_scale1_native_cuda_high.pfm",
+        "-q",
+        "high",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\ramp_scale1_native_cuda_high.pfm",
+      "count": 3072,
+      "finiteCount": 3072,
+      "nonfiniteCount": 0,
+      "min": 0.030823862180113792,
+      "max": 52.156646728515625,
+      "mean": 16.770061538882754,
+      "sha256": "1d5eb57e1c5e947be149bf57da8acb9e0e1a03abe56e42810c796effb4e9af34"
+    },
+    {
+      "case": "ramp",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 0.02,
+      "engine": "rust",
+      "device": "wgpu",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.8699374198913574,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\squarebob-rs\\target\\debug\\oidn-rs.exe",
+        "denoise",
+        "--input",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\ramp.pfm",
+        "--output",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\ramp_scale0.02_rust_wgpu_balanced.pfm",
+        "--hdr",
+        "--quality",
+        "balanced",
+        "--weights",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "--verbose",
+        "0",
+        "--input_scale",
+        "0.02"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\ramp_scale0.02_rust_wgpu_balanced.pfm",
+      "count": 3072,
+      "finiteCount": 3072,
+      "nonfiniteCount": 0,
+      "min": 0.010765661485493183,
+      "max": 51.16720962524414,
+      "mean": 16.756803870606443,
+      "sha256": "ceb1dcd9b50a394cae2bcc0149573f43ec1a88188a9ffc9fff5f490bb6c9d5c5"
+    },
+    {
+      "case": "ramp",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 0.02,
+      "engine": "native",
+      "device": "cpu",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.1380457878112793,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cpu",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\ramp.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\ramp_scale0.02_native_cpu_balanced.pfm",
+        "-q",
+        "balanced",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "0.02"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\ramp_scale0.02_native_cpu_balanced.pfm",
+      "count": 3072,
+      "finiteCount": 3072,
+      "nonfiniteCount": 0,
+      "min": 0.010765621438622475,
+      "max": 51.16714096069336,
+      "mean": 16.756804024786106,
+      "sha256": "94b45d99a616c5ef9556626b858fdf708d77e66b0289e77599c885e93fc5e848"
+    },
+    {
+      "case": "ramp",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 0.02,
+      "engine": "native",
+      "device": "cuda",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.37375760078430176,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cuda",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\ramp.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\ramp_scale0.02_native_cuda_balanced.pfm",
+        "-q",
+        "balanced",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "0.02"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\ramp_scale0.02_native_cuda_balanced.pfm",
+      "count": 3072,
+      "finiteCount": 3072,
+      "nonfiniteCount": 0,
+      "min": 0.010528244078159332,
+      "max": 51.16106414794922,
+      "mean": 16.750461219038698,
+      "sha256": "166e68f7059bb0818745f2676d41591df798d5c046c72d64360ce5f84de653d6"
+    },
+    {
+      "case": "ramp",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 0.02,
+      "engine": "native",
+      "device": "cpu",
+      "quality": "high",
+      "exitCode": 0,
+      "seconds": 0.1740107536315918,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cpu",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\ramp.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\ramp_scale0.02_native_cpu_high.pfm",
+        "-q",
+        "high",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "0.02"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\ramp_scale0.02_native_cpu_high.pfm",
+      "count": 3072,
+      "finiteCount": 3072,
+      "nonfiniteCount": 0,
+      "min": 0.010765621438622475,
+      "max": 51.16714096069336,
+      "mean": 16.756804024786106,
+      "sha256": "94b45d99a616c5ef9556626b858fdf708d77e66b0289e77599c885e93fc5e848"
+    },
+    {
+      "case": "ramp",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 0.02,
+      "engine": "native",
+      "device": "cuda",
+      "quality": "high",
+      "exitCode": 0,
+      "seconds": 0.3665921688079834,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cuda",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\ramp.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\ramp_scale0.02_native_cuda_high.pfm",
+        "-q",
+        "high",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "0.02"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\ramp_scale0.02_native_cuda_high.pfm",
+      "count": 3072,
+      "finiteCount": 3072,
+      "nonfiniteCount": 0,
+      "min": 0.010845392942428589,
+      "max": 51.16106414794922,
+      "mean": 16.762792271879942,
+      "sha256": "a11b7d668585b2e95c773740b8d67c2de9a00683d336f0e4e3fc5f540e0bb19a"
+    },
+    {
+      "case": "fine",
+      "width": 64,
+      "height": 48,
+      "aov": false,
+      "inputScale": 1,
+      "engine": "rust",
+      "device": "wgpu",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.8955657482147217,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\squarebob-rs\\target\\debug\\oidn-rs.exe",
+        "denoise",
+        "--input",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine.pfm",
+        "--output",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_scale1_rust_wgpu_balanced.pfm",
+        "--hdr",
+        "--quality",
+        "balanced",
+        "--weights",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "--verbose",
+        "0",
+        "--input_scale",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_scale1_rust_wgpu_balanced.pfm",
+      "count": 9216,
+      "finiteCount": 9216,
+      "nonfiniteCount": 0,
+      "min": 0.021502617746591568,
+      "max": 28.828893661499023,
+      "mean": 3.5517437613656915,
+      "sha256": "708ab3d67338569236f98ca18e716e6df47e380ea401d5290a324299985724b8"
+    },
+    {
+      "case": "fine",
+      "width": 64,
+      "height": 48,
+      "aov": false,
+      "inputScale": 1,
+      "engine": "native",
+      "device": "cpu",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.1761612892150879,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cpu",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_scale1_native_cpu_balanced.pfm",
+        "-q",
+        "balanced",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_scale1_native_cpu_balanced.pfm",
+      "count": 9216,
+      "finiteCount": 9216,
+      "nonfiniteCount": 0,
+      "min": 0.021502649411559105,
+      "max": 28.82895851135254,
+      "mean": 3.551743001310064,
+      "sha256": "6fcd0a80671ae5adad6342607e53eef234585d875b03af510328527f4c47d013"
+    },
+    {
+      "case": "fine",
+      "width": 64,
+      "height": 48,
+      "aov": false,
+      "inputScale": 1,
+      "engine": "native",
+      "device": "cuda",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.38265514373779297,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cuda",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_scale1_native_cuda_balanced.pfm",
+        "-q",
+        "balanced",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_scale1_native_cuda_balanced.pfm",
+      "count": 9216,
+      "finiteCount": 9216,
+      "nonfiniteCount": 0,
+      "min": 0.021438198164105415,
+      "max": 28.966873168945312,
+      "mean": 3.544656735717581,
+      "sha256": "0e33818f898125aa1dbedbdcf41f44ab0c058a5ce72210263381c54f2af81abf"
+    },
+    {
+      "case": "fine",
+      "width": 64,
+      "height": 48,
+      "aov": false,
+      "inputScale": 1,
+      "engine": "native",
+      "device": "cpu",
+      "quality": "high",
+      "exitCode": 0,
+      "seconds": 0.14856219291687012,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cpu",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_scale1_native_cpu_high.pfm",
+        "-q",
+        "high",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_scale1_native_cpu_high.pfm",
+      "count": 9216,
+      "finiteCount": 9216,
+      "nonfiniteCount": 0,
+      "min": 0.021502649411559105,
+      "max": 28.82895851135254,
+      "mean": 3.551743001310064,
+      "sha256": "6fcd0a80671ae5adad6342607e53eef234585d875b03af510328527f4c47d013"
+    },
+    {
+      "case": "fine",
+      "width": 64,
+      "height": 48,
+      "aov": false,
+      "inputScale": 1,
+      "engine": "native",
+      "device": "cuda",
+      "quality": "high",
+      "exitCode": 0,
+      "seconds": 0.3758542537689209,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cuda",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_scale1_native_cuda_high.pfm",
+        "-q",
+        "high",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_scale1_native_cuda_high.pfm",
+      "count": 9216,
+      "finiteCount": 9216,
+      "nonfiniteCount": 0,
+      "min": 0.021468525752425194,
+      "max": 28.737573623657227,
+      "mean": 3.5482749013978414,
+      "sha256": "3806eb698f0e41e7fa5c926b96a11157c5544f0cf906ff42f73ce84303ea0b4c"
+    },
+    {
+      "case": "fine",
+      "width": 64,
+      "height": 48,
+      "aov": false,
+      "inputScale": 0.02,
+      "engine": "rust",
+      "device": "wgpu",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.8223257064819336,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\squarebob-rs\\target\\debug\\oidn-rs.exe",
+        "denoise",
+        "--input",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine.pfm",
+        "--output",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_scale0.02_rust_wgpu_balanced.pfm",
+        "--hdr",
+        "--quality",
+        "balanced",
+        "--weights",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "--verbose",
+        "0",
+        "--input_scale",
+        "0.02"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_scale0.02_rust_wgpu_balanced.pfm",
+      "count": 9216,
+      "finiteCount": 9216,
+      "nonfiniteCount": 0,
+      "min": 0.005681472830474377,
+      "max": 28.32520294189453,
+      "mean": 3.54413608622599,
+      "sha256": "f638f7edf10210a613249f199aae0bfc178b8d093bb408323b272da3416bdbde"
+    },
+    {
+      "case": "fine",
+      "width": 64,
+      "height": 48,
+      "aov": false,
+      "inputScale": 0.02,
+      "engine": "native",
+      "device": "cpu",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.1639416217803955,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cpu",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_scale0.02_native_cpu_balanced.pfm",
+        "-q",
+        "balanced",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "0.02"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_scale0.02_native_cpu_balanced.pfm",
+      "count": 9216,
+      "finiteCount": 9216,
+      "nonfiniteCount": 0,
+      "min": 0.005681454204022884,
+      "max": 28.325206756591797,
+      "mean": 3.5441361475290147,
+      "sha256": "2bf798635758bb4538b75988867f871cd02f2dbca06fe6e73500b6b0300506b7"
+    },
+    {
+      "case": "fine",
+      "width": 64,
+      "height": 48,
+      "aov": false,
+      "inputScale": 0.02,
+      "engine": "native",
+      "device": "cuda",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.377941370010376,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cuda",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_scale0.02_native_cuda_balanced.pfm",
+        "-q",
+        "balanced",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "0.02"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_scale0.02_native_cuda_balanced.pfm",
+      "count": 9216,
+      "finiteCount": 9216,
+      "nonfiniteCount": 0,
+      "min": 0.005614659283310175,
+      "max": 28.50560760498047,
+      "mean": 3.5485230375501384,
+      "sha256": "715b185ba0e216da7a2f5df2a1eff3a7ffbf9d3b462f2744618da56415dba1a5"
+    },
+    {
+      "case": "fine",
+      "width": 64,
+      "height": 48,
+      "aov": false,
+      "inputScale": 0.02,
+      "engine": "native",
+      "device": "cpu",
+      "quality": "high",
+      "exitCode": 0,
+      "seconds": 0.15181875228881836,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cpu",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_scale0.02_native_cpu_high.pfm",
+        "-q",
+        "high",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "0.02"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_scale0.02_native_cpu_high.pfm",
+      "count": 9216,
+      "finiteCount": 9216,
+      "nonfiniteCount": 0,
+      "min": 0.005681454204022884,
+      "max": 28.325206756591797,
+      "mean": 3.5441361475290147,
+      "sha256": "2bf798635758bb4538b75988867f871cd02f2dbca06fe6e73500b6b0300506b7"
+    },
+    {
+      "case": "fine",
+      "width": 64,
+      "height": 48,
+      "aov": false,
+      "inputScale": 0.02,
+      "engine": "native",
+      "device": "cuda",
+      "quality": "high",
+      "exitCode": 0,
+      "seconds": 0.38355588912963867,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cuda",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_scale0.02_native_cuda_high.pfm",
+        "-q",
+        "high",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "0.02"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_scale0.02_native_cuda_high.pfm",
+      "count": 9216,
+      "finiteCount": 9216,
+      "nonfiniteCount": 0,
+      "min": 0.005691461730748415,
+      "max": 28.391334533691406,
+      "mean": 3.547543471853209,
+      "sha256": "cf039ffcbd54f9b3d26b23a1306f3824d4e3bda010d769d273d7a9ce88115644"
+    },
+    {
+      "case": "odd",
+      "width": 33,
+      "height": 19,
+      "aov": false,
+      "inputScale": 1,
+      "engine": "rust",
+      "device": "wgpu",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.9441983699798584,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\squarebob-rs\\target\\debug\\oidn-rs.exe",
+        "denoise",
+        "--input",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd.pfm",
+        "--output",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd_scale1_rust_wgpu_balanced.pfm",
+        "--hdr",
+        "--quality",
+        "balanced",
+        "--weights",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "--verbose",
+        "0",
+        "--input_scale",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd_scale1_rust_wgpu_balanced.pfm",
+      "count": 1881,
+      "finiteCount": 1881,
+      "nonfiniteCount": 0,
+      "min": 0.013516923412680626,
+      "max": 28.02111053466797,
+      "mean": 2.4867978717459405,
+      "sha256": "763f8a10a30d048ed5d3ace07458331d118e61055914c9c550b1a24bfb7213e6"
+    },
+    {
+      "case": "odd",
+      "width": 33,
+      "height": 19,
+      "aov": false,
+      "inputScale": 1,
+      "engine": "native",
+      "device": "cpu",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.16735601425170898,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cpu",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd_scale1_native_cpu_balanced.pfm",
+        "-q",
+        "balanced",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd_scale1_native_cpu_balanced.pfm",
+      "count": 1881,
+      "finiteCount": 1881,
+      "nonfiniteCount": 0,
+      "min": 0.013516928069293499,
+      "max": 28.02110481262207,
+      "mean": 2.4867987895527026,
+      "sha256": "4863a439d62988cd58b4e332ab9cb1eb709587f8ae95ea2e9961f50e0dfe6ac1"
+    },
+    {
+      "case": "odd",
+      "width": 33,
+      "height": 19,
+      "aov": false,
+      "inputScale": 1,
+      "engine": "native",
+      "device": "cuda",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.3760199546813965,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cuda",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd_scale1_native_cuda_balanced.pfm",
+        "-q",
+        "balanced",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd_scale1_native_cuda_balanced.pfm",
+      "count": 1881,
+      "finiteCount": 1881,
+      "nonfiniteCount": 0,
+      "min": 0.013465266674757004,
+      "max": 27.61797332763672,
+      "mean": 2.479450314041328,
+      "sha256": "eb90fcdd6056237b14ddd959eea0e0408c2f6cd7c7616d3e7fd9c6cc3106a2f2"
+    },
+    {
+      "case": "odd",
+      "width": 33,
+      "height": 19,
+      "aov": false,
+      "inputScale": 1,
+      "engine": "native",
+      "device": "cpu",
+      "quality": "high",
+      "exitCode": 0,
+      "seconds": 0.1714773178100586,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cpu",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd_scale1_native_cpu_high.pfm",
+        "-q",
+        "high",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd_scale1_native_cpu_high.pfm",
+      "count": 1881,
+      "finiteCount": 1881,
+      "nonfiniteCount": 0,
+      "min": 0.013516928069293499,
+      "max": 28.02110481262207,
+      "mean": 2.4867987895527026,
+      "sha256": "4863a439d62988cd58b4e332ab9cb1eb709587f8ae95ea2e9961f50e0dfe6ac1"
+    },
+    {
+      "case": "odd",
+      "width": 33,
+      "height": 19,
+      "aov": false,
+      "inputScale": 1,
+      "engine": "native",
+      "device": "cuda",
+      "quality": "high",
+      "exitCode": 0,
+      "seconds": 0.39385557174682617,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cuda",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd_scale1_native_cuda_high.pfm",
+        "-q",
+        "high",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd_scale1_native_cuda_high.pfm",
+      "count": 1881,
+      "finiteCount": 1881,
+      "nonfiniteCount": 0,
+      "min": 0.013511850498616695,
+      "max": 28.060470581054688,
+      "mean": 2.4812740899165937,
+      "sha256": "e36fce3ca3db699f6a34bdf3e825643c351f8bee37c3b44604c2204e17fedb92"
+    },
+    {
+      "case": "odd",
+      "width": 33,
+      "height": 19,
+      "aov": false,
+      "inputScale": 0.02,
+      "engine": "rust",
+      "device": "wgpu",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.872800350189209,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\squarebob-rs\\target\\debug\\oidn-rs.exe",
+        "denoise",
+        "--input",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd.pfm",
+        "--output",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd_scale0.02_rust_wgpu_balanced.pfm",
+        "--hdr",
+        "--quality",
+        "balanced",
+        "--weights",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "--verbose",
+        "0",
+        "--input_scale",
+        "0.02"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd_scale0.02_rust_wgpu_balanced.pfm",
+      "count": 1881,
+      "finiteCount": 1881,
+      "nonfiniteCount": 0,
+      "min": 0.006926295347511768,
+      "max": 22.631858825683594,
+      "mean": 2.526936125319455,
+      "sha256": "daef5b2282577023ecf91ea10bafd76d67ed94622e8fba2cdd47a60243b23c6d"
+    },
+    {
+      "case": "odd",
+      "width": 33,
+      "height": 19,
+      "aov": false,
+      "inputScale": 0.02,
+      "engine": "native",
+      "device": "cpu",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.136674165725708,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cpu",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd_scale0.02_native_cpu_balanced.pfm",
+        "-q",
+        "balanced",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "0.02"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd_scale0.02_native_cpu_balanced.pfm",
+      "count": 1881,
+      "finiteCount": 1881,
+      "nonfiniteCount": 0,
+      "min": 0.0069262320175766945,
+      "max": 22.63188362121582,
+      "mean": 2.5269364501017404,
+      "sha256": "39fdea4f8ce6a31bfd89bd287f64b75a9f2834ca4550c7bec0d788830485ec90"
+    },
+    {
+      "case": "odd",
+      "width": 33,
+      "height": 19,
+      "aov": false,
+      "inputScale": 0.02,
+      "engine": "native",
+      "device": "cuda",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.3829832077026367,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cuda",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd_scale0.02_native_cuda_balanced.pfm",
+        "-q",
+        "balanced",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "0.02"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd_scale0.02_native_cuda_balanced.pfm",
+      "count": 1881,
+      "finiteCount": 1881,
+      "nonfiniteCount": 0,
+      "min": 0.006936936639249325,
+      "max": 22.6655330657959,
+      "mean": 2.530027228806382,
+      "sha256": "e2606f049001ec6a42b79673aa7160ba72ab5939764891e4c126c0e777c16d50"
+    },
+    {
+      "case": "odd",
+      "width": 33,
+      "height": 19,
+      "aov": false,
+      "inputScale": 0.02,
+      "engine": "native",
+      "device": "cpu",
+      "quality": "high",
+      "exitCode": 0,
+      "seconds": 0.13257503509521484,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cpu",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd_scale0.02_native_cpu_high.pfm",
+        "-q",
+        "high",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "0.02"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd_scale0.02_native_cpu_high.pfm",
+      "count": 1881,
+      "finiteCount": 1881,
+      "nonfiniteCount": 0,
+      "min": 0.0069262320175766945,
+      "max": 22.63188362121582,
+      "mean": 2.5269364501017404,
+      "sha256": "39fdea4f8ce6a31bfd89bd287f64b75a9f2834ca4550c7bec0d788830485ec90"
+    },
+    {
+      "case": "odd",
+      "width": 33,
+      "height": 19,
+      "aov": false,
+      "inputScale": 0.02,
+      "engine": "native",
+      "device": "cuda",
+      "quality": "high",
+      "exitCode": 0,
+      "seconds": 0.39176130294799805,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cuda",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd_scale0.02_native_cuda_high.pfm",
+        "-q",
+        "high",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "0.02"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd_scale0.02_native_cuda_high.pfm",
+      "count": 1881,
+      "finiteCount": 1881,
+      "nonfiniteCount": 0,
+      "min": 0.006926155649125576,
+      "max": 22.574424743652344,
+      "mean": 2.527532048978442,
+      "sha256": "b8dbe8f4c1c6a2f78614ff2e144011643e578841d01c6e2ca81fadbc2c8868a5"
+    },
+    {
+      "case": "odd",
+      "width": 33,
+      "height": 19,
+      "aov": false,
+      "inputScale": null,
+      "engine": "rust",
+      "device": "wgpu",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 1.0293254852294922,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\squarebob-rs\\target\\debug\\oidn-rs.exe",
+        "denoise",
+        "--input",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd.pfm",
+        "--output",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd_scaleauto_rust_wgpu_balanced.pfm",
+        "--hdr",
+        "--quality",
+        "balanced",
+        "--weights",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "--verbose",
+        "0"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd_scaleauto_rust_wgpu_balanced.pfm",
+      "count": 1881,
+      "finiteCount": 1881,
+      "nonfiniteCount": 0,
+      "min": 0.013158878311514854,
+      "max": 28.304542541503906,
+      "mean": 2.4913774865997804,
+      "sha256": "d41826ea060f10dd5437efb42cd606fba14da417bc3ab53bff3df25e9e20dbdf"
+    },
+    {
+      "case": "odd",
+      "width": 33,
+      "height": 19,
+      "aov": false,
+      "inputScale": null,
+      "engine": "native",
+      "device": "cpu",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.1359548568725586,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cpu",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd_scaleauto_native_cpu_balanced.pfm",
+        "-q",
+        "balanced",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd_scaleauto_native_cpu_balanced.pfm",
+      "count": 1881,
+      "finiteCount": 1881,
+      "nonfiniteCount": 0,
+      "min": 0.011862112209200859,
+      "max": 27.182403564453125,
+      "mean": 2.5044519049410074,
+      "sha256": "3fd7c5e9a9815240b5af8738160ecabf3eca8be6406a9c998a94b0fa4b408064"
+    },
+    {
+      "case": "odd",
+      "width": 33,
+      "height": 19,
+      "aov": false,
+      "inputScale": null,
+      "engine": "native",
+      "device": "cuda",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.3851161003112793,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cuda",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd_scaleauto_native_cuda_balanced.pfm",
+        "-q",
+        "balanced",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd_scaleauto_native_cuda_balanced.pfm",
+      "count": 1881,
+      "finiteCount": 1881,
+      "nonfiniteCount": 0,
+      "min": 0.011874284595251083,
+      "max": 27.28132438659668,
+      "mean": 2.4993442122580394,
+      "sha256": "2adde863c90b39bdac9a614ef956cd20dae8ccf527f92a57ff59cfb6a381ff5a"
+    },
+    {
+      "case": "odd",
+      "width": 33,
+      "height": 19,
+      "aov": false,
+      "inputScale": null,
+      "engine": "native",
+      "device": "cpu",
+      "quality": "high",
+      "exitCode": 0,
+      "seconds": 0.18209218978881836,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cpu",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd_scaleauto_native_cpu_high.pfm",
+        "-q",
+        "high",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd_scaleauto_native_cpu_high.pfm",
+      "count": 1881,
+      "finiteCount": 1881,
+      "nonfiniteCount": 0,
+      "min": 0.011862112209200859,
+      "max": 27.182403564453125,
+      "mean": 2.5044519049410074,
+      "sha256": "3fd7c5e9a9815240b5af8738160ecabf3eca8be6406a9c998a94b0fa4b408064"
+    },
+    {
+      "case": "odd",
+      "width": 33,
+      "height": 19,
+      "aov": false,
+      "inputScale": null,
+      "engine": "native",
+      "device": "cuda",
+      "quality": "high",
+      "exitCode": 0,
+      "seconds": 0.3876676559448242,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cuda",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd_scaleauto_native_cuda_high.pfm",
+        "-q",
+        "high",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\odd_scaleauto_native_cuda_high.pfm",
+      "count": 1881,
+      "finiteCount": 1881,
+      "nonfiniteCount": 0,
+      "min": 0.011852936819195747,
+      "max": 27.173025131225586,
+      "mean": 2.5027176040744115,
+      "sha256": "dd2d431637745e154a87c2a39aa63e7fb4eedfc66a2cc2c696d6526a9a2d4f50"
+    },
+    {
+      "case": "tiny",
+      "width": 8,
+      "height": 8,
+      "aov": false,
+      "inputScale": 1,
+      "engine": "rust",
+      "device": "wgpu",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 1.2393825054168701,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\squarebob-rs\\target\\debug\\oidn-rs.exe",
+        "denoise",
+        "--input",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny.pfm",
+        "--output",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny_scale1_rust_wgpu_balanced.pfm",
+        "--hdr",
+        "--quality",
+        "balanced",
+        "--weights",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "--verbose",
+        "0",
+        "--input_scale",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny_scale1_rust_wgpu_balanced.pfm",
+      "count": 192,
+      "finiteCount": 192,
+      "nonfiniteCount": 0,
+      "min": 1.8130323886871338,
+      "max": 12.384476661682129,
+      "mean": 6.658858822037776,
+      "sha256": "579b308f1e350324999672a7824cec7c561fc7321ffe14817436d71a4f2a828a"
+    },
+    {
+      "case": "tiny",
+      "width": 8,
+      "height": 8,
+      "aov": false,
+      "inputScale": 1,
+      "engine": "native",
+      "device": "cpu",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.1333937644958496,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cpu",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny_scale1_native_cpu_balanced.pfm",
+        "-q",
+        "balanced",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny_scale1_native_cpu_balanced.pfm",
+      "count": 192,
+      "finiteCount": 192,
+      "nonfiniteCount": 0,
+      "min": 1.8130335807800293,
+      "max": 12.384514808654785,
+      "mean": 6.658858347684145,
+      "sha256": "6c7c866d62993fdfe73ef5b67d3081061ee7e736b8c9cf877a5218ef3eb564fa"
+    },
+    {
+      "case": "tiny",
+      "width": 8,
+      "height": 8,
+      "aov": false,
+      "inputScale": 1,
+      "engine": "native",
+      "device": "cuda",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.38434624671936035,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cuda",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny_scale1_native_cuda_balanced.pfm",
+        "-q",
+        "balanced",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny_scale1_native_cuda_balanced.pfm",
+      "count": 192,
+      "finiteCount": 192,
+      "nonfiniteCount": 0,
+      "min": 1.8179856538772583,
+      "max": 12.276576042175293,
+      "mean": 6.6477411283801,
+      "sha256": "cacf9b5420c7b1c39f4a3f110f7671e3e9c987194c6ed2121c325ba170527785"
+    },
+    {
+      "case": "tiny",
+      "width": 8,
+      "height": 8,
+      "aov": false,
+      "inputScale": 1,
+      "engine": "native",
+      "device": "cpu",
+      "quality": "high",
+      "exitCode": 0,
+      "seconds": 0.13460588455200195,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cpu",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny_scale1_native_cpu_high.pfm",
+        "-q",
+        "high",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny_scale1_native_cpu_high.pfm",
+      "count": 192,
+      "finiteCount": 192,
+      "nonfiniteCount": 0,
+      "min": 1.8130335807800293,
+      "max": 12.384514808654785,
+      "mean": 6.658858347684145,
+      "sha256": "6c7c866d62993fdfe73ef5b67d3081061ee7e736b8c9cf877a5218ef3eb564fa"
+    },
+    {
+      "case": "tiny",
+      "width": 8,
+      "height": 8,
+      "aov": false,
+      "inputScale": 1,
+      "engine": "native",
+      "device": "cuda",
+      "quality": "high",
+      "exitCode": 0,
+      "seconds": 0.38031482696533203,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cuda",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny_scale1_native_cuda_high.pfm",
+        "-q",
+        "high",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny_scale1_native_cuda_high.pfm",
+      "count": 192,
+      "finiteCount": 192,
+      "nonfiniteCount": 0,
+      "min": 1.8179856538772583,
+      "max": 12.374561309814453,
+      "mean": 6.655035929754376,
+      "sha256": "2983e5d18fa2a692e6e97bc288e4aa6e8e240de276db5a614fe2b6578af98aa5"
+    },
+    {
+      "case": "tiny",
+      "width": 8,
+      "height": 8,
+      "aov": false,
+      "inputScale": 0.02,
+      "engine": "rust",
+      "device": "wgpu",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.9125959873199463,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\squarebob-rs\\target\\debug\\oidn-rs.exe",
+        "denoise",
+        "--input",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny.pfm",
+        "--output",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny_scale0.02_rust_wgpu_balanced.pfm",
+        "--hdr",
+        "--quality",
+        "balanced",
+        "--weights",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "--verbose",
+        "0",
+        "--input_scale",
+        "0.02"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny_scale0.02_rust_wgpu_balanced.pfm",
+      "count": 192,
+      "finiteCount": 192,
+      "nonfiniteCount": 0,
+      "min": 2.6208531856536865,
+      "max": 10.8893461227417,
+      "mean": 6.65243327865998,
+      "sha256": "24ce24a93c0473e2eaf9d80490ce78e78844a2d5a368e160002421107229ea4f"
+    },
+    {
+      "case": "tiny",
+      "width": 8,
+      "height": 8,
+      "aov": false,
+      "inputScale": 0.02,
+      "engine": "native",
+      "device": "cpu",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.160020112991333,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cpu",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny_scale0.02_native_cpu_balanced.pfm",
+        "-q",
+        "balanced",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "0.02"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny_scale0.02_native_cpu_balanced.pfm",
+      "count": 192,
+      "finiteCount": 192,
+      "nonfiniteCount": 0,
+      "min": 2.6208510398864746,
+      "max": 10.889310836791992,
+      "mean": 6.6524304275711375,
+      "sha256": "f9ef95f4f5625edd374e013293420d8a5bf0dc022d35cb8d25bbcd4478038248"
+    },
+    {
+      "case": "tiny",
+      "width": 8,
+      "height": 8,
+      "aov": false,
+      "inputScale": 0.02,
+      "engine": "native",
+      "device": "cuda",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.387082576751709,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cuda",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny_scale0.02_native_cuda_balanced.pfm",
+        "-q",
+        "balanced",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "0.02"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny_scale0.02_native_cuda_balanced.pfm",
+      "count": 192,
+      "finiteCount": 192,
+      "nonfiniteCount": 0,
+      "min": 2.621528148651123,
+      "max": 10.92635440826416,
+      "mean": 6.649701478580634,
+      "sha256": "7c788246a135c0f53866e63b3ab7ab9d4db4c31c5ef5a9e7aed6714f4980fc6a"
+    },
+    {
+      "case": "tiny",
+      "width": 8,
+      "height": 8,
+      "aov": false,
+      "inputScale": 0.02,
+      "engine": "native",
+      "device": "cpu",
+      "quality": "high",
+      "exitCode": 0,
+      "seconds": 0.16066312789916992,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cpu",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny_scale0.02_native_cpu_high.pfm",
+        "-q",
+        "high",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "0.02"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny_scale0.02_native_cpu_high.pfm",
+      "count": 192,
+      "finiteCount": 192,
+      "nonfiniteCount": 0,
+      "min": 2.6208510398864746,
+      "max": 10.889310836791992,
+      "mean": 6.6524304275711375,
+      "sha256": "f9ef95f4f5625edd374e013293420d8a5bf0dc022d35cb8d25bbcd4478038248"
+    },
+    {
+      "case": "tiny",
+      "width": 8,
+      "height": 8,
+      "aov": false,
+      "inputScale": 0.02,
+      "engine": "native",
+      "device": "cuda",
+      "quality": "high",
+      "exitCode": 0,
+      "seconds": 0.38361620903015137,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cuda",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny_scale0.02_native_cuda_high.pfm",
+        "-q",
+        "high",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1",
+        "--is",
+        "0.02"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny_scale0.02_native_cuda_high.pfm",
+      "count": 192,
+      "finiteCount": 192,
+      "nonfiniteCount": 0,
+      "min": 2.621528148651123,
+      "max": 10.90404987335205,
+      "mean": 6.655472707003355,
+      "sha256": "fd0990839cbf13656338a31e95e349e8f58efad8f9b03ba8b5b56d78679ee7a4"
+    },
+    {
+      "case": "tiny",
+      "width": 8,
+      "height": 8,
+      "aov": false,
+      "inputScale": null,
+      "engine": "rust",
+      "device": "wgpu",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.8551554679870605,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\squarebob-rs\\target\\debug\\oidn-rs.exe",
+        "denoise",
+        "--input",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny.pfm",
+        "--output",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny_scaleauto_rust_wgpu_balanced.pfm",
+        "--hdr",
+        "--quality",
+        "balanced",
+        "--weights",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "--verbose",
+        "0"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny_scaleauto_rust_wgpu_balanced.pfm",
+      "count": 192,
+      "finiteCount": 192,
+      "nonfiniteCount": 0,
+      "min": 1.8130323886871338,
+      "max": 12.384476661682129,
+      "mean": 6.658858822037776,
+      "sha256": "579b308f1e350324999672a7824cec7c561fc7321ffe14817436d71a4f2a828a"
+    },
+    {
+      "case": "tiny",
+      "width": 8,
+      "height": 8,
+      "aov": false,
+      "inputScale": null,
+      "engine": "native",
+      "device": "cpu",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.12971138954162598,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cpu",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny_scaleauto_native_cpu_balanced.pfm",
+        "-q",
+        "balanced",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny_scaleauto_native_cpu_balanced.pfm",
+      "count": 192,
+      "finiteCount": 192,
+      "nonfiniteCount": 0,
+      "min": 2.630880117416382,
+      "max": 10.939105033874512,
+      "mean": 6.661177419126034,
+      "sha256": "b858a428d59489d91c25c14ab33290e30c2a2db6b07d70029643049e4570f843"
+    },
+    {
+      "case": "tiny",
+      "width": 8,
+      "height": 8,
+      "aov": false,
+      "inputScale": null,
+      "engine": "native",
+      "device": "cuda",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.37181544303894043,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cuda",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny_scaleauto_native_cuda_balanced.pfm",
+        "-q",
+        "balanced",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny_scaleauto_native_cuda_balanced.pfm",
+      "count": 192,
+      "finiteCount": 192,
+      "nonfiniteCount": 0,
+      "min": 2.6384365558624268,
+      "max": 10.961549758911133,
+      "mean": 6.65990752602617,
+      "sha256": "b6f366230e64fb6f17f11c5ad702e9592c97df848d8e002323155a606cfba3af"
+    },
+    {
+      "case": "tiny",
+      "width": 8,
+      "height": 8,
+      "aov": false,
+      "inputScale": null,
+      "engine": "native",
+      "device": "cpu",
+      "quality": "high",
+      "exitCode": 0,
+      "seconds": 0.17519164085388184,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cpu",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny_scaleauto_native_cpu_high.pfm",
+        "-q",
+        "high",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny_scaleauto_native_cpu_high.pfm",
+      "count": 192,
+      "finiteCount": 192,
+      "nonfiniteCount": 0,
+      "min": 2.630880117416382,
+      "max": 10.939105033874512,
+      "mean": 6.661177419126034,
+      "sha256": "b858a428d59489d91c25c14ab33290e30c2a2db6b07d70029643049e4570f843"
+    },
+    {
+      "case": "tiny",
+      "width": 8,
+      "height": 8,
+      "aov": false,
+      "inputScale": null,
+      "engine": "native",
+      "device": "cuda",
+      "quality": "high",
+      "exitCode": 0,
+      "seconds": 0.3883097171783447,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cuda",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny_scaleauto_native_cuda_high.pfm",
+        "-q",
+        "high",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+        "-v",
+        "1"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\tiny_scaleauto_native_cuda_high.pfm",
+      "count": 192,
+      "finiteCount": 192,
+      "nonfiniteCount": 0,
+      "min": 2.632693290710449,
+      "max": 10.961549758911133,
+      "mean": 6.664789717644453,
+      "sha256": "a078059e955383ce2d79004a31000e2736f2d6e07fc3cebfdc6909ba64157bdc"
+    },
+    {
+      "case": "fine_aov",
+      "width": 33,
+      "height": 19,
+      "aov": true,
+      "inputScale": 1,
+      "engine": "rust",
+      "device": "wgpu",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.8761777877807617,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\squarebob-rs\\target\\debug\\oidn-rs.exe",
+        "denoise",
+        "--input",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov.pfm",
+        "--output",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_scale1_rust_wgpu_balanced.pfm",
+        "--hdr",
+        "--quality",
+        "balanced",
+        "--weights",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr_alb_nrm.tza",
+        "--verbose",
+        "0",
+        "--input_scale",
+        "1",
+        "--albedo",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_albedo.pfm",
+        "--normal",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_normal.pfm"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_scale1_rust_wgpu_balanced.pfm",
+      "count": 1881,
+      "finiteCount": 1881,
+      "nonfiniteCount": 0,
+      "min": 0.02253422513604164,
+      "max": 28.895692825317383,
+      "mean": 3.5910545588490304,
+      "sha256": "14221d05794c72daacd43e0f674676494e7dde9a18b62a0c191843adcd891537"
+    },
+    {
+      "case": "fine_aov",
+      "width": 33,
+      "height": 19,
+      "aov": true,
+      "inputScale": 1,
+      "engine": "native",
+      "device": "cpu",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.18470549583435059,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cpu",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_scale1_native_cpu_balanced.pfm",
+        "-q",
+        "balanced",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr_alb_nrm.tza",
+        "-v",
+        "1",
+        "--is",
+        "1",
+        "--alb",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_albedo.pfm",
+        "--nrm",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_normal.pfm"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_scale1_native_cpu_balanced.pfm",
+      "count": 1881,
+      "finiteCount": 1881,
+      "nonfiniteCount": 0,
+      "min": 0.02431398443877697,
+      "max": 28.902082443237305,
+      "mean": 3.5811633282419786,
+      "sha256": "1b1590015c9d9d7856718da88601cf981d0f09d2aa5ed44a0a56b422ac4e725c"
+    },
+    {
+      "case": "fine_aov",
+      "width": 33,
+      "height": 19,
+      "aov": true,
+      "inputScale": 1,
+      "engine": "native",
+      "device": "cuda",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.37794017791748047,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cuda",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_scale1_native_cuda_balanced.pfm",
+        "-q",
+        "balanced",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr_alb_nrm.tza",
+        "-v",
+        "1",
+        "--is",
+        "1",
+        "--alb",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_albedo.pfm",
+        "--nrm",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_normal.pfm"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_scale1_native_cuda_balanced.pfm",
+      "count": 1881,
+      "finiteCount": 1881,
+      "nonfiniteCount": 0,
+      "min": 0.02446136623620987,
+      "max": 28.737573623657227,
+      "mean": 3.582308889254294,
+      "sha256": "d35168245e12ffcfcbbce3ac4a0d85de490ea00b30f0e7080d549aefc5c9cfd5"
+    },
+    {
+      "case": "fine_aov",
+      "width": 33,
+      "height": 19,
+      "aov": true,
+      "inputScale": 1,
+      "engine": "native",
+      "device": "cpu",
+      "quality": "high",
+      "exitCode": 0,
+      "seconds": 0.13393926620483398,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cpu",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_scale1_native_cpu_high.pfm",
+        "-q",
+        "high",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr_alb_nrm.tza",
+        "-v",
+        "1",
+        "--is",
+        "1",
+        "--alb",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_albedo.pfm",
+        "--nrm",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_normal.pfm"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_scale1_native_cpu_high.pfm",
+      "count": 1881,
+      "finiteCount": 1881,
+      "nonfiniteCount": 0,
+      "min": 0.02431398443877697,
+      "max": 28.902082443237305,
+      "mean": 3.5811633282419786,
+      "sha256": "1b1590015c9d9d7856718da88601cf981d0f09d2aa5ed44a0a56b422ac4e725c"
+    },
+    {
+      "case": "fine_aov",
+      "width": 33,
+      "height": 19,
+      "aov": true,
+      "inputScale": 1,
+      "engine": "native",
+      "device": "cuda",
+      "quality": "high",
+      "exitCode": 0,
+      "seconds": 0.38170886039733887,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cuda",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_scale1_native_cuda_high.pfm",
+        "-q",
+        "high",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr_alb_nrm.tza",
+        "-v",
+        "1",
+        "--is",
+        "1",
+        "--alb",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_albedo.pfm",
+        "--nrm",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_normal.pfm"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_scale1_native_cuda_high.pfm",
+      "count": 1881,
+      "finiteCount": 1881,
+      "nonfiniteCount": 0,
+      "min": 0.024298299103975296,
+      "max": 28.966873168945312,
+      "mean": 3.586696805015547,
+      "sha256": "bb28e280c35f9c99d1edc5ec2d329773c183d6b593f65870a10903159082831d"
+    },
+    {
+      "case": "fine_aov",
+      "width": 33,
+      "height": 19,
+      "aov": true,
+      "inputScale": 0.02,
+      "engine": "rust",
+      "device": "wgpu",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.8494315147399902,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\squarebob-rs\\target\\debug\\oidn-rs.exe",
+        "denoise",
+        "--input",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov.pfm",
+        "--output",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_scale0.02_rust_wgpu_balanced.pfm",
+        "--hdr",
+        "--quality",
+        "balanced",
+        "--weights",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr_alb_nrm.tza",
+        "--verbose",
+        "0",
+        "--input_scale",
+        "0.02",
+        "--albedo",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_albedo.pfm",
+        "--normal",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_normal.pfm"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_scale0.02_rust_wgpu_balanced.pfm",
+      "count": 1881,
+      "finiteCount": 1881,
+      "nonfiniteCount": 0,
+      "min": 0.014281542040407658,
+      "max": 29.045236587524414,
+      "mean": 3.5347261695817096,
+      "sha256": "19bd3bc657250466b22837d99686f80fb934c0af3464a299e0eacf28c37e3ce3"
+    },
+    {
+      "case": "fine_aov",
+      "width": 33,
+      "height": 19,
+      "aov": true,
+      "inputScale": 0.02,
+      "engine": "native",
+      "device": "cpu",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.1272730827331543,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cpu",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_scale0.02_native_cpu_balanced.pfm",
+        "-q",
+        "balanced",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr_alb_nrm.tza",
+        "-v",
+        "1",
+        "--is",
+        "0.02",
+        "--alb",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_albedo.pfm",
+        "--nrm",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_normal.pfm"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_scale0.02_native_cpu_balanced.pfm",
+      "count": 1881,
+      "finiteCount": 1881,
+      "nonfiniteCount": 0,
+      "min": 0.015219751745462418,
+      "max": 26.374521255493164,
+      "mean": 3.526442757838865,
+      "sha256": "6742866572f8d54cd0de32f512c6d90d149ff50e52d040439e963a2348322845"
+    },
+    {
+      "case": "fine_aov",
+      "width": 33,
+      "height": 19,
+      "aov": true,
+      "inputScale": 0.02,
+      "engine": "native",
+      "device": "cuda",
+      "quality": "balanced",
+      "exitCode": 0,
+      "seconds": 0.37522292137145996,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cuda",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_scale0.02_native_cuda_balanced.pfm",
+        "-q",
+        "balanced",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr_alb_nrm.tza",
+        "-v",
+        "1",
+        "--is",
+        "0.02",
+        "--alb",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_albedo.pfm",
+        "--nrm",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_normal.pfm"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_scale0.02_native_cuda_balanced.pfm",
+      "count": 1881,
+      "finiteCount": 1881,
+      "nonfiniteCount": 0,
+      "min": 0.015210052020847797,
+      "max": 26.19875717163086,
+      "mean": 3.523886792282022,
+      "sha256": "ec861b92d32a6dd20da1616ed671be0ce56dda44355893ff349028ca1c1cd73b"
+    },
+    {
+      "case": "fine_aov",
+      "width": 33,
+      "height": 19,
+      "aov": true,
+      "inputScale": 0.02,
+      "engine": "native",
+      "device": "cpu",
+      "quality": "high",
+      "exitCode": 0,
+      "seconds": 0.12435340881347656,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cpu",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_scale0.02_native_cpu_high.pfm",
+        "-q",
+        "high",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr_alb_nrm.tza",
+        "-v",
+        "1",
+        "--is",
+        "0.02",
+        "--alb",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_albedo.pfm",
+        "--nrm",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_normal.pfm"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_scale0.02_native_cpu_high.pfm",
+      "count": 1881,
+      "finiteCount": 1881,
+      "nonfiniteCount": 0,
+      "min": 0.015219751745462418,
+      "max": 26.374521255493164,
+      "mean": 3.526442757838865,
+      "sha256": "6742866572f8d54cd0de32f512c6d90d149ff50e52d040439e963a2348322845"
+    },
+    {
+      "case": "fine_aov",
+      "width": 33,
+      "height": 19,
+      "aov": true,
+      "inputScale": 0.02,
+      "engine": "native",
+      "device": "cuda",
+      "quality": "high",
+      "exitCode": 0,
+      "seconds": 0.36207056045532227,
+      "command": [
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+        "-d",
+        "cuda",
+        "--hdr",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov.pfm",
+        "-o",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_scale0.02_native_cuda_high.pfm",
+        "-q",
+        "high",
+        "-w",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr_alb_nrm.tza",
+        "-v",
+        "1",
+        "--is",
+        "0.02",
+        "--alb",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_albedo.pfm",
+        "--nrm",
+        "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_normal.pfm"
+      ],
+      "output": "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\matrix\\fine_aov_scale0.02_native_cuda_high.pfm",
+      "count": 1881,
+      "finiteCount": 1881,
+      "nonfiniteCount": 0,
+      "min": 0.015176364220678806,
+      "max": 26.304302215576172,
+      "mean": 3.5248654723352595,
+      "sha256": "72a466669026668e77d223ae9681318cd3015f6555dc02a25acf612cb9fb9f1a"
+    }
+  ],
+  "comparisons": [
+    {
+      "case": "uniform",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 1,
+      "actual": [
+        "rust",
+        "wgpu",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 3072,
+          "maxAbsolute": 8.58306884765625e-05,
+          "meanAbsolute": 1.2058764696121216e-05,
+          "maxRelative": 8.75818282993289e-06,
+          "meanRelative": 1.8138460079463482e-06
+        },
+        "highlights": {
+          "samples": 3072,
+          "maxAbsolute": 8.58306884765625e-05,
+          "meanAbsolute": 1.2058764696121216e-05,
+          "maxRelative": 8.75818282993289e-06,
+          "meanRelative": 1.8138460079463482e-06
+        },
+        "dark": {
+          "samples": 0,
+          "maxAbsolute": null,
+          "meanAbsolute": null,
+          "maxRelative": null,
+          "meanRelative": null
+        }
+      }
+    },
+    {
+      "case": "uniform",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 1,
+      "actual": [
+        "rust",
+        "wgpu",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 3072,
+          "maxAbsolute": 0.31472015380859375,
+          "meanAbsolute": 0.050599825102835894,
+          "maxRelative": 0.03215541485033576,
+          "meanRelative": 0.007297490099384602
+        },
+        "highlights": {
+          "samples": 3072,
+          "maxAbsolute": 0.31472015380859375,
+          "meanAbsolute": 0.050599825102835894,
+          "maxRelative": 0.03215541485033576,
+          "meanRelative": 0.007297490099384602
+        },
+        "dark": {
+          "samples": 0,
+          "maxAbsolute": null,
+          "meanAbsolute": null,
+          "maxRelative": null,
+          "meanRelative": null
+        }
+      }
+    },
+    {
+      "case": "uniform",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 1,
+      "actual": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 3072,
+          "maxAbsolute": 0.31472015380859375,
+          "meanAbsolute": 0.05060057761147618,
+          "maxRelative": 0.031153656113888963,
+          "meanRelative": 0.007281007541426291
+        },
+        "highlights": {
+          "samples": 3072,
+          "maxAbsolute": 0.31472015380859375,
+          "meanAbsolute": 0.05060057761147618,
+          "maxRelative": 0.031153656113888963,
+          "meanRelative": 0.007281007541426291
+        },
+        "dark": {
+          "samples": 0,
+          "maxAbsolute": null,
+          "meanAbsolute": null,
+          "maxRelative": null,
+          "meanRelative": null
+        }
+      }
+    },
+    {
+      "case": "uniform",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 1,
+      "actual": [
+        "native",
+        "cpu",
+        "high"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 3072,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        },
+        "highlights": {
+          "samples": 3072,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        },
+        "dark": {
+          "samples": 0,
+          "maxAbsolute": null,
+          "meanAbsolute": null,
+          "maxRelative": null,
+          "meanRelative": null
+        }
+      }
+    },
+    {
+      "case": "uniform",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 1,
+      "actual": [
+        "native",
+        "cuda",
+        "high"
+      ],
+      "reference": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 3072,
+          "maxAbsolute": 0.28173828125,
+          "meanAbsolute": 0.04715871989416579,
+          "maxRelative": 0.028219395169360412,
+          "meanRelative": 0.006881532511657952
+        },
+        "highlights": {
+          "samples": 3072,
+          "maxAbsolute": 0.28173828125,
+          "meanAbsolute": 0.04715871989416579,
+          "maxRelative": 0.028219395169360412,
+          "meanRelative": 0.006881532511657952
+        },
+        "dark": {
+          "samples": 0,
+          "maxAbsolute": null,
+          "meanAbsolute": null,
+          "maxRelative": null,
+          "meanRelative": null
+        }
+      }
+    },
+    {
+      "case": "uniform",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 0.02,
+      "actual": [
+        "rust",
+        "wgpu",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 3072,
+          "maxAbsolute": 3.814697265625e-05,
+          "meanAbsolute": 5.5551063269376755e-06,
+          "maxRelative": 4.11719956953095e-06,
+          "meanRelative": 8.258265945736315e-07
+        },
+        "highlights": {
+          "samples": 3072,
+          "maxAbsolute": 3.814697265625e-05,
+          "meanAbsolute": 5.5551063269376755e-06,
+          "maxRelative": 4.11719956953095e-06,
+          "meanRelative": 8.258265945736315e-07
+        },
+        "dark": {
+          "samples": 0,
+          "maxAbsolute": null,
+          "meanAbsolute": null,
+          "maxRelative": null,
+          "meanRelative": null
+        }
+      }
+    },
+    {
+      "case": "uniform",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 0.02,
+      "actual": [
+        "rust",
+        "wgpu",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 3072,
+          "maxAbsolute": 0.12791824340820312,
+          "meanAbsolute": 0.020531160291284323,
+          "maxRelative": 0.01411915646421446,
+          "meanRelative": 0.002986078614304548
+        },
+        "highlights": {
+          "samples": 3072,
+          "maxAbsolute": 0.12791824340820312,
+          "meanAbsolute": 0.020531160291284323,
+          "maxRelative": 0.01411915646421446,
+          "meanRelative": 0.002986078614304548
+        },
+        "dark": {
+          "samples": 0,
+          "maxAbsolute": null,
+          "meanAbsolute": null,
+          "maxRelative": null,
+          "meanRelative": null
+        }
+      }
+    },
+    {
+      "case": "uniform",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 0.02,
+      "actual": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 3072,
+          "maxAbsolute": 0.12790966033935547,
+          "meanAbsolute": 0.02053133468143642,
+          "maxRelative": 0.013924058822828324,
+          "meanRelative": 0.002983514770532889
+        },
+        "highlights": {
+          "samples": 3072,
+          "maxAbsolute": 0.12790966033935547,
+          "meanAbsolute": 0.02053133468143642,
+          "maxRelative": 0.013924058822828324,
+          "meanRelative": 0.002983514770532889
+        },
+        "dark": {
+          "samples": 0,
+          "maxAbsolute": null,
+          "meanAbsolute": null,
+          "maxRelative": null,
+          "meanRelative": null
+        }
+      }
+    },
+    {
+      "case": "uniform",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 0.02,
+      "actual": [
+        "native",
+        "cpu",
+        "high"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 3072,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        },
+        "highlights": {
+          "samples": 3072,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        },
+        "dark": {
+          "samples": 0,
+          "maxAbsolute": null,
+          "meanAbsolute": null,
+          "maxRelative": null,
+          "meanRelative": null
+        }
+      }
+    },
+    {
+      "case": "uniform",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 0.02,
+      "actual": [
+        "native",
+        "cuda",
+        "high"
+      ],
+      "reference": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 3072,
+          "maxAbsolute": 0.1430673599243164,
+          "meanAbsolute": 0.020880658955623705,
+          "maxRelative": 0.01463729951741971,
+          "meanRelative": 0.003008388227005022
+        },
+        "highlights": {
+          "samples": 3072,
+          "maxAbsolute": 0.1430673599243164,
+          "meanAbsolute": 0.020880658955623705,
+          "maxRelative": 0.01463729951741971,
+          "meanRelative": 0.003008388227005022
+        },
+        "dark": {
+          "samples": 0,
+          "maxAbsolute": null,
+          "meanAbsolute": null,
+          "maxRelative": null,
+          "meanRelative": null
+        }
+      }
+    },
+    {
+      "case": "ramp",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 1,
+      "actual": [
+        "rust",
+        "wgpu",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 3072,
+          "maxAbsolute": 0.0003814697265625,
+          "meanAbsolute": 3.506758306078458e-05,
+          "maxRelative": 1.155313268391634e-05,
+          "meanRelative": 1.9588333463238476e-06
+        },
+        "highlights": {
+          "samples": 2718,
+          "maxAbsolute": 0.0003814697265625,
+          "meanAbsolute": 3.932937266986277e-05,
+          "maxRelative": 1.155313268391634e-05,
+          "meanRelative": 2.0368710816677092e-06
+        },
+        "dark": {
+          "samples": 96,
+          "maxAbsolute": 6.109476089477539e-07,
+          "meanAbsolute": 1.0832445695996284e-07,
+          "maxRelative": 4.869094397133077e-06,
+          "meanRelative": 1.091217666198811e-06
+        }
+      }
+    },
+    {
+      "case": "ramp",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 1,
+      "actual": [
+        "rust",
+        "wgpu",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 3072,
+          "maxAbsolute": 1.2776412963867188,
+          "meanAbsolute": 0.14055077995969137,
+          "maxRelative": 0.034624315701638576,
+          "meanRelative": 0.007653962881730845
+        },
+        "highlights": {
+          "samples": 2718,
+          "maxAbsolute": 1.2776412963867188,
+          "meanAbsolute": 0.15775520798035453,
+          "maxRelative": 0.034624315701638576,
+          "meanRelative": 0.008043756225049112
+        },
+        "dark": {
+          "samples": 96,
+          "maxAbsolute": 0.0028399527072906494,
+          "meanAbsolute": 0.0004327590577304363,
+          "maxRelative": 0.011687588537227029,
+          "meanRelative": 0.0035374279316523656
+        }
+      }
+    },
+    {
+      "case": "ramp",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 1,
+      "actual": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 3072,
+          "maxAbsolute": 1.2774772644042969,
+          "meanAbsolute": 0.14055050411661796,
+          "maxRelative": 0.03586728659365126,
+          "meanRelative": 0.007623450945042607
+        },
+        "highlights": {
+          "samples": 2718,
+          "maxAbsolute": 1.2774772644042969,
+          "meanAbsolute": 0.1577548382912075,
+          "maxRelative": 0.03586728659365126,
+          "meanRelative": 0.00800812194433825
+        },
+        "dark": {
+          "samples": 96,
+          "maxAbsolute": 0.0028400421142578125,
+          "meanAbsolute": 0.00043272935242081684,
+          "maxRelative": 0.011826180365631702,
+          "meanRelative": 0.003552869736634816
+        }
+      }
+    },
+    {
+      "case": "ramp",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 1,
+      "actual": [
+        "native",
+        "cpu",
+        "high"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 3072,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        },
+        "highlights": {
+          "samples": 2718,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        },
+        "dark": {
+          "samples": 96,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        }
+      }
+    },
+    {
+      "case": "ramp",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 1,
+      "actual": [
+        "native",
+        "cuda",
+        "high"
+      ],
+      "reference": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 3072,
+          "maxAbsolute": 1.2190055847167969,
+          "meanAbsolute": 0.13255297927753418,
+          "maxRelative": 0.03642759522668473,
+          "meanRelative": 0.0074327327998689125
+        },
+        "highlights": {
+          "samples": 2718,
+          "maxAbsolute": 1.2190055847167969,
+          "meanAbsolute": 0.1486847743644181,
+          "maxRelative": 0.03642759522668473,
+          "meanRelative": 0.007796291180132106
+        },
+        "dark": {
+          "samples": 96,
+          "maxAbsolute": 0.0029531270265579224,
+          "meanAbsolute": 0.0003604310331866145,
+          "maxRelative": 0.012153348010327043,
+          "meanRelative": 0.003235645755013015
+        }
+      }
+    },
+    {
+      "case": "ramp",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 0.02,
+      "actual": [
+        "rust",
+        "wgpu",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 3072,
+          "maxAbsolute": 0.000225067138671875,
+          "meanAbsolute": 1.814845776001069e-05,
+          "maxRelative": 7.618613205956674e-06,
+          "meanRelative": 1.0272808257177388e-06
+        },
+        "highlights": {
+          "samples": 2718,
+          "maxAbsolute": 0.000225067138671875,
+          "meanAbsolute": 2.035057834178933e-05,
+          "maxRelative": 6.864875586545195e-06,
+          "meanRelative": 1.032326779519844e-06
+        },
+        "dark": {
+          "samples": 96,
+          "maxAbsolute": 7.748603820800781e-07,
+          "meanAbsolute": 1.312485740830501e-07,
+          "maxRelative": 7.618613205956674e-06,
+          "meanRelative": 1.523267884651185e-06
+        }
+      }
+    },
+    {
+      "case": "ramp",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 0.02,
+      "actual": [
+        "rust",
+        "wgpu",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 3072,
+          "maxAbsolute": 0.7697029113769531,
+          "meanAbsolute": 0.0678336727369242,
+          "maxRelative": 0.022550522724522442,
+          "meanRelative": 0.003762976369849385
+        },
+        "highlights": {
+          "samples": 2718,
+          "maxAbsolute": 0.7697029113769531,
+          "meanAbsolute": 0.07623942666759027,
+          "maxRelative": 0.017421538089564762,
+          "meanRelative": 0.003884917352520035
+        },
+        "dark": {
+          "samples": 96,
+          "maxAbsolute": 0.0019612014293670654,
+          "meanAbsolute": 0.0003581724886316806,
+          "maxRelative": 0.022550522724522442,
+          "meanRelative": 0.00460719545395221
+        }
+      }
+    },
+    {
+      "case": "ramp",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 0.02,
+      "actual": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 3072,
+          "maxAbsolute": 0.7695770263671875,
+          "meanAbsolute": 0.06783393837940821,
+          "maxRelative": 0.022049573433033164,
+          "meanRelative": 0.00376136979122182
+        },
+        "highlights": {
+          "samples": 2718,
+          "maxAbsolute": 0.7695770263671875,
+          "meanAbsolute": 0.0762397444713107,
+          "maxRelative": 0.017123225170048568,
+          "meanRelative": 0.003883505652131979
+        },
+        "dark": {
+          "samples": 96,
+          "maxAbsolute": 0.001961439847946167,
+          "meanAbsolute": 0.00035818621593837935,
+          "maxRelative": 0.022049573433033164,
+          "meanRelative": 0.004595789587817949
+        }
+      }
+    },
+    {
+      "case": "ramp",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 0.02,
+      "actual": [
+        "native",
+        "cpu",
+        "high"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 3072,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        },
+        "highlights": {
+          "samples": 2718,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        },
+        "dark": {
+          "samples": 96,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        }
+      }
+    },
+    {
+      "case": "ramp",
+      "width": 32,
+      "height": 32,
+      "aov": false,
+      "inputScale": 0.02,
+      "actual": [
+        "native",
+        "cuda",
+        "high"
+      ],
+      "reference": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 3072,
+          "maxAbsolute": 0.607452392578125,
+          "meanAbsolute": 0.06665212146769288,
+          "maxRelative": 0.030123623836492988,
+          "meanRelative": 0.0037557877446407
+        },
+        "highlights": {
+          "samples": 2718,
+          "maxAbsolute": 0.607452392578125,
+          "meanAbsolute": 0.07489085079028907,
+          "maxRelative": 0.016304313621318987,
+          "meanRelative": 0.0038110429665683338
+        },
+        "dark": {
+          "samples": 96,
+          "maxAbsolute": 0.0022178292274475098,
+          "meanAbsolute": 0.00044365938326033455,
+          "maxRelative": 0.030123623836492988,
+          "meanRelative": 0.0063261409497492906
+        }
+      }
+    },
+    {
+      "case": "fine",
+      "width": 64,
+      "height": 48,
+      "aov": false,
+      "inputScale": 1,
+      "actual": [
+        "rust",
+        "wgpu",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 9216,
+          "maxAbsolute": 0.0001621246337890625,
+          "meanAbsolute": 6.271137155838207e-06,
+          "maxRelative": 1.058669007695216e-05,
+          "meanRelative": 1.033495508574781e-06
+        },
+        "highlights": {
+          "samples": 2304,
+          "maxAbsolute": 0.0001621246337890625,
+          "meanAbsolute": 2.48917688926061e-05,
+          "maxRelative": 1.058669007695216e-05,
+          "meanRelative": 1.7747249383911735e-06
+        },
+        "dark": {
+          "samples": 6912,
+          "maxAbsolute": 1.8477439880371094e-06,
+          "meanAbsolute": 6.425991024890984e-08,
+          "maxRelative": 6.358119653795599e-06,
+          "meanRelative": 7.864190319693169e-07
+        }
+      }
+    },
+    {
+      "case": "fine",
+      "width": 64,
+      "height": 48,
+      "aov": false,
+      "inputScale": 1,
+      "actual": [
+        "rust",
+        "wgpu",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 9216,
+          "maxAbsolute": 0.6864852905273438,
+          "meanAbsolute": 0.026133025382579136,
+          "maxRelative": 0.03023975180847345,
+          "meanRelative": 0.0036600342012564685
+        },
+        "highlights": {
+          "samples": 2304,
+          "maxAbsolute": 0.6864852905273438,
+          "meanAbsolute": 0.10393526591360569,
+          "maxRelative": 0.03023975180847345,
+          "meanRelative": 0.007314046611323862
+        },
+        "dark": {
+          "samples": 6912,
+          "maxAbsolute": 0.008194446563720703,
+          "meanAbsolute": 0.00019894520557028482,
+          "maxRelative": 0.015671791685714136,
+          "meanRelative": 0.002442030064567337
+        }
+      }
+    },
+    {
+      "case": "fine",
+      "width": 64,
+      "height": 48,
+      "aov": false,
+      "inputScale": 1,
+      "actual": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 9216,
+          "maxAbsolute": 0.6865825653076172,
+          "meanAbsolute": 0.026132718212870207,
+          "maxRelative": 0.030513583052829873,
+          "meanRelative": 0.003653676456093578
+        },
+        "highlights": {
+          "samples": 2304,
+          "maxAbsolute": 0.6865825653076172,
+          "meanAbsolute": 0.10393403532604377,
+          "maxRelative": 0.030513583052829873,
+          "meanRelative": 0.00729210044421181
+        },
+        "dark": {
+          "samples": 6912,
+          "maxAbsolute": 0.008194446563720703,
+          "meanAbsolute": 0.0001989458418123562,
+          "maxRelative": 0.015694015554974888,
+          "meanRelative": 0.002440868460054168
+        }
+      }
+    },
+    {
+      "case": "fine",
+      "width": 64,
+      "height": 48,
+      "aov": false,
+      "inputScale": 1,
+      "actual": [
+        "native",
+        "cpu",
+        "high"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 9216,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        },
+        "highlights": {
+          "samples": 2304,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        },
+        "dark": {
+          "samples": 6912,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        }
+      }
+    },
+    {
+      "case": "fine",
+      "width": 64,
+      "height": 48,
+      "aov": false,
+      "inputScale": 1,
+      "actual": [
+        "native",
+        "cuda",
+        "high"
+      ],
+      "reference": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 9216,
+          "maxAbsolute": 0.7256031036376953,
+          "meanAbsolute": 0.025361474095916492,
+          "maxRelative": 0.03230383616217583,
+          "meanRelative": 0.0036141043643708112
+        },
+        "highlights": {
+          "samples": 2304,
+          "maxAbsolute": 0.7256031036376953,
+          "meanAbsolute": 0.10084730583346552,
+          "maxRelative": 0.03230383616217583,
+          "meanRelative": 0.00717416143491765
+        },
+        "dark": {
+          "samples": 6912,
+          "maxAbsolute": 0.006775081157684326,
+          "meanAbsolute": 0.00019953018340014819,
+          "maxRelative": 0.020907705566831473,
+          "meanRelative": 0.0024274186741885316
+        }
+      }
+    },
+    {
+      "case": "fine",
+      "width": 64,
+      "height": 48,
+      "aov": false,
+      "inputScale": 0.02,
+      "actual": [
+        "rust",
+        "wgpu",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 9216,
+          "maxAbsolute": 8.392333984375e-05,
+          "meanAbsolute": 3.472555716952128e-06,
+          "maxRelative": 1.0455660289323803e-05,
+          "meanRelative": 1.1046238144723614e-06
+        },
+        "highlights": {
+          "samples": 2304,
+          "maxAbsolute": 8.392333984375e-05,
+          "meanAbsolute": 1.3609830704000262e-05,
+          "maxRelative": 5.206186890513771e-06,
+          "meanRelative": 9.806115996524566e-07
+        },
+        "dark": {
+          "samples": 6912,
+          "maxAbsolute": 2.205371856689453e-06,
+          "meanAbsolute": 9.34640546027502e-08,
+          "maxRelative": 1.0455660289323803e-05,
+          "meanRelative": 1.1459612194123294e-06
+        }
+      }
+    },
+    {
+      "case": "fine",
+      "width": 64,
+      "height": 48,
+      "aov": false,
+      "inputScale": 0.02,
+      "actual": [
+        "rust",
+        "wgpu",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 9216,
+          "maxAbsolute": 0.3712043762207031,
+          "meanAbsolute": 0.012479163746674102,
+          "maxRelative": 0.022790572736690287,
+          "meanRelative": 0.0028237446425511954
+        },
+        "highlights": {
+          "samples": 2304,
+          "maxAbsolute": 0.3712043762207031,
+          "meanAbsolute": 0.049200755854447685,
+          "maxRelative": 0.017752209015208388,
+          "meanRelative": 0.0034784747132620775
+        },
+        "dark": {
+          "samples": 6912,
+          "maxAbsolute": 0.012340545654296875,
+          "meanAbsolute": 0.00023863304408290855,
+          "maxRelative": 0.022790572736690287,
+          "meanRelative": 0.002605501285647568
+        }
+      }
+    },
+    {
+      "case": "fine",
+      "width": 64,
+      "height": 48,
+      "aov": false,
+      "inputScale": 0.02,
+      "actual": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 9216,
+          "maxAbsolute": 0.3712272644042969,
+          "meanAbsolute": 0.012479190579445762,
+          "maxRelative": 0.022277332922338283,
+          "meanRelative": 0.002825985513913918
+        },
+        "highlights": {
+          "samples": 2304,
+          "maxAbsolute": 0.3712272644042969,
+          "meanAbsolute": 0.049200861921740904,
+          "maxRelative": 0.01807418000817206,
+          "meanRelative": 0.0034869997234826624
+        },
+        "dark": {
+          "samples": 6912,
+          "maxAbsolute": 0.012339591979980469,
+          "meanAbsolute": 0.00023863346534738042,
+          "maxRelative": 0.022277332922338283,
+          "meanRelative": 0.00260564744405767
+        }
+      }
+    },
+    {
+      "case": "fine",
+      "width": 64,
+      "height": 48,
+      "aov": false,
+      "inputScale": 0.02,
+      "actual": [
+        "native",
+        "cpu",
+        "high"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 9216,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        },
+        "highlights": {
+          "samples": 2304,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        },
+        "dark": {
+          "samples": 6912,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        }
+      }
+    },
+    {
+      "case": "fine",
+      "width": 64,
+      "height": 48,
+      "aov": false,
+      "inputScale": 0.02,
+      "actual": [
+        "native",
+        "cuda",
+        "high"
+      ],
+      "reference": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 9216,
+          "maxAbsolute": 0.3537483215332031,
+          "meanAbsolute": 0.011643356596778176,
+          "maxRelative": 0.027513646558513252,
+          "meanRelative": 0.002788821457476618
+        },
+        "highlights": {
+          "samples": 2304,
+          "maxAbsolute": 0.3537483215332031,
+          "meanAbsolute": 0.04582394411166509,
+          "maxRelative": 0.016002419039261955,
+          "meanRelative": 0.003245857982550885
+        },
+        "dark": {
+          "samples": 6912,
+          "maxAbsolute": 0.012017488479614258,
+          "meanAbsolute": 0.00024982742514920473,
+          "maxRelative": 0.027513646558513252,
+          "meanRelative": 0.0026364759491185295
+        }
+      }
+    },
+    {
+      "case": "odd",
+      "width": 33,
+      "height": 19,
+      "aov": false,
+      "inputScale": 1,
+      "actual": [
+        "rust",
+        "wgpu",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 1881,
+          "maxAbsolute": 0.0001659393310546875,
+          "meanAbsolute": 4.584961934713276e-06,
+          "maxRelative": 8.598038027203624e-06,
+          "meanRelative": 9.659387674973515e-07
+        },
+        "highlights": {
+          "samples": 351,
+          "maxAbsolute": 0.0001659393310546875,
+          "meanAbsolute": 2.4427375902137866e-05,
+          "maxRelative": 8.598038027203624e-06,
+          "meanRelative": 1.8508823048625499e-06
+        },
+        "dark": {
+          "samples": 1530,
+          "maxAbsolute": 3.427267074584961e-07,
+          "meanAbsolute": 3.287873042175193e-08,
+          "maxRelative": 5.2918419719021864e-06,
+          "meanRelative": 7.629223089253354e-07
+        }
+      }
+    },
+    {
+      "case": "odd",
+      "width": 33,
+      "height": 19,
+      "aov": false,
+      "inputScale": 1,
+      "actual": [
+        "rust",
+        "wgpu",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 1881,
+          "maxAbsolute": 0.5332889556884766,
+          "meanAbsolute": 0.017429341190256444,
+          "maxRelative": 0.02589635049052204,
+          "meanRelative": 0.0033648556829376742
+        },
+        "highlights": {
+          "samples": 351,
+          "maxAbsolute": 0.5332889556884766,
+          "meanAbsolute": 0.09292538145668486,
+          "maxRelative": 0.02589635049052204,
+          "meanRelative": 0.0066810271942097975
+        },
+        "dark": {
+          "samples": 1530,
+          "maxAbsolute": 0.0012784600257873535,
+          "meanAbsolute": 0.00010966136442874771,
+          "maxRelative": 0.012389339638262397,
+          "meanRelative": 0.0026040869244693637
+        }
+      }
+    },
+    {
+      "case": "odd",
+      "width": 33,
+      "height": 19,
+      "aov": false,
+      "inputScale": 1,
+      "actual": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 1881,
+          "maxAbsolute": 0.5331802368164062,
+          "meanAbsolute": 0.017429022477907046,
+          "maxRelative": 0.026145799248476657,
+          "meanRelative": 0.003359374392903569
+        },
+        "highlights": {
+          "samples": 351,
+          "maxAbsolute": 0.5331802368164062,
+          "meanAbsolute": 0.09292367109206327,
+          "maxRelative": 0.026145799248476657,
+          "meanRelative": 0.006659616026973648
+        },
+        "dark": {
+          "samples": 1530,
+          "maxAbsolute": 0.001278698444366455,
+          "meanAbsolute": 0.00010966191348297144,
+          "maxRelative": 0.012238098045517736,
+          "meanRelative": 0.0026022601356757275
+        }
+      }
+    },
+    {
+      "case": "odd",
+      "width": 33,
+      "height": 19,
+      "aov": false,
+      "inputScale": 1,
+      "actual": [
+        "native",
+        "cpu",
+        "high"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 1881,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        },
+        "highlights": {
+          "samples": 351,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        },
+        "dark": {
+          "samples": 1530,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        }
+      }
+    },
+    {
+      "case": "odd",
+      "width": 33,
+      "height": 19,
+      "aov": false,
+      "inputScale": 1,
+      "actual": [
+        "native",
+        "cuda",
+        "high"
+      ],
+      "reference": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 1881,
+          "maxAbsolute": 0.5334796905517578,
+          "meanAbsolute": 0.01578600423738305,
+          "maxRelative": 0.027453733295985914,
+          "meanRelative": 0.003166941295770234
+        },
+        "highlights": {
+          "samples": 351,
+          "maxAbsolute": 0.5334796905517578,
+          "meanAbsolute": 0.0841331862316512,
+          "maxRelative": 0.027453733295985914,
+          "meanRelative": 0.006196893474709499
+        },
+        "dark": {
+          "samples": 1530,
+          "maxAbsolute": 0.0015546232461929321,
+          "meanAbsolute": 0.00010635660340388617,
+          "maxRelative": 0.012484467323836247,
+          "meanRelative": 0.002471834619425344
+        }
+      }
+    },
+    {
+      "case": "odd",
+      "width": 33,
+      "height": 19,
+      "aov": false,
+      "inputScale": 0.02,
+      "actual": [
+        "rust",
+        "wgpu",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 1881,
+          "maxAbsolute": 7.82012939453125e-05,
+          "meanAbsolute": 2.445645406564964e-06,
+          "maxRelative": 9.143490271931434e-06,
+          "meanRelative": 1.1991943124654433e-06
+        },
+        "highlights": {
+          "samples": 351,
+          "maxAbsolute": 7.82012939453125e-05,
+          "meanAbsolute": 1.2756412864750268e-05,
+          "maxRelative": 4.170416651069986e-06,
+          "meanRelative": 9.62280647017412e-07
+        },
+        "dark": {
+          "samples": 1530,
+          "maxAbsolute": 4.172325134277344e-06,
+          "meanAbsolute": 8.023404851068858e-08,
+          "maxRelative": 9.143490271931434e-06,
+          "meanRelative": 1.2535450945388153e-06
+        }
+      }
+    },
+    {
+      "case": "odd",
+      "width": 33,
+      "height": 19,
+      "aov": false,
+      "inputScale": 0.02,
+      "actual": [
+        "rust",
+        "wgpu",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 1881,
+          "maxAbsolute": 0.202911376953125,
+          "meanAbsolute": 0.008315223346898557,
+          "maxRelative": 0.02559728574823019,
+          "meanRelative": 0.0031028057137028188
+        },
+        "highlights": {
+          "samples": 351,
+          "maxAbsolute": 0.202911376953125,
+          "meanAbsolute": 0.04370295424067397,
+          "maxRelative": 0.014081465906789978,
+          "meanRelative": 0.0032978291634859548
+        },
+        "dark": {
+          "samples": 1530,
+          "maxAbsolute": 0.003983527421951294,
+          "meanAbsolute": 0.0001968615536206688,
+          "maxRelative": 0.02559728574823019,
+          "meanRelative": 0.0030580650399290405
+        }
+      }
+    },
+    {
+      "case": "odd",
+      "width": 33,
+      "height": 19,
+      "aov": false,
+      "inputScale": 0.02,
+      "actual": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 1881,
+          "maxAbsolute": 0.20289039611816406,
+          "meanAbsolute": 0.00831496777163461,
+          "maxRelative": 0.02627463355385186,
+          "meanRelative": 0.003105930548632221
+        },
+        "highlights": {
+          "samples": 351,
+          "maxAbsolute": 0.20289039611816406,
+          "meanAbsolute": 0.04370154138983485,
+          "maxRelative": 0.014280731036590976,
+          "meanRelative": 0.003305615352227287
+        },
+        "dark": {
+          "samples": 1530,
+          "maxAbsolute": 0.003983139991760254,
+          "meanAbsolute": 0.00019687147098867332,
+          "maxRelative": 0.02627463355385186,
+          "meanRelative": 0.0030601205054545293
+        }
+      }
+    },
+    {
+      "case": "odd",
+      "width": 33,
+      "height": 19,
+      "aov": false,
+      "inputScale": 0.02,
+      "actual": [
+        "native",
+        "cpu",
+        "high"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 1881,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        },
+        "highlights": {
+          "samples": 351,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        },
+        "dark": {
+          "samples": 1530,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        }
+      }
+    },
+    {
+      "case": "odd",
+      "width": 33,
+      "height": 19,
+      "aov": false,
+      "inputScale": 0.02,
+      "actual": [
+        "native",
+        "cuda",
+        "high"
+      ],
+      "reference": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 1881,
+          "maxAbsolute": 0.24456214904785156,
+          "meanAbsolute": 0.008206014935588707,
+          "maxRelative": 0.021349443468038475,
+          "meanRelative": 0.0030618437111226133
+        },
+        "highlights": {
+          "samples": 351,
+          "maxAbsolute": 0.24456214904785156,
+          "meanAbsolute": 0.043134497781085156,
+          "maxRelative": 0.014551820497610574,
+          "meanRelative": 0.003268683883457901
+        },
+        "dark": {
+          "samples": 1530,
+          "maxAbsolute": 0.0038462579250335693,
+          "meanAbsolute": 0.00019301004750422792,
+          "maxRelative": 0.021349443468038475,
+          "meanRelative": 0.0030143921421751066
+        }
+      }
+    },
+    {
+      "case": "odd",
+      "width": 33,
+      "height": 19,
+      "aov": false,
+      "inputScale": null,
+      "actual": [
+        "rust",
+        "wgpu",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 1881,
+          "maxAbsolute": 1.7249717712402344,
+          "meanAbsolute": 0.060481408221279766,
+          "maxRelative": 0.3864692790894497,
+          "meanRelative": 0.04762082229461811
+        },
+        "highlights": {
+          "samples": 351,
+          "maxAbsolute": 1.7249717712402344,
+          "meanAbsolute": 0.3091448216017155,
+          "maxRelative": 0.0784090432032271,
+          "meanRelative": 0.022526869044012694
+        },
+        "dark": {
+          "samples": 1530,
+          "maxAbsolute": 0.09176503121852875,
+          "meanAbsolute": 0.003435095739885678,
+          "maxRelative": 0.3864692790894497,
+          "meanRelative": 0.0533776703932864
+        }
+      }
+    },
+    {
+      "case": "odd",
+      "width": 33,
+      "height": 19,
+      "aov": false,
+      "inputScale": null,
+      "actual": [
+        "rust",
+        "wgpu",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 1881,
+          "maxAbsolute": 1.7710380554199219,
+          "meanAbsolute": 0.0601036531181292,
+          "maxRelative": 0.3857948843601649,
+          "meanRelative": 0.0476472288475547
+        },
+        "highlights": {
+          "samples": 351,
+          "maxAbsolute": 1.7710380554199219,
+          "meanAbsolute": 0.3071054882473416,
+          "maxRelative": 0.08209015724220413,
+          "meanRelative": 0.02260667149607052
+        },
+        "dark": {
+          "samples": 1530,
+          "maxAbsolute": 0.09167306125164032,
+          "meanAbsolute": 0.003438526235545188,
+          "maxRelative": 0.3857948843601649,
+          "meanRelative": 0.05339182729877755
+        }
+      }
+    },
+    {
+      "case": "odd",
+      "width": 33,
+      "height": 19,
+      "aov": false,
+      "inputScale": null,
+      "actual": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 1881,
+          "maxAbsolute": 0.4206657409667969,
+          "meanAbsolute": 0.013845344030994928,
+          "maxRelative": 0.021331429382764864,
+          "meanRelative": 0.0030852218534477647
+        },
+        "highlights": {
+          "samples": 351,
+          "maxAbsolute": 0.4206657409667969,
+          "meanAbsolute": 0.07368734147813585,
+          "maxRelative": 0.021331429382764864,
+          "meanRelative": 0.005581749631739706
+        },
+        "dark": {
+          "samples": 1530,
+          "maxAbsolute": 0.0014595240354537964,
+          "meanAbsolute": 0.00011688579312142204,
+          "maxRelative": 0.014179289569072388,
+          "meanRelative": 0.002512489010192555
+        }
+      }
+    },
+    {
+      "case": "odd",
+      "width": 33,
+      "height": 19,
+      "aov": false,
+      "inputScale": null,
+      "actual": [
+        "native",
+        "cpu",
+        "high"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 1881,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        },
+        "highlights": {
+          "samples": 351,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        },
+        "dark": {
+          "samples": 1530,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        }
+      }
+    },
+    {
+      "case": "odd",
+      "width": 33,
+      "height": 19,
+      "aov": false,
+      "inputScale": null,
+      "actual": [
+        "native",
+        "cuda",
+        "high"
+      ],
+      "reference": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 1881,
+          "maxAbsolute": 0.4232444763183594,
+          "meanAbsolute": 0.013071099767567375,
+          "maxRelative": 0.024258289428766053,
+          "meanRelative": 0.002976384872041959
+        },
+        "highlights": {
+          "samples": 351,
+          "maxAbsolute": 0.4232444763183594,
+          "meanAbsolute": 0.06954590887086004,
+          "maxRelative": 0.024258289428766053,
+          "meanRelative": 0.005228545588247985
+        },
+        "dark": {
+          "samples": 1530,
+          "maxAbsolute": 0.0015966445207595825,
+          "meanAbsolute": 0.00011511414975317475,
+          "maxRelative": 0.014451266355519982,
+          "meanRelative": 0.0024597127077358705
+        }
+      }
+    },
+    {
+      "case": "tiny",
+      "width": 8,
+      "height": 8,
+      "aov": false,
+      "inputScale": 1,
+      "actual": [
+        "rust",
+        "wgpu",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 192,
+          "maxAbsolute": 5.53131103515625e-05,
+          "meanAbsolute": 1.1434157689412435e-05,
+          "maxRelative": 8.172050404079713e-06,
+          "meanRelative": 1.7606425704288087e-06
+        },
+        "highlights": {
+          "samples": 192,
+          "maxAbsolute": 5.53131103515625e-05,
+          "meanAbsolute": 1.1434157689412435e-05,
+          "maxRelative": 8.172050404079713e-06,
+          "meanRelative": 1.7606425704288087e-06
+        },
+        "dark": {
+          "samples": 0,
+          "maxAbsolute": null,
+          "meanAbsolute": null,
+          "maxRelative": null,
+          "meanRelative": null
+        }
+      }
+    },
+    {
+      "case": "tiny",
+      "width": 8,
+      "height": 8,
+      "aov": false,
+      "inputScale": 1,
+      "actual": [
+        "rust",
+        "wgpu",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 192,
+          "maxAbsolute": 0.24339771270751953,
+          "meanAbsolute": 0.04018225582937399,
+          "maxRelative": 0.024185789194030353,
+          "meanRelative": 0.0058779828979707615
+        },
+        "highlights": {
+          "samples": 192,
+          "maxAbsolute": 0.24339771270751953,
+          "meanAbsolute": 0.04018225582937399,
+          "maxRelative": 0.024185789194030353,
+          "meanRelative": 0.0058779828979707615
+        },
+        "dark": {
+          "samples": 0,
+          "maxAbsolute": null,
+          "meanAbsolute": null,
+          "maxRelative": null,
+          "meanRelative": null
+        }
+      }
+    },
+    {
+      "case": "tiny",
+      "width": 8,
+      "height": 8,
+      "aov": false,
+      "inputScale": 1,
+      "actual": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 192,
+          "maxAbsolute": 0.24341106414794922,
+          "meanAbsolute": 0.040182444577415787,
+          "maxRelative": 0.02361591501805093,
+          "meanRelative": 0.005871448721569241
+        },
+        "highlights": {
+          "samples": 192,
+          "maxAbsolute": 0.24341106414794922,
+          "meanAbsolute": 0.040182444577415787,
+          "maxRelative": 0.02361591501805093,
+          "meanRelative": 0.005871448721569241
+        },
+        "dark": {
+          "samples": 0,
+          "maxAbsolute": null,
+          "meanAbsolute": null,
+          "maxRelative": null,
+          "meanRelative": null
+        }
+      }
+    },
+    {
+      "case": "tiny",
+      "width": 8,
+      "height": 8,
+      "aov": false,
+      "inputScale": 1,
+      "actual": [
+        "native",
+        "cpu",
+        "high"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 192,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        },
+        "highlights": {
+          "samples": 192,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        },
+        "dark": {
+          "samples": 0,
+          "maxAbsolute": null,
+          "meanAbsolute": null,
+          "maxRelative": null,
+          "meanRelative": null
+        }
+      }
+    },
+    {
+      "case": "tiny",
+      "width": 8,
+      "height": 8,
+      "aov": false,
+      "inputScale": 1,
+      "actual": [
+        "native",
+        "cuda",
+        "high"
+      ],
+      "reference": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 192,
+          "maxAbsolute": 0.20203495025634766,
+          "meanAbsolute": 0.037176514665285744,
+          "maxRelative": 0.02414503603828697,
+          "meanRelative": 0.005411681991028853
+        },
+        "highlights": {
+          "samples": 192,
+          "maxAbsolute": 0.20203495025634766,
+          "meanAbsolute": 0.037176514665285744,
+          "maxRelative": 0.02414503603828697,
+          "meanRelative": 0.005411681991028853
+        },
+        "dark": {
+          "samples": 0,
+          "maxAbsolute": null,
+          "meanAbsolute": null,
+          "maxRelative": null,
+          "meanRelative": null
+        }
+      }
+    },
+    {
+      "case": "tiny",
+      "width": 8,
+      "height": 8,
+      "aov": false,
+      "inputScale": 0.02,
+      "actual": [
+        "rust",
+        "wgpu",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 192,
+          "maxAbsolute": 3.528594970703125e-05,
+          "meanAbsolute": 6.136794884999593e-06,
+          "maxRelative": 3.240420834329544e-06,
+          "meanRelative": 9.136704787289457e-07
+        },
+        "highlights": {
+          "samples": 192,
+          "maxAbsolute": 3.528594970703125e-05,
+          "meanAbsolute": 6.136794884999593e-06,
+          "maxRelative": 3.240420834329544e-06,
+          "meanRelative": 9.136704787289457e-07
+        },
+        "dark": {
+          "samples": 0,
+          "maxAbsolute": null,
+          "meanAbsolute": null,
+          "maxRelative": null,
+          "meanRelative": null
+        }
+      }
+    },
+    {
+      "case": "tiny",
+      "width": 8,
+      "height": 8,
+      "aov": false,
+      "inputScale": 0.02,
+      "actual": [
+        "rust",
+        "wgpu",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 192,
+          "maxAbsolute": 0.1278514862060547,
+          "meanAbsolute": 0.018915558854738872,
+          "maxRelative": 0.012621217092333756,
+          "meanRelative": 0.002838489704124449
+        },
+        "highlights": {
+          "samples": 192,
+          "maxAbsolute": 0.1278514862060547,
+          "meanAbsolute": 0.018915558854738872,
+          "maxRelative": 0.012621217092333756,
+          "meanRelative": 0.002838489704124449
+        },
+        "dark": {
+          "samples": 0,
+          "maxAbsolute": null,
+          "meanAbsolute": null,
+          "maxRelative": null,
+          "meanRelative": null
+        }
+      }
+    },
+    {
+      "case": "tiny",
+      "width": 8,
+      "height": 8,
+      "aov": false,
+      "inputScale": 0.02,
+      "actual": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 192,
+          "maxAbsolute": 0.12786579132080078,
+          "meanAbsolute": 0.01891561597585678,
+          "maxRelative": 0.012783996915295925,
+          "meanRelative": 0.0028349281884267967
+        },
+        "highlights": {
+          "samples": 192,
+          "maxAbsolute": 0.12786579132080078,
+          "meanAbsolute": 0.01891561597585678,
+          "maxRelative": 0.012783996915295925,
+          "meanRelative": 0.0028349281884267967
+        },
+        "dark": {
+          "samples": 0,
+          "maxAbsolute": null,
+          "meanAbsolute": null,
+          "maxRelative": null,
+          "meanRelative": null
+        }
+      }
+    },
+    {
+      "case": "tiny",
+      "width": 8,
+      "height": 8,
+      "aov": false,
+      "inputScale": 0.02,
+      "actual": [
+        "native",
+        "cpu",
+        "high"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 192,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        },
+        "highlights": {
+          "samples": 192,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        },
+        "dark": {
+          "samples": 0,
+          "maxAbsolute": null,
+          "meanAbsolute": null,
+          "maxRelative": null,
+          "meanRelative": null
+        }
+      }
+    },
+    {
+      "case": "tiny",
+      "width": 8,
+      "height": 8,
+      "aov": false,
+      "inputScale": 0.02,
+      "actual": [
+        "native",
+        "cuda",
+        "high"
+      ],
+      "reference": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 192,
+          "maxAbsolute": 0.10321235656738281,
+          "meanAbsolute": 0.019792721917231876,
+          "maxRelative": 0.011021497658525583,
+          "meanRelative": 0.002936316676564517
+        },
+        "highlights": {
+          "samples": 192,
+          "maxAbsolute": 0.10321235656738281,
+          "meanAbsolute": 0.019792721917231876,
+          "maxRelative": 0.011021497658525583,
+          "meanRelative": 0.002936316676564517
+        },
+        "dark": {
+          "samples": 0,
+          "maxAbsolute": null,
+          "meanAbsolute": null,
+          "maxRelative": null,
+          "meanRelative": null
+        }
+      }
+    },
+    {
+      "case": "tiny",
+      "width": 8,
+      "height": 8,
+      "aov": false,
+      "inputScale": null,
+      "actual": [
+        "rust",
+        "wgpu",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 192,
+          "maxAbsolute": 3.218883514404297,
+          "meanAbsolute": 0.34480201328794163,
+          "maxRelative": 0.46605272414640136,
+          "meanRelative": 0.05241343522126555
+        },
+        "highlights": {
+          "samples": 192,
+          "maxAbsolute": 3.218883514404297,
+          "meanAbsolute": 0.34480201328794163,
+          "maxRelative": 0.46605272414640136,
+          "meanRelative": 0.05241343522126555
+        },
+        "dark": {
+          "samples": 0,
+          "maxAbsolute": null,
+          "meanAbsolute": null,
+          "maxRelative": null,
+          "meanRelative": null
+        }
+      }
+    },
+    {
+      "case": "tiny",
+      "width": 8,
+      "height": 8,
+      "aov": false,
+      "inputScale": null,
+      "actual": [
+        "rust",
+        "wgpu",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 192,
+          "maxAbsolute": 3.253830909729004,
+          "meanAbsolute": 0.3437697192033132,
+          "maxRelative": 0.4700865952429876,
+          "meanRelative": 0.05222899977735388
+        },
+        "highlights": {
+          "samples": 192,
+          "maxAbsolute": 3.253830909729004,
+          "meanAbsolute": 0.3437697192033132,
+          "maxRelative": 0.4700865952429876,
+          "meanRelative": 0.05222899977735388
+        },
+        "dark": {
+          "samples": 0,
+          "maxAbsolute": null,
+          "meanAbsolute": null,
+          "maxRelative": null,
+          "meanRelative": null
+        }
+      }
+    },
+    {
+      "case": "tiny",
+      "width": 8,
+      "height": 8,
+      "aov": false,
+      "inputScale": null,
+      "actual": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 192,
+          "maxAbsolute": 0.11227226257324219,
+          "meanAbsolute": 0.018684308975934982,
+          "maxRelative": 0.01121240151075886,
+          "meanRelative": 0.0026756661507463552
+        },
+        "highlights": {
+          "samples": 192,
+          "maxAbsolute": 0.11227226257324219,
+          "meanAbsolute": 0.018684308975934982,
+          "maxRelative": 0.01121240151075886,
+          "meanRelative": 0.0026756661507463552
+        },
+        "dark": {
+          "samples": 0,
+          "maxAbsolute": null,
+          "meanAbsolute": null,
+          "maxRelative": null,
+          "meanRelative": null
+        }
+      }
+    },
+    {
+      "case": "tiny",
+      "width": 8,
+      "height": 8,
+      "aov": false,
+      "inputScale": null,
+      "actual": [
+        "native",
+        "cpu",
+        "high"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 192,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        },
+        "highlights": {
+          "samples": 192,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        },
+        "dark": {
+          "samples": 0,
+          "maxAbsolute": null,
+          "meanAbsolute": null,
+          "maxRelative": null,
+          "meanRelative": null
+        }
+      }
+    },
+    {
+      "case": "tiny",
+      "width": 8,
+      "height": 8,
+      "aov": false,
+      "inputScale": null,
+      "actual": [
+        "native",
+        "cuda",
+        "high"
+      ],
+      "reference": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 192,
+          "maxAbsolute": 0.14221668243408203,
+          "meanAbsolute": 0.018344851831595104,
+          "maxRelative": 0.01436394385689399,
+          "meanRelative": 0.0026760934288215573
+        },
+        "highlights": {
+          "samples": 192,
+          "maxAbsolute": 0.14221668243408203,
+          "meanAbsolute": 0.018344851831595104,
+          "maxRelative": 0.01436394385689399,
+          "meanRelative": 0.0026760934288215573
+        },
+        "dark": {
+          "samples": 0,
+          "maxAbsolute": null,
+          "meanAbsolute": null,
+          "maxRelative": null,
+          "meanRelative": null
+        }
+      }
+    },
+    {
+      "case": "fine_aov",
+      "width": 33,
+      "height": 19,
+      "aov": true,
+      "inputScale": 1,
+      "actual": [
+        "rust",
+        "wgpu",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 1881,
+          "maxAbsolute": 0.9775581359863281,
+          "meanAbsolute": 0.04498465850965131,
+          "maxRelative": 0.2655116663906185,
+          "meanRelative": 0.020937137636494033
+        },
+        "highlights": {
+          "samples": 480,
+          "maxAbsolute": 0.9775581359863281,
+          "meanAbsolute": 0.17072992374499638,
+          "maxRelative": 0.07698030796564999,
+          "meanRelative": 0.012519585472012032
+        },
+        "dark": {
+          "samples": 1401,
+          "maxAbsolute": 0.03835362195968628,
+          "meanAbsolute": 0.0019027689215245203,
+          "maxRelative": 0.2655116663906185,
+          "meanRelative": 0.023821095551519986
+        }
+      }
+    },
+    {
+      "case": "fine_aov",
+      "width": 33,
+      "height": 19,
+      "aov": true,
+      "inputScale": 1,
+      "actual": [
+        "rust",
+        "wgpu",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 1881,
+          "maxAbsolute": 0.9528579711914062,
+          "meanAbsolute": 0.050424572822065,
+          "maxRelative": 0.2678754359329607,
+          "meanRelative": 0.021632332948661407
+        },
+        "highlights": {
+          "samples": 480,
+          "maxAbsolute": 0.9528579711914062,
+          "meanAbsolute": 0.1918935328722,
+          "maxRelative": 0.08244594610630654,
+          "meanRelative": 0.014066241565446733
+        },
+        "dark": {
+          "samples": 1401,
+          "maxAbsolute": 0.03499746322631836,
+          "meanAbsolute": 0.0019555501068153182,
+          "maxRelative": 0.2678754359329607,
+          "meanRelative": 0.024224569825137526
+        }
+      }
+    },
+    {
+      "case": "fine_aov",
+      "width": 33,
+      "height": 19,
+      "aov": true,
+      "inputScale": 1,
+      "actual": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 1881,
+          "maxAbsolute": 0.5632362365722656,
+          "meanAbsolute": 0.027562780581030486,
+          "maxRelative": 0.029219338807219362,
+          "meanRelative": 0.004147821094738151
+        },
+        "highlights": {
+          "samples": 480,
+          "maxAbsolute": 0.5632362365722656,
+          "meanAbsolute": 0.10714001605908076,
+          "maxRelative": 0.029219338807219362,
+          "meanRelative": 0.007507090801921189
+        },
+        "dark": {
+          "samples": 1401,
+          "maxAbsolute": 0.00626826286315918,
+          "meanAbsolute": 0.00029863138084195497,
+          "maxRelative": 0.026241729392732352,
+          "meanRelative": 0.0029968935719345397
+        }
+      }
+    },
+    {
+      "case": "fine_aov",
+      "width": 33,
+      "height": 19,
+      "aov": true,
+      "inputScale": 1,
+      "actual": [
+        "native",
+        "cpu",
+        "high"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 1881,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        },
+        "highlights": {
+          "samples": 480,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        },
+        "dark": {
+          "samples": 1401,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        }
+      }
+    },
+    {
+      "case": "fine_aov",
+      "width": 33,
+      "height": 19,
+      "aov": true,
+      "inputScale": 1,
+      "actual": [
+        "native",
+        "cuda",
+        "high"
+      ],
+      "reference": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 1881,
+          "maxAbsolute": 0.7431011199951172,
+          "meanAbsolute": 0.027365438229167226,
+          "maxRelative": 0.032308771220185654,
+          "meanRelative": 0.004160946493386784
+        },
+        "highlights": {
+          "samples": 480,
+          "maxAbsolute": 0.7431011199951172,
+          "meanAbsolute": 0.1063542420665423,
+          "maxRelative": 0.032308771220185654,
+          "meanRelative": 0.007496509057899916
+        },
+        "dark": {
+          "samples": 1401,
+          "maxAbsolute": 0.00591886043548584,
+          "meanAbsolute": 0.0003028930172185911,
+          "maxRelative": 0.02664165890762939,
+          "meanRelative": 0.0030181413320974886
+        }
+      }
+    },
+    {
+      "case": "fine_aov",
+      "width": 33,
+      "height": 19,
+      "aov": true,
+      "inputScale": 0.02,
+      "actual": [
+        "rust",
+        "wgpu",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 1881,
+          "maxAbsolute": 4.665126800537109,
+          "meanAbsolute": 0.1983189496827143,
+          "maxRelative": 0.5093481502165333,
+          "meanRelative": 0.07301055710533376
+        },
+        "highlights": {
+          "samples": 480,
+          "maxAbsolute": 4.665126800537109,
+          "meanAbsolute": 0.7388032833735149,
+          "maxRelative": 0.21873669713284086,
+          "meanRelative": 0.054677849588108104
+        },
+        "dark": {
+          "samples": 1401,
+          "maxAbsolute": 0.27767783403396606,
+          "meanAbsolute": 0.013142304306851166,
+          "maxRelative": 0.5093481502165333,
+          "meanRelative": 0.07929157038746673
+        }
+      }
+    },
+    {
+      "case": "fine_aov",
+      "width": 33,
+      "height": 19,
+      "aov": true,
+      "inputScale": 0.02,
+      "actual": [
+        "rust",
+        "wgpu",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 1881,
+          "maxAbsolute": 4.656581878662109,
+          "meanAbsolute": 0.1992638302993689,
+          "maxRelative": 0.509467669186356,
+          "meanRelative": 0.07298556700514285
+        },
+        "highlights": {
+          "samples": 480,
+          "maxAbsolute": 4.656581878662109,
+          "meanAbsolute": 0.7425823907057444,
+          "maxRelative": 0.2182486045405622,
+          "meanRelative": 0.05503923793167468
+        },
+        "dark": {
+          "samples": 1401,
+          "maxAbsolute": 0.2803747057914734,
+          "meanAbsolute": 0.013116143650503604,
+          "maxRelative": 0.509467669186356,
+          "meanRelative": 0.07913420223374008
+        }
+      }
+    },
+    {
+      "case": "fine_aov",
+      "width": 33,
+      "height": 19,
+      "aov": true,
+      "inputScale": 0.02,
+      "actual": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 1881,
+          "maxAbsolute": 0.38899803161621094,
+          "meanAbsolute": 0.013587764680191503,
+          "maxRelative": 0.021426992083212925,
+          "meanRelative": 0.003478649043750848
+        },
+        "highlights": {
+          "samples": 480,
+          "maxAbsolute": 0.38899803161621094,
+          "meanAbsolute": 0.05212239821751912,
+          "maxRelative": 0.02040384092073249,
+          "meanRelative": 0.003771254166444894
+        },
+        "dark": {
+          "samples": 1401,
+          "maxAbsolute": 0.009374022483825684,
+          "meanAbsolute": 0.00038532064170666375,
+          "maxRelative": 0.021426992083212925,
+          "meanRelative": 0.0033783988946479624
+        }
+      }
+    },
+    {
+      "case": "fine_aov",
+      "width": 33,
+      "height": 19,
+      "aov": true,
+      "inputScale": 0.02,
+      "actual": [
+        "native",
+        "cpu",
+        "high"
+      ],
+      "reference": [
+        "native",
+        "cpu",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 1881,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        },
+        "highlights": {
+          "samples": 480,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        },
+        "dark": {
+          "samples": 1401,
+          "maxAbsolute": 0.0,
+          "meanAbsolute": 0.0,
+          "maxRelative": 0.0,
+          "meanRelative": 0.0
+        }
+      }
+    },
+    {
+      "case": "fine_aov",
+      "width": 33,
+      "height": 19,
+      "aov": true,
+      "inputScale": 0.02,
+      "actual": [
+        "native",
+        "cuda",
+        "high"
+      ],
+      "reference": [
+        "native",
+        "cuda",
+        "balanced"
+      ],
+      "metrics": {
+        "all": {
+          "samples": 1881,
+          "maxAbsolute": 0.3809852600097656,
+          "meanAbsolute": 0.013062288850973668,
+          "maxRelative": 0.02131545056764794,
+          "meanRelative": 0.0034174940361596418
+        },
+        "highlights": {
+          "samples": 480,
+          "maxAbsolute": 0.3809852600097656,
+          "meanAbsolute": 0.05008291651805242,
+          "maxRelative": 0.020399786632852555,
+          "meanRelative": 0.0036274990707548093
+        },
+        "dark": {
+          "samples": 1401,
+          "maxAbsolute": 0.009601771831512451,
+          "meanAbsolute": 0.00037856202713512334,
+          "maxRelative": 0.02131545056764794,
+          "meanRelative": 0.0033455437031077646
+        }
+      }
+    }
+  ]
+}

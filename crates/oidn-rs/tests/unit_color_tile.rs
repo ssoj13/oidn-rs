@@ -49,7 +49,8 @@ fn tile_plan_covers_small_image() {
         tile::RECEPTIVE_FIELD_BASE,
         tile::MIN_TILE_ALIGNMENT,
         tile::DEFAULT_MAX_TILE_SIZE,
-    );
+    )
+    .unwrap();
     assert_eq!(p.jobs.len(), 1, "256x256 should fit in one tile");
     let job = p.jobs[0];
     assert_eq!(job.output_dst.x, 0);
@@ -60,15 +61,16 @@ fn tile_plan_covers_small_image() {
 
 #[test]
 fn tile_plan_covers_4k() {
-    // 3840×2160 is a single tile under the default 2160² budget (after rounding).
+    // 3840×2160 exceeds the default budget and must be stitched from multiple tiles.
     let p = tile::plan(
         3840,
         2160,
         tile::RECEPTIVE_FIELD_BASE,
         tile::MIN_TILE_ALIGNMENT,
         tile::DEFAULT_MAX_TILE_SIZE,
-    );
-    let total = oidn_rs::tile::total_output_pixels(&p);
+    )
+    .unwrap();
+    let total = oidn_rs::tile::total_output_pixels(&p).unwrap();
     assert_eq!(
         total,
         3840i64 * 2160,
@@ -84,7 +86,8 @@ fn tile_plan_covers_1024() {
         tile::RECEPTIVE_FIELD_BASE,
         tile::MIN_TILE_ALIGNMENT,
         tile::DEFAULT_MAX_TILE_SIZE,
-    );
-    let total = oidn_rs::tile::total_output_pixels(&p);
+    )
+    .unwrap();
+    let total = oidn_rs::tile::total_output_pixels(&p).unwrap();
     assert_eq!(total, 1024i64 * 1024);
 }

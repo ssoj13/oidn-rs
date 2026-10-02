@@ -1,0 +1,71 @@
+{
+  "date": "2026-10-02",
+  "reference": {
+    "path": "D:/Projects/vfx.ref/oidn",
+    "commit": "f7ae1bf07b3201aaa8cfe04d71f5243f8e0f2bb7",
+    "tag": "v2.5.0",
+    "clean": true,
+    "applicableAgensFiles": [],
+    "weightsGitlink": "28883d1769d5930e13cf7f1676dd852bd81ed9e7"
+  },
+  "acquisitionCommands": [
+    [
+      "gh",
+      "release",
+      "download",
+      "v2.5.0",
+      "--repo",
+      "RenderKit/oidn",
+      "--pattern",
+      "oidn-2.5.0.x64.windows.zip",
+      "--dir",
+      "bughunt/native-verification"
+    ],
+    [
+      "git",
+      "clone",
+      "--no-checkout",
+      "https://github.com/RenderKit/oidn-weights.git",
+      "bughunt/native-verification/oidn-weights"
+    ],
+    [
+      "git",
+      "checkout",
+      "--detach",
+      "28883d1769d5930e13cf7f1676dd852bd81ed9e7"
+    ]
+  ],
+  "release": {
+    "url": "https://github.com/RenderKit/oidn/releases/download/v2.5.0/oidn-2.5.0.x64.windows.zip",
+    "size": 56062809,
+    "sha256": "6ae0474ef7606d68647c1e2c2842832d6af01128ee84a523d30368a91013b707"
+  },
+  "runtime": {
+    "root": "runtime/oidn-2.5.0.x64.windows",
+    "exeSHA256": "f2fd4af5433aaa571cdef664d1cc84293bc947387420c987a70bf60d925edd9d",
+    "apiDLLSHA256": "26d81b0dc6062a0620e4a80eb31f5def6a69e873746f39bfd15179691c5b4616",
+    "versionObserved": "2.5.0",
+    "devices": [
+      "NVIDIA GeForce RTX3080Ti CUDA SM8.6",
+      "AMD Ryzen9 5900X CPU AVX2"
+    ],
+    "helpExitCode": 1,
+    "listDevicesExitCode": 0,
+    "CPUandCUDASmokeExitCode": 0
+  },
+  "weights": {
+    "count": 23,
+    "allSHA256AndSizeEqual": true,
+    "evidence": "weight_hashes.json"
+  },
+  "toolchain": {
+    "cmake": "C:/Programs/Ntutil/apps/prog/tools/cmake/bin/cmake.exe",
+    "cl": "C:/Programs/Vs/23/VC/Tools/MSVC/14.44.35207/bin/HostX64/x64/cl.exe",
+    "nativeBuildNeeded": false
+  },
+  "boundaries": [
+    "Native smoke validates executable/model readiness only; no claim of Rust/native numerical parity or user scene reproduction",
+    "Existing reference tracked source/submodule not changed",
+    "Official release observed version matches checkout, not source-rebuilt binary attestation"
+  ]
+}

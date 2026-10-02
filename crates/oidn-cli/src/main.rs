@@ -1,21 +1,43 @@
 //! `oidn-rs` — command-line denoiser using the oidn-rs library.
 
 mod io;
+pub mod support;
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+use burn::tensor::Device;
 use clap::{ArgAction, Args, Parser, Subcommand, ValueEnum};
+use io::Encoding;
 use oidn_rs::prelude::wgpu_prelude::*;
 use oidn_rs::prelude::*;
-use oidn_rs::registry::select_rt;
-use oidn_rs::weights;
+use oidn_rs::weights::SourcePolicy;
 
 #[derive(Parser, Debug)]
 #[command(name = "oidn-rs", version, about = "Pure Rust port of Intel OIDN")]
 struct Cli {
+    /// Execution backend; CPU never initializes a GPU.
+    #[arg(long, global = true, value_enum, default_value_t = DeviceChoice::Wgpu)]
+    device: DeviceChoice,
     #[command(subcommand)]
     cmd: Cmd,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
+enum DeviceChoice {
+    Cpu,
+    Wgpu,
+}
+
+impl DeviceChoice {
+    fn create(self) -> Result<Device, support::Error> {
+        let device = match self {
+            Self::Cpu => Device::ndarray(),
+            Self::Wgpu => WgpuDevice::new()?.handle,
+        };
+        tracing::info!("backend: {:?}", self);
+        Ok(device)
+    }
 }
 
 #[derive(Subcommand, Debug)]
@@ -31,7 +53,7 @@ enum Cmd {
     },
 
     /// Denoise an image (EXR / PFM / PHM / HDR / TIFF / PNG / JPG / BMP).
-    Denoise(DenoiseArgs),
+    Denoise(Box<DenoiseArgs>),
 
     /// Benchmark denoising throughput on a synthetic HDR scene.
     Bench {
@@ -89,14 +111,14 @@ struct DenoiseArgs {
     normal: Option<PathBuf>,
 
     /// Input is HDR — PU transfer + autoexposure.
-    #[arg(long, action = ArgAction::SetTrue, conflicts_with = "srgb")]
+    #[arg(long, action = ArgAction::SetTrue, conflicts_with_all = ["srgb", "ldr"])]
     hdr: bool,
 
     /// Input is LDR (linear in [0, 1]).
     #[arg(long, action = ArgAction::SetTrue, conflicts_with = "hdr")]
     ldr: bool,
 
-    /// Input already in sRGB (skip the linear→sRGB conversion before display).
+    /// LDR color buffer stays sRGB; albedo is decoded independently and normals stay numeric.
     #[arg(long, action = ArgAction::SetTrue)]
     srgb: bool,
 
@@ -138,8 +160,8 @@ struct DenoiseArgs {
     #[arg(long)]
     threads: Option<u32>,
 
-    /// Maximum memory budget in MB; routed to `RtFilterBuilder::max_memory_mb`.
-    #[arg(long)]
+    /// Maximum memory budget in MB for either family; negative disables the limit.
+    #[arg(long, allow_negative_numbers = true)]
     maxmem: Option<i32>,
 
     /// Re-run the filter N times for hash-stability checks. Default 1.
@@ -194,7 +216,7 @@ fn tracing_subscriber_init(verbose: Option<u8>) {
 fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
     match cli.cmd {
         Cmd::Probe { path, json } => probe(&path, json),
-        Cmd::Denoise(args) => denoise(args),
+        Cmd::Denoise(args) => denoise(*args, cli.device),
         Cmd::Bench {
             resolution,
             iters,
@@ -202,10 +224,13 @@ fn run(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
             weights_dir,
             threads,
         } => {
-            if threads.is_some() {
-                tracing::info!("--threads is a no-op on the wgpu backend");
+            if threads == Some(0) {
+                return Err("--threads must be positive".into());
             }
-            bench(&resolution, iters, quality, &weights_dir)
+            if threads.is_some() {
+                tracing::info!("--threads is not supported by this frontend");
+            }
+            bench(&resolution, iters, quality, &weights_dir, cli.device)
         }
         Cmd::ListDevices => list_devices(),
     }
@@ -219,17 +244,14 @@ fn probe(path: &Path, json: bool) -> Result<(), Box<dyn std::error::Error>> {
     }
     for (name, t) in &tensors {
         if json {
-            // Hand-rolled JSON to avoid a serde_json dep for one trivial use.
-            let dims = t
-                .desc
-                .dims
-                .iter()
-                .map(|d| d.to_string())
-                .collect::<Vec<_>>()
-                .join(",");
             println!(
-                "{{\"name\":\"{name}\",\"dims\":[{dims}],\"layout\":\"{:?}\",\"dtype\":\"{:?}\"}}",
-                t.desc.layout, t.desc.dtype
+                "{}",
+                serde_json::json!({
+                    "name": name,
+                    "dims": t.desc.dims,
+                    "layout": format!("{:?}", t.desc.layout),
+                    "dtype": format!("{:?}", t.desc.dtype),
+                })
             );
         } else {
             println!(
@@ -241,52 +263,74 @@ fn probe(path: &Path, json: bool) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn denoise(args: DenoiseArgs) -> Result<(), Box<dyn std::error::Error>> {
-    // ---- argument validation (matches oidnDenoise.cpp:121-130 contract) ----
-    if !args.hdr && !args.ldr {
-        return Err(
-            "must specify one of --hdr or --ldr (matches reference oidnDenoise behaviour)".into(),
-        );
+fn validate(args: &DenoiseArgs) -> Result<(), support::Error> {
+    if args.iters == 0 {
+        return Err("--iters must be positive".into());
+    }
+    if args.input_scale.is_some_and(|v| !v.is_finite() || v <= 0.0) {
+        return Err("--input-scale must be finite and positive".into());
+    }
+    if args.maxerror.is_some_and(|v| !v.is_finite() || v < 0.0) {
+        return Err("--maxerror must be finite and nonnegative".into());
+    }
+    if args.maxerror.is_some() && args.reference.is_none() {
+        return Err("--maxerror requires --ref".into());
+    }
+    if args.threads == Some(0) {
+        return Err("--threads must be positive".into());
+    }
+    if args.filter == FilterKind::Rt {
+        if !args.hdr && !args.ldr {
+            return Err("RT requires one of --hdr or --ldr".into());
+        }
+        if args.directional {
+            return Err("--directional requires --filter RTLightmap".into());
+        }
+    } else {
+        if args.ldr || args.srgb {
+            return Err("RTLightmap is intrinsically HDR (or signed directional); --ldr/--srgb are unsupported".into());
+        }
+        if args.albedo.is_some() || args.normal.is_some() || args.clean_aux {
+            return Err("RTLightmap does not accept auxiliary images".into());
+        }
     }
     if args.clean_aux && (args.albedo.is_none() || args.normal.is_none()) {
-        return Err("--clean_aux requires both --albedo and --normal".into());
+        return Err("--clean-aux requires both --albedo and --normal".into());
     }
-    if args.filter == FilterKind::RtLightmap && (args.albedo.is_some() || args.normal.is_some()) {
-        return Err("--filter RTLightmap does not accept --albedo / --normal".into());
-    }
-    if args.threads.is_some() {
-        tracing::info!("--threads is a no-op on the wgpu backend");
-    }
+    Ok(())
+}
 
-    let device = WgpuDevice::new()?;
-
-    let (color_pixels, w, h) = io::load_rgb_f32(&args.input)?;
-    let albedo_pixels = args.albedo.as_deref().map(io::load_rgb_f32).transpose()?;
-    let normal_pixels = args.normal.as_deref().map(io::load_rgb_f32).transpose()?;
-
-    // Resolve weights: explicit blob > weights_dir > embedded fallback.
-    let user_weights: Option<Vec<u8>> = if let Some(p) = args.weights.as_deref() {
-        Some(std::fs::read(p)?)
-    } else if args.filter == FilterKind::Rt {
-        let base = select_rt(
-            true,
-            albedo_pixels.is_some(),
-            normal_pixels.is_some(),
-            args.hdr,
-            args.srgb,
-            args.clean_aux,
-            args.quality,
-        )?;
-        weights::resolve(&base, args.quality, args.weights_dir.as_deref()).map(|(stem, bytes)| {
-            tracing::info!("resolved model stem `{stem}` ({} bytes)", bytes.len());
-            bytes
-        })
+fn encoding(args: &DenoiseArgs) -> Encoding {
+    if args.directional {
+        Encoding::Data
+    } else if args.srgb {
+        Encoding::Srgb
     } else {
-        // RTLightmap: explicit blob handled in the `if let Some(...)` arm
-        // above; otherwise the filter resolves its weights from
-        // `weights_dir` at commit time.
-        None
-    };
+        Encoding::Linear
+    }
+}
+
+fn denoise(args: DenoiseArgs, backend: DeviceChoice) -> Result<(), Box<dyn std::error::Error>> {
+    validate(&args)?;
+    if args.threads.is_some() {
+        tracing::info!("--threads is not supported by this frontend");
+    }
+    let device = backend.create()?;
+
+    let (color_pixels, w, h) = io::load_rgb_f32(&args.input, encoding(&args))?;
+    let albedo_pixels = args
+        .albedo
+        .as_deref()
+        .map(|p| io::load_rgb_f32(p, Encoding::Linear))
+        .transpose()?;
+    let normal_pixels = args
+        .normal
+        .as_deref()
+        .map(|p| io::load_rgb_f32(p, Encoding::Data))
+        .transpose()?;
+
+    // Ordinary model selection belongs to the filter's shared resolver.
+    let user_weights = args.weights.as_deref().map(std::fs::read).transpose()?;
     let weights_dir = args
         .weights_dir
         .clone()
@@ -298,44 +342,42 @@ fn denoise(args: DenoiseArgs) -> Result<(), Box<dyn std::error::Error>> {
             &weights_dir,
             user_weights,
             &args,
-            &color_pixels,
+            (&color_pixels, w, h),
             albedo_pixels.as_ref(),
             normal_pixels.as_ref(),
-            w,
-            h,
         )?,
         FilterKind::RtLightmap => run_rtlightmap(
             &device,
             &weights_dir,
             user_weights,
             &args,
-            &color_pixels,
-            w,
-            h,
+            (&color_pixels, w, h),
         )?,
     }
 
     Ok(())
 }
 
-#[allow(clippy::too_many_arguments)]
 fn run_rt(
-    device: &WgpuDevice,
+    device: &Device,
     weights_dir: &Path,
     user_weights: Option<Vec<u8>>,
     args: &DenoiseArgs,
-    color: &[f32],
-    albedo: Option<&(Vec<f32>, usize, usize)>,
-    normal: Option<&(Vec<f32>, usize, usize)>,
-    w: usize,
-    h: usize,
+    (color, w, h): (&[f32], usize, usize),
+    albedo: Option<&io::RgbImage>,
+    normal: Option<&io::RgbImage>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let mut builder = RtFilter::builder(&device.handle, weights_dir)
+    let mut builder = RtFilter::builder(device, weights_dir)
         .hdr(args.hdr)
         .srgb(args.srgb)
         .clean_aux(args.clean_aux)
         .quality(args.quality)
-        .input_scale(args.input_scale);
+        .input_scale(args.input_scale)
+        .weight_source(if args.weights_dir.is_some() {
+            SourcePolicy::DiskFirst
+        } else {
+            SourcePolicy::EmbeddedFirst
+        });
     if let Some(mb) = args.maxmem {
         builder = builder.max_memory_mb(mb);
     }
@@ -345,78 +387,95 @@ fn run_rt(
     let mut filter = builder.build();
 
     let color_img = Image::from_rgb_f32(color, w, h);
-    filter.set_color(&color_img);
+    filter.set_color(&color_img)?;
 
     let albedo_img = albedo.map(|(buf, w, h)| Image::from_rgb_f32(buf, *w, *h));
     if let Some(img) = &albedo_img {
-        filter.set_albedo(img);
+        filter.set_albedo(img)?;
     }
     let normal_img = normal.map(|(buf, w, h)| Image::from_rgb_f32(buf, *w, *h));
     if let Some(img) = &normal_img {
-        filter.set_normal(img);
+        filter.set_normal(img)?;
     }
 
-    filter.allocate_output(w, h, PixelFormat::Rgb32f);
+    filter.allocate_output(w, h, PixelFormat::Rgb32f)?;
     filter.commit()?;
     if let Some(k) = filter.model_key() {
         tracing::info!("model: {}", k.0);
     }
 
-    for i in 0..args.iters.max(1) {
+    for i in 0..args.iters {
         let t0 = std::time::Instant::now();
         filter.execute()?;
         tracing::info!("iter {}: {:.2} ms", i, t0.elapsed().as_secs_f64() * 1000.0);
     }
 
-    let (raw, ow, oh, fmt) = filter.take_output().ok_or("no output")?;
-    debug_assert_eq!(fmt, PixelFormat::Rgb32f);
-    let out_pixels: &[f32] = bytemuck::cast_slice(&raw);
-    io::save_rgb_f32(&args.output, out_pixels, ow, oh)?;
-
-    if let Some(ref_path) = args.reference.as_deref() {
-        compare_against_reference(ref_path, out_pixels, ow, oh, args.maxerror)?;
-    }
-
-    eprintln!("wrote {}", args.output.display());
-    Ok(())
+    let output = filter.take_output().ok_or("no output")?;
+    save_output(args, output)
 }
 
 fn run_rtlightmap(
-    device: &WgpuDevice,
+    device: &Device,
     weights_dir: &Path,
     user_weights: Option<Vec<u8>>,
     args: &DenoiseArgs,
-    color: &[f32],
-    w: usize,
-    h: usize,
+    (color, w, h): (&[f32], usize, usize),
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let mut builder = RtLightmapFilter::builder(&device.handle, weights_dir)
+    let mut builder = RtLightmapFilter::builder(device, weights_dir)
         .directional(args.directional)
         .quality(args.quality)
-        .input_scale(args.input_scale);
+        .input_scale(args.input_scale)
+        .weight_source(if args.weights_dir.is_some() {
+            SourcePolicy::DiskFirst
+        } else {
+            SourcePolicy::EmbeddedFirst
+        });
+    if let Some(mb) = args.maxmem {
+        builder = builder.max_memory_mb(mb);
+    }
     if let Some(bytes) = user_weights {
         builder = builder.weights(bytes);
     }
     let mut filter = builder.build();
 
     let color_img = Image::from_rgb_f32(color, w, h);
-    filter.set_color(&color_img);
-    filter.allocate_output(w, h, PixelFormat::Rgb32f);
+    filter.set_color(&color_img)?;
+    filter.allocate_output(w, h, PixelFormat::Rgb32f)?;
     filter.commit()?;
     if let Some(k) = filter.model_key() {
         tracing::info!("model: {}", k.0);
     }
-    for i in 0..args.iters.max(1) {
+    for i in 0..args.iters {
         let t0 = std::time::Instant::now();
         filter.execute()?;
         tracing::info!("iter {}: {:.2} ms", i, t0.elapsed().as_secs_f64() * 1000.0);
     }
-    let (raw, ow, oh, fmt) = filter.take_output().ok_or("no output")?;
-    debug_assert_eq!(fmt, PixelFormat::Rgb32f);
-    let out_pixels: &[f32] = bytemuck::cast_slice(&raw);
-    io::save_rgb_f32(&args.output, out_pixels, ow, oh)?;
-    if let Some(ref_path) = args.reference.as_deref() {
-        compare_against_reference(ref_path, out_pixels, ow, oh, args.maxerror)?;
+    let output = filter.take_output().ok_or("no output")?;
+    save_output(args, output)
+}
+
+fn save_output(
+    args: &DenoiseArgs,
+    (raw, w, h, format): (Vec<u8>, usize, usize, PixelFormat),
+) -> Result<(), support::Error> {
+    if format != PixelFormat::Rgb32f
+        || raw.len()
+            != support::samples(w, h, 3)?
+                .checked_mul(4)
+                .ok_or("output byte length overflow")?
+    {
+        return Err("filter returned an invalid RGB32f output".into());
+    }
+    let pixels: Vec<f32> = raw
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .copied()
+        .map(f32::from_ne_bytes)
+        .collect();
+    io::save_rgb_f32(&args.output, &pixels, w, h, encoding(args))?;
+    if let Some(reference) = args.reference.as_deref() {
+        compare_against_reference(reference, &pixels, w, h, args.maxerror, encoding(args))?;
     }
     eprintln!("wrote {}", args.output.display());
     Ok(())
@@ -428,31 +487,19 @@ fn compare_against_reference(
     w: usize,
     h: usize,
     maxerror: Option<f32>,
+    encoding: Encoding,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let (ref_pixels, rw, rh) = io::load_rgb_f32(ref_path)?;
+    let (ref_pixels, rw, rh) = io::load_rgb_f32(ref_path, encoding)?;
     if rw != w || rh != h {
         return Err(format!("reference image is {rw}x{rh}, output is {w}x{h}",).into());
     }
-    let mut sse = 0.0f64;
-    let mut maxe = 0.0f32;
-    for (a, b) in out_pixels.iter().zip(ref_pixels.iter()) {
-        let d = a - b;
-        sse += (d * d) as f64;
-        if d.abs() > maxe {
-            maxe = d.abs();
-        }
-    }
-    let mse = (sse / out_pixels.len() as f64) as f32;
-    let psnr = if mse > 0.0 {
-        10.0 * (1.0 / mse).log10()
-    } else {
-        f32::INFINITY
-    };
-    println!("compare: mse={mse:.6e} psnr={psnr:.2} dB max={maxe:.6e}");
-    if let Some(thr) = maxerror {
-        if mse > thr {
-            return Err(format!("MSE {mse:.6e} exceeds --maxerror {thr:.6e}").into());
-        }
+    let metrics = support::metrics(out_pixels, &ref_pixels)?;
+    let mse = metrics.mse;
+    let maxe = metrics.max_error;
+    let psnr = metrics.psnr(1.0)?;
+    println!("compare: mse={mse:.6e} psnr={psnr:.2} dB (peak=1) max={maxe:.6e}");
+    if maxerror.is_some_and(|threshold| mse > f64::from(threshold)) {
+        return Err(format!("MSE {mse:.6e} exceeds --maxerror").into());
     }
     Ok(())
 }
@@ -471,10 +518,7 @@ fn parse_quality_clap(s: &str) -> Result<Quality, String> {
 }
 
 fn parse_resolution(s: &str) -> Result<(usize, usize), Box<dyn std::error::Error>> {
-    let (w, h) = s
-        .split_once('x')
-        .ok_or("resolution must be WxH (e.g. 1024x1024)")?;
-    Ok((w.parse()?, h.parse()?))
+    support::resolution(s)
 }
 
 fn list_devices() -> Result<(), Box<dyn std::error::Error>> {
@@ -502,36 +546,33 @@ fn bench(
     iters: u32,
     quality: Quality,
     weights_dir: &Path,
+    backend: DeviceChoice,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let (w, h) = parse_resolution(resolution)?;
-    let device = WgpuDevice::new()?;
-
-    // Generate a deterministic noisy HDR image.
-    let mut color = vec![0.0f32; w * h * 3];
-    for y in 0..h {
-        for x in 0..w {
-            let v = 0.5 + 0.3 * ((x + y) as f32 / (w + h) as f32);
-            let n = ((x * 17 + y * 31) % 19) as f32 * 0.04;
-            let i = (y * w + x) * 3;
-            color[i] = v + n;
-            color[i + 1] = v + n * 0.7;
-            color[i + 2] = v + n * 0.4;
-        }
+    if iters == 0 {
+        return Err("--iters must be positive".into());
     }
+    let (w, h) = parse_resolution(resolution)?;
+    let device = backend.create()?;
+
+    let color = support::add_noise(&support::make_clean(w, h)?, 0.12)?;
     let color_img = Image::from_rgb_f32(&color, w, h);
 
-    let mut filter = RtFilter::builder(&device.handle, weights_dir)
+    let mut filter = RtFilter::builder(&device, weights_dir)
         .hdr(true)
         .quality(quality)
+        .weight_source(SourcePolicy::DiskFirst)
         .build();
-    filter.set_color(&color_img);
-    filter.allocate_output(w, h, PixelFormat::Rgb32f);
+    filter.set_color(&color_img)?;
+    filter.allocate_output(w, h, PixelFormat::Rgb32f)?;
     filter.commit()?;
 
     eprintln!(
         "bench: {w}x{h}, quality={:?}, model={}",
         quality,
-        filter.model_key().unwrap().0
+        filter
+            .model_key()
+            .map(|k| k.0.as_str())
+            .unwrap_or("<unknown>")
     );
 
     // Warm-up run (excluded from timing — wgpu pipeline + shader compile
@@ -546,7 +587,7 @@ fn bench(
         times_ms.push(dt.as_secs_f64() * 1000.0);
     }
 
-    times_ms.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    times_ms.sort_by(f64::total_cmp);
     let min = times_ms.first().copied().unwrap_or(0.0);
     let max = times_ms.last().copied().unwrap_or(0.0);
     let avg: f64 = times_ms.iter().sum::<f64>() / times_ms.len() as f64;
@@ -561,4 +602,47 @@ fn bench(
     println!("  throughput @ median: {:.2} MP/s", mp / (med / 1000.0));
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn args(extra: &[&str]) -> DenoiseArgs {
+        let mut argv = vec!["oidn-rs", "denoise", "-i", "in.pfm", "-o", "out.pfm"];
+        argv.extend_from_slice(extra);
+        let Cmd::Denoise(args) = Cli::try_parse_from(argv).unwrap().cmd else {
+            panic!("denoise command");
+        };
+        *args
+    }
+    #[test]
+    fn family_validation_and_invalid_quality_gates_precede_gpu_work() {
+        assert!(validate(&args(&["--hdr"])).is_ok());
+        assert!(validate(&args(&["--hdr", "--maxmem", "-1"])).is_ok());
+        assert_eq!(
+            Cli::try_parse_from(["oidn-rs", "--device", "cpu", "bench"])
+                .unwrap()
+                .device,
+            DeviceChoice::Cpu
+        );
+        assert_eq!(
+            Cli::try_parse_from(["oidn-rs", "bench", "--device", "cpu"])
+                .unwrap()
+                .device,
+            DeviceChoice::Cpu
+        );
+        assert!(validate(&args(&["--filter", "RTLightmap"])).is_ok());
+        assert!(validate(&args(&["--hdr", "--dir"])).is_err());
+        assert!(validate(&args(&["--filter", "RTLightmap", "--ldr"])).is_err());
+        assert!(validate(&args(&["--hdr", "--iters", "0"])).is_err());
+        assert!(validate(&args(&["--hdr", "--input-scale", "NaN"])).is_err());
+        assert!(validate(&args(&["--hdr", "--maxerror", "NaN", "--ref", "ref.pfm"])).is_err());
+        assert!(validate(&args(&["--hdr", "--maxerror", "1"])).is_err());
+        assert!(
+            Cli::try_parse_from([
+                "oidn-rs", "denoise", "-i", "in.pfm", "-o", "out.pfm", "--hdr", "--ldr"
+            ])
+            .is_err()
+        );
+    }
 }

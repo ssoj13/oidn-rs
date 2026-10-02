@@ -19,7 +19,9 @@ pub enum Variant {
 }
 
 impl Variant {
-    /// Detect the variant from a TZA tensor map.
+    /// Detect the topology family from names only (Base or Large).
+    /// This cannot distinguish Small/XL widths; use `ModelDescriptor::from_tza`
+    /// to infer a complete executable variant and validate its channel edges.
     ///
     /// Logic mirrors `_ref/oidn/core/unet_filter.cpp:263`:
     /// presence of `enc_conv1b.weight` ⇒ `Large` (or XL — same topology,
@@ -34,7 +36,7 @@ impl Variant {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ChannelConfig {
     pub ec1: usize,
     pub ec2: usize,

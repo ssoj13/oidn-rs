@@ -1,0 +1,9 @@
+Diff in \\?\C:\projects\projects.rust.cg\cglibs\oidn-rs\crates\oidn-rs\src\tile.rs:6:
+ //! receptive-field overlap.
+ 
+ /// Network geometry constants shared with the validated model descriptor.
+[31m-pub use oidn_model::{RECEPTIVE_FIELD_BASE, RECEPTIVE_FIELD_LARGE, MIN_TILE_ALIGNMENT};
+[0m[32m+pub use oidn_model::{MIN_TILE_ALIGNMENT, RECEPTIVE_FIELD_BASE, RECEPTIVE_FIELD_LARGE};
+[0m /// Default upper bound on tile pixel count (`_ref/oidn/core/unet_filter.h:34`).
+ pub const DEFAULT_MAX_TILE_SIZE: i32 = 2160 * 2160;
+ 

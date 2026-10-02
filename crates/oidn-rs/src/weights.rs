@@ -111,50 +111,189 @@ pub fn embedded(stem: &str) -> Option<&'static [u8]> {
     }
 }
 
-/// Walk quality candidate stems and return the first weight blob we
-/// can produce, trying embedded `include_bytes!` first and then
-/// (optionally) reading `fallback_dir.join("{stem}.tza")` from disk.
-///
-/// Designed to replace the per-consumer candidate loops:
-///
-/// ```ignore
-/// let base_key = oidn_rs::registry::select_rt(
-///     /* has_color */ true, has_alb, has_nrm, hdr, srgb,
-///     clean_aux, quality,
-/// )?;
-/// let (stem, bytes) = oidn_rs::weights::resolve(
-///     &base_key, quality, Some(weights_dir.as_path()),
-/// )
-/// .ok_or("no weights found")?;
-/// let filter = RtFilter::builder(device, weights_dir)
-///     .weights(bytes)
-///     .build();
-/// ```
-///
-/// Returns `None` only when *all* candidates fail — neither embedded
-/// nor any provided filesystem path holds a matching blob.
+/// Which storage sources may satisfy a candidate, in priority order.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum SourcePolicy {
+    #[default]
+    EmbeddedFirst,
+    DiskFirst,
+    EmbeddedOnly,
+    DiskOnly,
+}
+
+/// Provenance of resolved bytes; filesystem errors are never treated as absence.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum WeightSource {
+    Embedded,
+    File(std::path::PathBuf),
+}
+
+/// Selected identity, bytes and provenance travel together until schema validation.
+#[derive(Debug, Clone)]
+pub struct ResolvedWeights {
+    pub stem: String,
+    pub bytes: Vec<u8>,
+    pub source: WeightSource,
+}
+
+/// Resolve sources in explicit priority order, then quality candidates within each source.
+/// Returns `Ok(None)` only when all allowed sources are absent. Only
+/// filesystem `NotFound` permits fallback; all other I/O errors propagate.
 pub fn resolve(
     base_key: &ModelKey,
     quality: Quality,
     fallback_dir: Option<&Path>,
-) -> Option<(String, Vec<u8>)> {
-    for stem in quality_candidates(base_key, quality) {
-        if let Some(bytes) = embedded(&stem) {
-            return Some((stem, bytes.to_vec()));
-        }
-        if let Some(dir) = fallback_dir {
-            let path = dir.join(format!("{stem}.tza"));
-            if let Ok(bytes) = std::fs::read(&path) {
-                return Some((stem, bytes));
+    policy: SourcePolicy,
+) -> Result<Option<ResolvedWeights>, crate::error::OidnError> {
+    let candidates = quality_candidates(base_key, quality);
+    let sources: &[bool] = match policy {
+        SourcePolicy::EmbeddedFirst => &[true, false],
+        SourcePolicy::DiskFirst => &[false, true],
+        SourcePolicy::EmbeddedOnly => &[true],
+        SourcePolicy::DiskOnly => &[false],
+    };
+    // Source precedence dominates quality fallback: an explicit directory's
+    // base model wins over an embedded Large when disk-first was requested.
+    for &is_embedded in sources {
+        for stem in candidates.iter().cloned() {
+            if is_embedded {
+                if let Some(bytes) = embedded(&stem) {
+                    return Ok(Some(ResolvedWeights {
+                        stem,
+                        bytes: bytes.to_vec(),
+                        source: WeightSource::Embedded,
+                    }));
+                }
+            } else if let Some(dir) = fallback_dir {
+                let path = dir.join(format!("{stem}.tza"));
+                match std::fs::read(&path) {
+                    Ok(bytes) => {
+                        return Ok(Some(ResolvedWeights {
+                            stem,
+                            bytes,
+                            source: WeightSource::File(path),
+                        }));
+                    }
+                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                    Err(error) => return Err(error.into()),
+                }
             }
         }
     }
-    None
+    Ok(None)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    struct Fixture(std::path::PathBuf);
+    impl Fixture {
+        fn new() -> Self {
+            let nonce = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos();
+            let path =
+                std::env::temp_dir().join(format!("oidn-resolver-{}-{nonce}", std::process::id()));
+            std::fs::create_dir(&path).unwrap();
+            Self(path)
+        }
+    }
+    impl Drop for Fixture {
+        fn drop(&mut self) {
+            for name in ["rt_hdr.tza", "rt_alb.tza"] {
+                let file = self.0.join(name);
+                if file.is_dir() {
+                    let _ = std::fs::remove_dir(file);
+                } else if file.is_file() {
+                    let _ = std::fs::remove_file(file);
+                }
+            }
+            let _ = std::fs::remove_dir(&self.0);
+        }
+    }
+
+    #[test]
+    fn disk_only_absence_and_io_errors_are_distinct() {
+        let fixture = Fixture::new();
+        let key = ModelKey::new("rt_hdr");
+        assert!(
+            resolve(
+                &key,
+                Quality::Balanced,
+                Some(&fixture.0),
+                SourcePolicy::DiskOnly
+            )
+            .unwrap()
+            .is_none()
+        );
+        std::fs::create_dir(fixture.0.join("rt_hdr.tza")).unwrap();
+        assert!(matches!(
+            resolve(
+                &key,
+                Quality::Balanced,
+                Some(&fixture.0),
+                SourcePolicy::DiskOnly
+            ),
+            Err(crate::error::OidnError::Io(_))
+        ));
+    }
+
+    #[cfg(feature = "embed-hdr")]
+    #[test]
+    fn explicit_directory_content_wins_same_stem_conflict() {
+        let fixture = Fixture::new();
+        std::fs::write(fixture.0.join("rt_hdr.tza"), b"caller disk bytes").unwrap();
+        let key = ModelKey::new("rt_hdr");
+        let disk = resolve(
+            &key,
+            Quality::Balanced,
+            Some(&fixture.0),
+            SourcePolicy::DiskFirst,
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(disk.bytes, b"caller disk bytes");
+        assert!(matches!(disk.source, WeightSource::File(_)));
+        let embedded = resolve(
+            &key,
+            Quality::Balanced,
+            Some(&fixture.0),
+            SourcePolicy::EmbeddedFirst,
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(embedded.bytes, super::embedded("rt_hdr").unwrap());
+        assert_eq!(embedded.source, WeightSource::Embedded);
+    }
+
+    #[cfg(feature = "embed-aov")]
+    #[test]
+    fn source_priority_precedes_quality_fallback() {
+        let fixture = Fixture::new();
+        std::fs::write(fixture.0.join("rt_alb.tza"), b"caller base").unwrap();
+        let key = ModelKey::new("rt_alb");
+        let disk = resolve(
+            &key,
+            Quality::High,
+            Some(&fixture.0),
+            SourcePolicy::DiskFirst,
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(disk.stem, "rt_alb");
+        assert_eq!(disk.bytes, b"caller base");
+        let embedded = resolve(
+            &key,
+            Quality::High,
+            Some(&fixture.0),
+            SourcePolicy::EmbeddedFirst,
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(embedded.stem, "rt_alb_large");
+    }
 
     /// Sanity: any feature-gated stem we declare must resolve to bytes
     /// in the builds that enable it, and the blob must be non-empty

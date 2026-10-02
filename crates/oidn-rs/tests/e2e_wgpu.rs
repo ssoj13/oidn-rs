@@ -12,8 +12,11 @@ use std::path::PathBuf;
 
 use oidn_rs::prelude::wgpu_prelude::*;
 use oidn_rs::prelude::*;
+#[path = "../../oidn-cli/src/support.rs"]
+pub mod support;
+use support::{add_noise, make_clean, make_normal, metrics};
 
-fn weights_dir() -> Option<PathBuf> {
+fn weights_dir() -> PathBuf {
     // CARGO_MANIFEST_DIR is the crate root (`crates/oidn-rs`), regardless of
     // how cargo test was invoked. Going up two levels lands at the workspace
     // root where `data/` lives.
@@ -22,64 +25,20 @@ fn weights_dir() -> Option<PathBuf> {
         .join("..")
         .join("data")
         .join("weights");
-    if p.is_dir() { Some(p) } else { None }
-}
-
-/// Smooth radial gradient — used as the ground truth for noise-reduction tests.
-fn make_clean(w: usize, h: usize) -> Vec<f32> {
-    let mut buf = vec![0.0f32; w * h * 3];
-    let cx = w as f32 / 2.0;
-    let cy = h as f32 / 2.0;
-    let rmax = (cx * cx + cy * cy).sqrt();
-    for y in 0..h {
-        for x in 0..w {
-            let dx = x as f32 - cx;
-            let dy = y as f32 - cy;
-            let r = (dx * dx + dy * dy).sqrt() / rmax;
-            let v = 0.7 + 0.25 * (1.0 - r);
-            let i = (y * w + x) * 3;
-            buf[i] = v;
-            buf[i + 1] = v * 0.9;
-            buf[i + 2] = v * 0.7;
-        }
-    }
-    buf
-}
-
-/// Deterministic per-pixel hash-noise (no `rand` dep). Magnitude controls the
-/// amount of noise added on top of the clean image.
-fn add_noise(clean: &[f32], magnitude: f32) -> Vec<f32> {
-    let mut out = clean.to_vec();
-    for (i, v) in out.iter_mut().enumerate() {
-        // xorshift-ish from index → uniform-ish f32 in [-1, 1]
-        let mut n = (i as u32).wrapping_mul(2654435761);
-        n ^= n >> 13;
-        n = n.wrapping_mul(0x85ebca6b);
-        n ^= n >> 16;
-        let r = (n as f32 / u32::MAX as f32) * 2.0 - 1.0;
-        *v += r * magnitude;
-    }
-    out
-}
-
-fn rmse(a: &[f32], b: &[f32]) -> f32 {
-    let n = a.len() as f32;
-    let s: f32 = a.iter().zip(b.iter()).map(|(x, y)| (x - y).powi(2)).sum();
-    (s / n).sqrt()
+    assert!(p.is_dir(), "required shipped weights are missing");
+    p
 }
 
 #[test]
+#[ignore = "requires explicit GPU verification; run with --ignored"]
 fn denoise_small_hdr_color_only_wgpu() {
-    let Some(dir) = weights_dir() else {
-        eprintln!("skipping: weights submodule not initialised");
-        return;
-    };
+    let dir = weights_dir();
 
     let device = WgpuDevice::new().expect("wgpu init");
 
     let (w, h) = (64usize, 64usize);
-    let clean = make_clean(w, h);
-    let noisy = add_noise(&clean, 0.15);
+    let clean = make_clean(w, h).unwrap();
+    let noisy = add_noise(&clean, 0.15).unwrap();
 
     let in_img = Image::from_rgb_f32(&noisy, w, h);
     let mut filter = RtFilter::builder(&device.handle, &dir)
@@ -87,14 +46,15 @@ fn denoise_small_hdr_color_only_wgpu() {
         .quality(Quality::High)
         .input_scale(Some(1.0))
         .build();
-    filter.set_color(&in_img);
-    filter.allocate_output(w, h, PixelFormat::Rgb32f);
+    filter.set_color(&in_img).unwrap();
+    filter.allocate_output(w, h, PixelFormat::Rgb32f).unwrap();
     filter.commit().expect("commit");
     filter.execute().expect("execute");
 
     let (raw, ow, oh, fmt) = filter.take_output().unwrap();
     assert_eq!((ow, oh, fmt), (w, h, PixelFormat::Rgb32f));
     let out: &[f32] = bytemuck::cast_slice(&raw);
+    assert!(out.iter().any(|v| v.abs() > 1e-6), "output lost all signal");
 
     for x in out {
         assert!(x.is_finite());
@@ -110,24 +70,18 @@ fn denoise_small_hdr_color_only_wgpu() {
 }
 
 #[test]
+#[ignore = "requires explicit GPU verification; run with --ignored"]
 fn denoise_with_albedo_normal_wgpu() {
-    let Some(dir) = weights_dir() else {
-        return;
-    };
+    let dir = weights_dir();
     let device = WgpuDevice::new().expect("wgpu init");
 
     let (w, h) = (64usize, 64usize);
-    let clean = make_clean(w, h);
-    let noisy = add_noise(&clean, 0.2);
+    let clean = make_clean(w, h).unwrap();
+    let noisy = add_noise(&clean, 0.2).unwrap();
 
     // Synthetic AOVs: albedo = clean colour clamped, normal = constant up-vector.
     let albedo: Vec<f32> = clean.iter().map(|v| v.clamp(0.0, 1.0)).collect();
-    let mut normal = vec![0.0f32; w * h * 3];
-    for px in normal.chunks_exact_mut(3) {
-        px[0] = 0.0;
-        px[1] = 1.0;
-        px[2] = 0.0;
-    }
+    let normal = make_normal(w, h).unwrap();
 
     let color_img = Image::from_rgb_f32(&noisy, w, h);
     let albedo_img = Image::from_rgb_f32(&albedo, w, h);
@@ -138,10 +92,10 @@ fn denoise_with_albedo_normal_wgpu() {
         .quality(Quality::High)
         .input_scale(Some(1.0))
         .build();
-    filter.set_color(&color_img);
-    filter.set_albedo(&albedo_img);
-    filter.set_normal(&normal_img);
-    filter.allocate_output(w, h, PixelFormat::Rgb32f);
+    filter.set_color(&color_img).unwrap();
+    filter.set_albedo(&albedo_img).unwrap();
+    filter.set_normal(&normal_img).unwrap();
+    filter.allocate_output(w, h, PixelFormat::Rgb32f).unwrap();
     filter.commit().expect("commit");
 
     // Must have routed to the 9-channel model.
@@ -151,6 +105,7 @@ fn denoise_with_albedo_normal_wgpu() {
 
     let (raw, _, _, _) = filter.take_output().unwrap();
     let out: &[f32] = bytemuck::cast_slice(&raw);
+    assert!(out.iter().any(|v| v.abs() > 1e-6), "output lost all signal");
     for x in out {
         assert!(x.is_finite());
     }
@@ -159,28 +114,28 @@ fn denoise_with_albedo_normal_wgpu() {
 }
 
 #[test]
+#[ignore = "requires explicit GPU verification; run with --ignored"]
 fn denoise_512x512_wgpu() {
-    let Some(dir) = weights_dir() else {
-        return;
-    };
+    let dir = weights_dir();
     let device = WgpuDevice::new().expect("wgpu init");
 
     let (w, h) = (512usize, 512usize);
-    let clean = make_clean(w, h);
-    let noisy = add_noise(&clean, 0.1);
+    let clean = make_clean(w, h).unwrap();
+    let noisy = add_noise(&clean, 0.1).unwrap();
 
     let in_img = Image::from_rgb_f32(&noisy, w, h);
     let mut filter = RtFilter::builder(&device.handle, &dir)
         .hdr(true)
         .input_scale(Some(1.0))
         .build();
-    filter.set_color(&in_img);
-    filter.allocate_output(w, h, PixelFormat::Rgb32f);
+    filter.set_color(&in_img).unwrap();
+    filter.allocate_output(w, h, PixelFormat::Rgb32f).unwrap();
     filter.commit().expect("commit");
     filter.execute().expect("execute");
 
     let (raw, _, _, _) = filter.take_output().unwrap();
     let out: &[f32] = bytemuck::cast_slice(&raw);
+    assert!(out.iter().any(|v| v.abs() > 1e-6), "output lost all signal");
     for x in out {
         assert!(x.is_finite());
     }
@@ -188,32 +143,32 @@ fn denoise_512x512_wgpu() {
 }
 
 #[test]
+#[ignore = "requires explicit GPU verification; run with --ignored"]
 fn denoiser_actually_reduces_noise_wgpu() {
-    let Some(dir) = weights_dir() else {
-        return;
-    };
+    let dir = weights_dir();
     let device = WgpuDevice::new().expect("wgpu init");
 
     let (w, h) = (256usize, 256usize);
-    let clean = make_clean(w, h);
-    let noisy = add_noise(&clean, 0.12);
+    let clean = make_clean(w, h).unwrap();
+    let noisy = add_noise(&clean, 0.12).unwrap();
 
     let noisy_img = Image::from_rgb_f32(&noisy, w, h);
     let mut filter = RtFilter::builder(&device.handle, &dir)
         .hdr(true)
         .input_scale(Some(1.0))
         .build();
-    filter.set_color(&noisy_img);
-    filter.allocate_output(w, h, PixelFormat::Rgb32f);
+    filter.set_color(&noisy_img).unwrap();
+    filter.allocate_output(w, h, PixelFormat::Rgb32f).unwrap();
     filter.commit().expect("commit");
     filter.execute().expect("execute");
 
     let (raw, _, _, _) = filter.take_output().unwrap();
     let out: &[f32] = bytemuck::cast_slice(&raw);
+    assert!(out.iter().any(|v| v.abs() > 1e-6), "output lost all signal");
     let denoised = out.to_vec();
 
-    let rmse_noisy = rmse(&noisy, &clean);
-    let rmse_denoised = rmse(&denoised, &clean);
+    let rmse_noisy = metrics(&noisy, &clean).unwrap().rmse;
+    let rmse_denoised = metrics(&denoised, &clean).unwrap().rmse;
 
     eprintln!(
         "RMSE vs clean: noisy={rmse_noisy:.5}  denoised={rmse_denoised:.5}  improvement={:.2}x",
@@ -227,16 +182,16 @@ fn denoiser_actually_reduces_noise_wgpu() {
 }
 
 #[test]
+#[ignore = "requires explicit GPU verification; run with --ignored"]
 fn denoise_albedo_only_wgpu() {
     // AOV-only filter: only albedo provided, no colour.
-    let Some(dir) = weights_dir() else {
-        return;
-    };
+    let dir = weights_dir();
     let device = WgpuDevice::new().expect("wgpu init");
 
     let (w, h) = (64usize, 64usize);
     // Albedo is in [0, 1].
     let albedo: Vec<f32> = make_clean(w, h)
+        .unwrap()
         .into_iter()
         .map(|v| v.clamp(0.0, 1.0))
         .collect();
@@ -245,25 +200,25 @@ fn denoise_albedo_only_wgpu() {
     // Default Quality::High prefers `_large` when available — OIDN spec
     // (see _ref/oidn/core/unet_filter.cpp:450).
     let mut filter = RtFilter::builder(&device.handle, &dir).build();
-    filter.set_albedo(&albedo_img);
-    filter.allocate_output(w, h, PixelFormat::Rgb32f);
+    filter.set_albedo(&albedo_img).unwrap();
+    filter.allocate_output(w, h, PixelFormat::Rgb32f).unwrap();
     filter.commit().expect("commit");
     assert_eq!(filter.model_key().unwrap().0, "rt_alb_large");
     filter.execute().expect("execute");
 
     let (raw, _, _, _) = filter.take_output().unwrap();
     let out: &[f32] = bytemuck::cast_slice(&raw);
+    assert!(out.iter().any(|v| v.abs() > 1e-6), "output lost all signal");
     for x in out {
         assert!(x.is_finite());
     }
 }
 
 #[test]
+#[ignore = "requires explicit GPU verification; run with --ignored"]
 fn denoise_normal_only_wgpu() {
     // AOV-only filter: only normal provided.
-    let Some(dir) = weights_dir() else {
-        return;
-    };
+    let dir = weights_dir();
     let device = WgpuDevice::new().expect("wgpu init");
 
     let (w, h) = (64usize, 64usize);
@@ -283,39 +238,34 @@ fn denoise_normal_only_wgpu() {
     let normal_img = Image::from_rgb_f32(&normal, w, h);
 
     let mut filter = RtFilter::builder(&device.handle, &dir).build();
-    filter.set_normal(&normal_img);
-    filter.allocate_output(w, h, PixelFormat::Rgb32f);
+    filter.set_normal(&normal_img).unwrap();
+    filter.allocate_output(w, h, PixelFormat::Rgb32f).unwrap();
     filter.commit().expect("commit");
     assert_eq!(filter.model_key().unwrap().0, "rt_nrm_large");
     filter.execute().expect("execute");
 
     let (raw, _, _, _) = filter.take_output().unwrap();
     let out: &[f32] = bytemuck::cast_slice(&raw);
+    assert!(out.iter().any(|v| v.abs() > 1e-6), "output lost all signal");
     for x in out {
         assert!(x.is_finite());
     }
 }
 
 #[test]
+#[ignore = "requires explicit GPU verification; run with --ignored"]
 fn denoise_with_clean_aux_wgpu() {
     // cleanAux=true routes to *_calb_cnrm model (clean albedo + clean normal).
-    let Some(dir) = weights_dir() else {
-        return;
-    };
+    let dir = weights_dir();
     let device = WgpuDevice::new().expect("wgpu init");
 
     let (w, h) = (64usize, 64usize);
-    let clean = make_clean(w, h);
-    let noisy = add_noise(&clean, 0.12);
+    let clean = make_clean(w, h).unwrap();
+    let noisy = add_noise(&clean, 0.12).unwrap();
 
     // Synthetic "already denoised" AOVs.
     let albedo: Vec<f32> = clean.iter().map(|v| v.clamp(0.0, 1.0)).collect();
-    let mut normal = vec![0.0f32; w * h * 3];
-    for px in normal.chunks_exact_mut(3) {
-        px[0] = 0.0;
-        px[1] = 1.0;
-        px[2] = 0.0;
-    }
+    let normal = make_normal(w, h).unwrap();
 
     let mut filter = RtFilter::builder(&device.handle, &dir)
         .hdr(true)
@@ -323,23 +273,30 @@ fn denoise_with_clean_aux_wgpu() {
         .quality(oidn_rs::Quality::Balanced) // Balanced ⇒ base only, easier to assert key.
         .input_scale(Some(1.0))
         .build();
-    filter.set_color(&Image::from_rgb_f32(&noisy, w, h));
-    filter.set_albedo(&Image::from_rgb_f32(&albedo, w, h));
-    filter.set_normal(&Image::from_rgb_f32(&normal, w, h));
-    filter.allocate_output(w, h, PixelFormat::Rgb32f);
+    filter
+        .set_color(&Image::from_rgb_f32(&noisy, w, h))
+        .unwrap();
+    filter
+        .set_albedo(&Image::from_rgb_f32(&albedo, w, h))
+        .unwrap();
+    filter
+        .set_normal(&Image::from_rgb_f32(&normal, w, h))
+        .unwrap();
+    filter.allocate_output(w, h, PixelFormat::Rgb32f).unwrap();
     filter.commit().expect("commit");
     assert_eq!(filter.model_key().unwrap().0, "rt_hdr_calb_cnrm");
     filter.execute().expect("execute");
 
     let (raw, _, _, _) = filter.take_output().unwrap();
     let out: &[f32] = bytemuck::cast_slice(&raw);
+    assert!(out.iter().any(|v| v.abs() > 1e-6), "output lost all signal");
     for x in out {
         assert!(x.is_finite());
     }
 
     let denoised = out.to_vec();
-    let rmse_noisy = rmse(&noisy, &clean);
-    let rmse_denoised = rmse(&denoised, &clean);
+    let rmse_noisy = metrics(&noisy, &clean).unwrap().rmse;
+    let rmse_denoised = metrics(&denoised, &clean).unwrap().rmse;
     eprintln!("cleanAux: noisy rmse={rmse_noisy:.5} denoised rmse={rmse_denoised:.5}");
     assert!(
         rmse_denoised < rmse_noisy,
@@ -348,68 +305,69 @@ fn denoise_with_clean_aux_wgpu() {
 }
 
 #[test]
+#[ignore = "requires explicit GPU verification; run with --ignored"]
 fn quality_fast_routes_to_small_wgpu() {
     // Quality::Fast prefers _small variant when available.
-    let Some(dir) = weights_dir() else {
-        return;
-    };
+    let dir = weights_dir();
     let device = WgpuDevice::new().expect("wgpu init");
 
     let (w, h) = (64usize, 64usize);
-    let clean = make_clean(w, h);
-    let noisy = add_noise(&clean, 0.1);
+    let clean = make_clean(w, h).unwrap();
+    let noisy = add_noise(&clean, 0.1).unwrap();
 
     let mut filter = RtFilter::builder(&device.handle, &dir)
         .hdr(true)
         .quality(oidn_rs::Quality::Fast)
         .input_scale(Some(1.0))
         .build();
-    filter.set_color(&Image::from_rgb_f32(&noisy, w, h));
-    filter.allocate_output(w, h, PixelFormat::Rgb32f);
+    filter
+        .set_color(&Image::from_rgb_f32(&noisy, w, h))
+        .unwrap();
+    filter.allocate_output(w, h, PixelFormat::Rgb32f).unwrap();
     filter.commit().expect("commit");
     assert_eq!(filter.model_key().unwrap().0, "rt_hdr_small");
     filter.execute().expect("execute");
 
     let (raw, _, _, _) = filter.take_output().unwrap();
     let out: &[f32] = bytemuck::cast_slice(&raw);
+    assert!(out.iter().any(|v| v.abs() > 1e-6), "output lost all signal");
     for x in out {
         assert!(x.is_finite());
     }
 }
 
 #[test]
+#[ignore = "requires explicit GPU verification; run with --ignored"]
 fn denoise_lightmap_hdr_wgpu() {
-    let Some(dir) = weights_dir() else {
-        return;
-    };
+    let dir = weights_dir();
     let device = WgpuDevice::new().expect("wgpu init");
 
     let (w, h) = (64usize, 64usize);
-    let color = make_clean(w, h); // positive HDR-ish irradiance
+    let color = make_clean(w, h).unwrap(); // positive HDR-ish irradiance
     let color_img = Image::from_rgb_f32(&color, w, h);
 
     let mut filter = RtLightmapFilter::builder(&device.handle, &dir)
         .directional(false)
         .input_scale(Some(1.0))
         .build();
-    filter.set_color(&color_img);
-    filter.allocate_output(w, h, PixelFormat::Rgb32f);
+    filter.set_color(&color_img).unwrap();
+    filter.allocate_output(w, h, PixelFormat::Rgb32f).unwrap();
     filter.commit().expect("commit");
     assert_eq!(filter.model_key().unwrap().0, "rtlightmap_hdr");
     filter.execute().expect("execute");
 
     let (raw, _, _, _) = filter.take_output().unwrap();
     let out: &[f32] = bytemuck::cast_slice(&raw);
+    assert!(out.iter().any(|v| v.abs() > 1e-6), "output lost all signal");
     for x in out {
         assert!(x.is_finite(), "non-finite output from rtlightmap_hdr");
     }
 }
 
 #[test]
+#[ignore = "requires explicit GPU verification; run with --ignored"]
 fn denoise_lightmap_directional_wgpu() {
-    let Some(dir) = weights_dir() else {
-        return;
-    };
+    let dir = weights_dir();
     let device = WgpuDevice::new().expect("wgpu init");
 
     let (w, h) = (64usize, 64usize);
@@ -430,14 +388,15 @@ fn denoise_lightmap_directional_wgpu() {
         .directional(true)
         .input_scale(Some(1.0))
         .build();
-    filter.set_color(&color_img);
-    filter.allocate_output(w, h, PixelFormat::Rgb32f);
+    filter.set_color(&color_img).unwrap();
+    filter.allocate_output(w, h, PixelFormat::Rgb32f).unwrap();
     filter.commit().expect("commit");
     assert_eq!(filter.model_key().unwrap().0, "rtlightmap_dir");
     filter.execute().expect("execute");
 
     let (raw, _, _, _) = filter.take_output().unwrap();
     let out: &[f32] = bytemuck::cast_slice(&raw);
+    assert!(out.iter().any(|v| v.abs() > 1e-6), "output lost all signal");
     for x in out {
         assert!(x.is_finite(), "non-finite output from rtlightmap_dir");
     }

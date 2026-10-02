@@ -1,0 +1,52 @@
+[
+  {
+    "device": "cpu",
+    "command": [
+      "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+      "-d",
+      "cpu",
+      "--hdr",
+      "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\smoke_input.pfm",
+      "--is",
+      "1",
+      "-q",
+      "balanced",
+      "-w",
+      "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+      "-o",
+      "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\smoke_cpu.pfm",
+      "-v",
+      "1"
+    ],
+    "exitCode": 0,
+    "count": 3072,
+    "finite": true,
+    "min": 0.02899540401995182,
+    "max": 27.887126922607422
+  },
+  {
+    "device": "cuda",
+    "command": [
+      "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\runtime\\oidn-2.5.0.x64.windows\\bin\\oidnDenoise.exe",
+      "-d",
+      "cuda",
+      "--hdr",
+      "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\smoke_input.pfm",
+      "--is",
+      "1",
+      "-q",
+      "balanced",
+      "-w",
+      "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\oidn-weights\\rt_hdr.tza",
+      "-o",
+      "C:\\projects\\projects.rust.cg\\cglibs\\oidn-rs\\bughunt\\native-verification\\smoke_cuda.pfm",
+      "-v",
+      "1"
+    ],
+    "exitCode": 0,
+    "count": 3072,
+    "finite": true,
+    "min": 0.029136650264263153,
+    "max": 27.83834457397461
+  }
+]

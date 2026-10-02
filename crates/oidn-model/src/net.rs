@@ -25,6 +25,13 @@ impl Net {
         }
     }
 
+    pub fn out_channels(&self) -> usize {
+        match self {
+            Net::Base(u) => u.dec_conv0.weight.shape().dims::<4>()[0],
+            Net::Large(u) => u.dec_conv1c.weight.shape().dims::<4>()[0],
+        }
+    }
+
     pub fn forward(&self, x: Tensor<4>) -> Tensor<4> {
         match self {
             Net::Base(u) => u.forward(x),

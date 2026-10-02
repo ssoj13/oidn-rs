@@ -18,7 +18,6 @@ path = "src/lib.rs"
 [dependencies]
 oidn-tza  = { path = "../oidn-tza", version = "0.1.0" }
 burn      = { workspace = true }
-half      = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]

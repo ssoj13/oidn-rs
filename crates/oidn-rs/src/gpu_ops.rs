@@ -1,6 +1,6 @@
 //! GPU-side helpers for the Phase I tile pipeline.
 //!
-//! - [`preprocess_input`] / [`postprocess_color`] wrap the transfer-function
+//! - `preprocess_input` / `postprocess_color` wrap the transfer-function
 //!   curves with the sanitise + clamp + scale sequence that mirrors
 //!   `_ref/oidn/devices/cpu/cpu_input_process.isph` and
 //!   `cpu_output_process.isph`. The piecewise PU and sRGB curves use
@@ -22,25 +22,23 @@ use crate::color::{
 
 // ---------- preprocess / postprocess wrappers ----------
 
-/// Replace any non-finite samples (NaN, +/-inf) with zero. Matches the
+/// Replace NaNs with zero; infinities are clamped by the caller. Matches the
 /// `nan_to_zero` helper called at the top of every reference input/output
 /// kernel (`_ref/oidn/devices/cpu/cpu_input_process.isph:31`,
 /// `cpu_output_process.isph:38`).
 fn nan_to_zero(t: Tensor<4>) -> Tensor<4> {
-    let finite_mask = t.clone().is_finite();
-    let zeros: Tensor<4> = Tensor::zeros(t.dims(), &t.device());
-    t.mask_where(finite_mask.bool_not(), zeros)
+    t.clone().mask_fill(t.is_nan(), 0.0)
 }
 
 /// Preprocess the colour tile before the network.
 ///
 /// Mirrors `_ref/oidn/devices/cpu/cpu_input_process.isph:31-51`:
-/// `nan_to_zero -> *input_scale -> clamp(lo, hi) -> [snorm remap] ->
+/// `*input_scale -> nan_to_zero -> clamp(lo, hi) -> [snorm remap] ->
 /// forward transfer`.
 ///
-/// Whole-tensor sanitisation happens upstream once per frame; the
-/// nan_to_zero call here is redundant on already-clean tiles but keeps
-/// the helper self-contained and cheap (single elementwise pass).
+/// Optional strict nonfinite sanitation happens upstream once per frame.
+/// NaN replacement after scaling remains mandatory, including when strict
+/// sanitation is disabled.
 pub(crate) fn preprocess_input(
     color: Tensor<4>,
     input_scale: f32,
@@ -48,14 +46,11 @@ pub(crate) fn preprocess_input(
     snorm: bool,
     transfer: &TransferState,
 ) -> Tensor<4> {
-    let t = nan_to_zero(color);
-    let t = t.mul_scalar(input_scale);
+    let t = nan_to_zero(color.mul_scalar(input_scale));
     let lo = if snorm { -1.0_f32 } else { 0.0_f32 };
     let hi = if hdr { f32::MAX } else { 1.0_f32 };
     let t = t.clamp(lo, hi);
-    // snorm remap (value * 0.5 + 0.5) is not used by any current filter;
-    // colour inputs are always unsigned. Auxiliary normals go through a
-    // dedicated remap in `unet_runner`. Branch left as a no-op for now.
+    // Primary normals and directional lightmaps use signed normalized input.
     let t = if snorm {
         t.mul_scalar(0.5_f32).add_scalar(0.5_f32)
     } else {
@@ -67,7 +62,8 @@ pub(crate) fn preprocess_input(
 /// Postprocess the network output before slicing back into the accumulator.
 ///
 /// Mirrors `_ref/oidn/devices/cpu/cpu_output_process.isph:37-69`:
-/// `nan_to_zero -> clamp(0, +inf) -> inverse transfer -> [snorm demap] ->
+/// `nan_to_zero -> clamp(0, +inf) -> inverse transfer -> [scalar mean] ->
+/// [snorm demap] ->
 /// [ldr clamp] -> *output_scale`.
 pub(crate) fn postprocess_color(
     network_output: Tensor<4>,
@@ -75,12 +71,23 @@ pub(crate) fn postprocess_color(
     hdr: bool,
     snorm: bool,
     output_scale: f32,
+    output_channels: usize,
 ) -> Tensor<4> {
     let t = nan_to_zero(network_output);
     let t = t.clamp(0.0_f32, f32::MAX);
     let t = apply_transfer_inverse(t, transfer);
-    // snorm demap (value * 2 - 1, then max(value, -1)). Unused by any
-    // current colour filter; reference parity stub.
+    // Reference reduces after inverse transfer, before signed decode/clamp.
+    let t = if output_channels == 1 {
+        t.clone()
+            .narrow(1, 0, 1)
+            .add(t.clone().narrow(1, 1, 1))
+            .add(t.narrow(1, 2, 1))
+            .mul_scalar(1.0 / 3.0)
+            .repeat_dim(1, 3)
+    } else {
+        t
+    };
+    // Decode signed primary output before the non-HDR upper clamp.
     let t = if snorm {
         t.mul_scalar(2.0_f32)
             .sub_scalar(1.0_f32)
@@ -88,23 +95,16 @@ pub(crate) fn postprocess_color(
     } else {
         t
     };
-    let t = if !hdr && !snorm {
-        t.clamp_max(1.0_f32)
-    } else {
-        t
-    };
+    let t = if !hdr { t.clamp_max(1.0_f32) } else { t };
     t.mul_scalar(output_scale)
 }
 
 // ---------- transfer functions (tensor-vectorised) ----------
 
 /// Forward transfer curve only. No `input_scale`, no clamp — the wrapping
-/// [`preprocess_input`] is responsible for ordering those ops to match the
+/// `preprocess_input` is responsible for ordering those ops to match the
 /// CPU reference.
-pub fn apply_transfer_forward(
-    color: Tensor<4>,
-    state: &TransferState,
-) -> Tensor<4> {
+pub fn apply_transfer_forward(color: Tensor<4>, state: &TransferState) -> Tensor<4> {
     match state.kind {
         TransferFunction::Linear => color,
         TransferFunction::SRGB => srgb_forward_tensor(color),
@@ -114,7 +114,7 @@ pub fn apply_transfer_forward(
 }
 
 /// Inverse transfer curve only. No `output_scale`, no clamp — see
-/// [`postprocess_color`] for the full reference-ordered sequence.
+/// `postprocess_color` for the full reference-ordered sequence.
 pub fn apply_transfer_inverse(x: Tensor<4>, state: &TransferState) -> Tensor<4> {
     match state.kind {
         TransferFunction::Linear => x,
@@ -209,6 +209,59 @@ mod tests {
 
     use crate::color::{self, TransferFunction};
 
+    #[test]
+    fn signed_primary_sanitizes_after_scale_and_clamps_both_ends() {
+        let device = Device::ndarray();
+        let source = Tensor::from_data(
+            TensorData::new(
+                vec![f32::NEG_INFINITY, -2.0, f32::NAN, f32::INFINITY],
+                [1, 1, 1, 4],
+            ),
+            &device,
+        );
+        let tf = TransferState::new(TransferFunction::Linear);
+        let result = preprocess_input(source, 2.0, false, true, &tf)
+            .into_data()
+            .to_vec::<f32>()
+            .unwrap();
+        assert_eq!(result, [0.0, 0.0, 0.5, 1.0]);
+        let output =
+            Tensor::from_data(TensorData::new(vec![0.5, 1.5, 0.25], [1, 3, 1, 1]), &device);
+        let result = postprocess_color(output, &tf, false, true, 2.0, 3)
+            .into_data()
+            .to_vec::<f32>()
+            .unwrap();
+        assert_eq!(result, [0.0, 2.0, -1.0]);
+    }
+
+    #[test]
+    fn scalar_reduction_precedes_clamp_and_output_scale() {
+        let device = Device::ndarray();
+        let output =
+            Tensor::from_data(TensorData::new(vec![0.5, 1.5, 0.25], [1, 3, 1, 1]), &device);
+        let tf = TransferState::new(TransferFunction::Linear);
+        let result = postprocess_color(output, &tf, false, false, 2.0, 1)
+            .into_data()
+            .to_vec::<f32>()
+            .unwrap();
+        assert_eq!(result, [1.5; 3]);
+    }
+
+    #[test]
+    fn scalar_reduction_uses_inverse_transfer_domain() {
+        let device = Device::ndarray();
+        let values = [0.2, 0.7, 1.2];
+        let output = Tensor::from_data(TensorData::new(values.to_vec(), [1, 3, 1, 1]), &device);
+        let tf = TransferState::new(TransferFunction::SRGB);
+        let expected =
+            (values.into_iter().map(color::srgb_inverse).sum::<f32>() / 3.0).min(1.0) * 0.5;
+        let result = postprocess_color(output, &tf, false, false, 0.5, 1)
+            .into_data()
+            .to_vec::<f32>()
+            .unwrap();
+        assert!(result.iter().all(|value| (value - expected).abs() < 1e-6));
+    }
+
     /// Forward / inverse round-trip on PU within 1e-4 relative error
     /// — confirms the mask_where cascade matches the CPU piecewise impl.
     #[test]
@@ -220,8 +273,7 @@ mod tests {
             .map(|i| 10.0_f32.powf((i as f32 - 64.0) / 16.0)) // log-spaced
             .collect();
 
-        let t =
-            Tensor::<4>::from_data(TensorData::new(samples.clone(), [1, 1, 1, 128]), &device);
+        let t = Tensor::<4>::from_data(TensorData::new(samples.clone(), [1, 1, 1, 128]), &device);
         let tf = TransferState::new(TransferFunction::PU);
         let fwd = apply_transfer_forward(t, &tf);
         let bwd = apply_transfer_inverse(fwd, &tf);

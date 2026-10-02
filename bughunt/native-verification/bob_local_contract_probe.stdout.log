@@ -1,0 +1,12 @@
+adapter=AdapterInfo { name: "NVIDIA GeForce RTX 3080 Ti", vendor: 4318, device: 8712, device_type: DiscreteGpu, device_pci_bus_id: "0000:0c:00.0", driver: "NVIDIA", driver_info: "616.64", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 32, transient_saves_memory: Some(false), limit_bucket: None }
+input=frozen synthetic HDR checkerboard; fixed_scale=0.02; clamp=10; mode=full_AOV; quality=Balanced
+case,spp,highlight_mean,highlight_sd,highlight_max,dark_mean
+adaptive,1,2.000045,0.001503,2.005736,0.210797
+adaptive,64,3.248755,0.002404,3.255955,0.210939
+adaptive,128,5.997941,0.003034,6.010278,0.210957
+adaptive,256,8.164577,0.065254,8.366093,0.210212
+adaptive,256,8.164577,0.065254,8.366093,0.210212
+fixed,1,8.164577,0.065254,8.366093,0.210212
+fixed,256,8.164577,0.065254,8.366093,0.210212
+max_abs_repeat=0.000000000; max_abs_fixed_spp=0.000000000; max_abs_adaptive_spp=8.448264122
+frozen_repeats=32; max_abs_repeated_series=0.000000000
