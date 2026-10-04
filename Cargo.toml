@@ -37,8 +37,12 @@ tracing      = "0.1"
 
 # CLI-only
 clap         = { version = "4", features = ["derive"] }
-exr          = "1"
-image        = "0.25"
+# `image` formats come from exr-image (image's default set minus `exr`); EXR is decoded by exr-core
+# through exr-image's hooks and written by exr-core, never by crates.io `exr`.
+image        = { version = "0.25", default-features = false }
+exr-image    = { git = "ssh://git@github.com/ssoj13/exr-rs.git", branch = "main" }
+exr-core     = { git = "ssh://git@github.com/ssoj13/exr-rs.git", branch = "main" }
+imath-rs     = { git = "ssh://git@github.com/ssoj13/exr-rs.git", branch = "main" }
 
 # dev
 approx       = "0.5"

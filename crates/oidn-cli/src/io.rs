@@ -39,7 +39,6 @@ pub fn load_rgb_f32(path: &Path, encoding: Encoding) -> Result<RgbImage, Error> 
         .map(str::to_ascii_lowercase)
         .as_deref()
     {
-        Some("exr") => load_exr(path),
         Some("pfm") => load_pfm(path, false),
         Some("phm") => load_pfm(path, true),
         _ => load_image(path),
@@ -91,47 +90,30 @@ pub fn save_rgb_f32(
     }
 }
 
-fn load_exr(path: &Path) -> Result<RgbImage, Error> {
-    use exr::prelude::*;
+/// Float32 R, G, B EXR through exr-core (our OpenEXR port). Untagged on purpose: the buffer may be
+/// colour, albedo or normals (`Encoding::Data`), so no `chromaticities` is claimed for it.
+fn save_exr(path: &Path, pixels: &[f32], w: usize, h: usize) -> Result<(), Error> {
+    use exr_core::attr::Compression;
+    use exr_core::{ChannelData, Image};
+    use imath_rs::{Box2i, V2i};
 
-    let img = read_first_rgba_layer_from_file(
-        path,
-        |resolution, _channels: &RgbaChannels| {
-            let pixels: Vec<(f32, f32, f32, f32)> =
-                vec![(0.0, 0.0, 0.0, 1.0); resolution.width() * resolution.height()];
-            (pixels, resolution.width(), resolution.height())
-        },
-        |(pixels, w, _h), pos, (r, g, b, a): (f32, f32, f32, f32)| {
-            pixels[pos.y() * *w + pos.x()] = (r, g, b, a);
-        },
-    )?;
-
-    let (pixels, w, h) = img.layer_data.channel_data.pixels;
-    let mut flat = Vec::with_capacity(w * h * 3);
-    for (r, g, b, _a) in pixels {
-        flat.push(r);
-        flat.push(g);
-        flat.push(b);
-    }
-    Ok((flat, w, h))
-}
-
-fn save_exr(
-    path: &Path,
-    pixels: &[f32],
-    w: usize,
-    h: usize,
-) -> Result<(), Box<dyn std::error::Error>> {
-    use exr::prelude::*;
-    debug_assert_eq!(pixels.len(), w * h * 3);
-    write_rgb_file(path, w, h, |x, y| {
-        let idx = (y * w + x) * 3;
-        (pixels[idx], pixels[idx + 1], pixels[idx + 2])
-    })?;
+    let window = Box2i {
+        min: V2i { x: 0, y: 0 },
+        max: V2i { x: i32::try_from(w - 1)?, y: i32::try_from(h - 1)? },
+    };
+    let plane = |c: usize| ChannelData::Float(pixels.iter().skip(c).step_by(3).copied().collect());
+    Image::new(window)
+        .with_channel("R", plane(0))
+        .with_channel("G", plane(1))
+        .with_channel("B", plane(2))
+        .write(path, Compression::Zip)?;
     Ok(())
 }
 
+/// Every non-PFM/PHM format, EXR included: exr-image's hooks make `image::open` decode `.exr` with
+/// exr-core (float RGB kept unclamped), so there is one load path.
 fn load_image(path: &Path) -> Result<RgbImage, Error> {
+    exr_image::register();
     let img = image::open(path)?.to_rgb32f();
     let (w, h) = (img.width() as usize, img.height() as usize);
     Ok((img.into_raw(), w, h))
@@ -437,5 +419,15 @@ mod tests {
             [-0.5, 2.0, 100.0]
         );
         assert!(save_rgb_f32(&temp.0, &[1.0], 1, 1, Encoding::Linear).is_err());
+    }
+    #[test]
+    fn exr_round_trips_float_rgb_through_exr_core() {
+        let temp = Temp::new("exr");
+        let pixels = [19.43, -0.25, 1e-6, 0.5, 2.0, 0.125];
+        save_rgb_f32(&temp.0, &pixels, 2, 1, Encoding::Linear).unwrap();
+        assert_eq!(
+            load_rgb_f32(&temp.0, Encoding::Linear).unwrap(),
+            (pixels.to_vec(), 2, 1)
+        );
     }
 }

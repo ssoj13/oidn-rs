@@ -944,6 +944,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c8d4a3bb8b1e0c1050499d1815f5ab16d04f0959b233085fb31653fbfc9d98f9"
 
 [[package]]
+name = "codec-simd"
+version = "0.3.35"
+source = "git+ssh://git@github.com/ssoj13/codec-simd-rs.git?branch=main#c79919b3304a18e66393e61527f868a94b95ac03"
+
+[[package]]
 name = "codespan-reporting"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1721,6 +1726,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a4ae5f15dda3c708c0ade84bfee31ccab44a3da4f88015ed22f63732abe300c8"
 
 [[package]]
+name = "deflate-rs"
+version = "0.1.0"
+source = "git+ssh://git@github.com/ssoj13/exr-rs.git?branch=main#6fd7d7525cce3e5367379f22d783b972fd7ae560"
+
+[[package]]
 name = "deranged"
 version = "0.5.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2040,6 +2050,30 @@ dependencies = [
  "rayon-core",
  "smallvec",
  "zune-inflate",
+]
+
+[[package]]
+name = "exr-core"
+version = "0.1.0"
+source = "git+ssh://git@github.com/ssoj13/exr-rs.git?branch=main#6fd7d7525cce3e5367379f22d783b972fd7ae560"
+dependencies = [
+ "codec-simd",
+ "deflate-rs",
+ "imath-rs",
+ "jph-rs",
+ "log",
+ "murmur3",
+ "rayon",
+ "smallvec",
+]
+
+[[package]]
+name = "exr-image"
+version = "0.1.0"
+source = "git+ssh://git@github.com/ssoj13/exr-rs.git?branch=main#6fd7d7525cce3e5367379f22d783b972fd7ae560"
+dependencies = [
+ "exr-core",
+ "image",
 ]
 
 [[package]]
@@ -2775,6 +2809,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "imath-rs"
+version = "0.1.0"
+source = "git+ssh://git@github.com/ssoj13/exr-rs.git?branch=main#6fd7d7525cce3e5367379f22d783b972fd7ae560"
+
+[[package]]
 name = "imgref"
 version = "1.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2890,6 +2929,11 @@ dependencies = [
  "getrandom 0.4.3",
  "libc",
 ]
+
+[[package]]
+name = "jph-rs"
+version = "0.2.0"
+source = "git+ssh://git@github.com/ssoj13/jph-rs.git?branch=main#e7232855b7774315515f7ffe13f6d8dc67190713"
 
 [[package]]
 name = "js-sys"
@@ -3165,6 +3209,11 @@ dependencies = [
  "num-traits",
  "pxfm",
 ]
+
+[[package]]
+name = "murmur3"
+version = "0.2.0"
+source = "git+ssh://git@github.com/ssoj13/murmur3.git?branch=main#1819dc0c9295f804eb07e4aa273e20d603163f78"
 
 [[package]]
 name = "mutants"
@@ -3524,9 +3573,11 @@ version = "0.1.0"
 dependencies = [
  "burn",
  "clap",
- "exr",
+ "exr-core",
+ "exr-image",
  "half",
  "image",
+ "imath-rs",
  "oidn-rs",
  "oidn-tza",
  "pollster",

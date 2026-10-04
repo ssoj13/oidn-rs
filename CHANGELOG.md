@@ -25,6 +25,12 @@ Notable changes to `oidn-rs`.
   fork that previously lived in a vendored in-tree copy of the crate.
 
 ### Changed
+- **oidn-cli EXR goes through exr-core** (exr-rs, our 1:1 OpenEXR port) instead
+  of crates.io `exr`. Reading `.exr` now shares the one `image::open` load path
+  (exr-image's hooks decode it with exr-core; float RGB unclamped), so the
+  separate EXR loader is gone; writing is float32 R, G, B, ZIP, untagged (the
+  buffer may be colour, albedo or normals). `image` drops its default features
+  (which pulled `exr`) and takes its format set from exr-image.
 - `autoexposure::compute_scale` (CPU path) now folds the `LUM_*` luminance
   constants inline instead of calling `color::luminance`, so both the CPU and
   tensor autoexposure paths honour the feature-selected weights. Behaviour is

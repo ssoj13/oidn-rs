@@ -13,7 +13,7 @@ graph LR
     facade --> tza[oidn-tza<br/>TZA parser]
     model --> tza
     facade --> burn[burn 0.22<br/>dynamic Device: WGPU or NdArray]
-    cli --> exr[exr crate]
+    cli --> exr[exr-core<br/>EXR write · exr-image hooks for read]
     cli --> img[image crate]
     style facade fill:#ffd,stroke:#664
     style tza fill:#dfd,stroke:#363
