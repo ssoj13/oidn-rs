@@ -4,6 +4,12 @@ Notable changes to `oidn-rs`.
 
 ## Unreleased
 
+### Changed
+- burn's `ndarray` backend left the runtime graph of a consumer: the workspace burn dependency is `std` only, `oidn-rs`
+  takes `wgpu` as a dependency and `ndarray` as a dev-dependency (its CPU unit tests), `oidn-cli` takes `ndarray` for
+  `--device cpu`. A renderer that links `oidn-rs` (render-rs `pt-denoise-oidn`) no longer compiles or links the CPU
+  backend.
+
 ### Added
 - **`autoexposure::Primaries` (Rec.709 / ACEScg), a run-time choice** replacing the `acescg-autoexposure`
   cargo feature: `compute_scale` / `compute_scale_tensor` take it, `RtFilterBuilder::autoexposure_primaries`
