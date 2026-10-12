@@ -307,6 +307,7 @@ impl<'b> Filter for RtLightmapFilter<'b> {
                 signed: self.directional,
                 input_scale: self.user_input_scale,
                 sanitize_nonfinite: self.nan_to_zero,
+                primaries: Default::default(),
                 output_channels: 3,
             },
             progress,

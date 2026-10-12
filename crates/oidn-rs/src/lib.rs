@@ -21,8 +21,9 @@
 //! - `embed-*` / `embed-all` — bake the reference TZA weight blobs into the
 //!   library via `include_bytes!` (see [`weights`]); a default build embeds none
 //!   and loads weights from disk instead.
-//! - `acescg-autoexposure` — measure autoexposure luminance with ACEScg (AP1)
-//!   weights instead of the default Rec.709. See [`autoexposure`].
+//!
+//! The autoexposure luminance primaries (Rec.709 default, ACEScg) are a run-time
+//! choice: [`autoexposure::Primaries`].
 
 #![forbid(unsafe_op_in_unsafe_fn)]
 

@@ -37,6 +37,8 @@ pub struct RunOptions {
     pub input_scale: Option<f32>,
     /// Optional stronger policy; reference NaN sanitation remains mandatory.
     pub sanitize_nonfinite: bool,
+    /// Primaries of the HDR autoexposure luminance.
+    pub primaries: autoexposure::Primaries,
     pub output_channels: usize,
 }
 
@@ -67,6 +69,7 @@ pub fn run_tensors(
         signed,
         input_scale: user_input_scale,
         sanitize_nonfinite: nan_to_zero,
+        primaries,
         output_channels,
     } = options;
     if !(1..=3).contains(&output_channels) || (signed && hdr) {
@@ -131,7 +134,7 @@ pub fn run_tensors(
         s
     } else if hdr {
         match color.as_ref() {
-            Some(c) => autoexposure::compute_scale_tensor(c.clone())?,
+            Some(c) => autoexposure::compute_scale_tensor(c.clone(), primaries)?,
             None => 1.0,
         }
     } else {

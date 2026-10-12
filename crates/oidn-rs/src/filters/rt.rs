@@ -31,6 +31,7 @@ use burn::tensor::{Device, Tensor};
 use oidn_model::Net;
 
 use crate::{
+    autoexposure::Primaries,
     color::TransferFunction,
     error::OidnError,
     filter::{Filter, Quality},
@@ -53,6 +54,7 @@ pub struct RtFilterBuilder<'b> {
     user_weights: Option<Vec<u8>>,
     max_memory_mb: Option<i32>,
     nan_to_zero: bool,
+    primaries: Primaries,
 }
 
 impl<'b> RtFilterBuilder<'b> {
@@ -75,6 +77,7 @@ impl<'b> RtFilterBuilder<'b> {
             user_weights: None,
             max_memory_mb: None,
             nan_to_zero: true,
+            primaries: Primaries::default(),
         }
     }
 
@@ -132,6 +135,13 @@ impl<'b> RtFilterBuilder<'b> {
         self
     }
 
+    /// Primaries of the input colour for the HDR autoexposure estimator
+    /// (default Rec.709; ACEScg pipelines pass [`Primaries::AcesCg`]).
+    pub fn autoexposure_primaries(mut self, p: Primaries) -> Self {
+        self.primaries = p;
+        self
+    }
+
     pub fn build(self) -> RtFilter<'b> {
         RtFilter {
             device: self.device,
@@ -145,6 +155,7 @@ impl<'b> RtFilterBuilder<'b> {
             user_weights: self.user_weights,
             max_memory_mb: self.max_memory_mb,
             nan_to_zero: self.nan_to_zero,
+            primaries: self.primaries,
             color: None,
             albedo: None,
             normal: None,
@@ -177,6 +188,7 @@ pub struct RtFilter<'b> {
     user_weights: Option<Vec<u8>>,
     max_memory_mb: Option<i32>,
     nan_to_zero: bool,
+    primaries: Primaries,
 
     // --- Legacy Image<'_> path ---
     color: Option<OwnedImage>,
@@ -219,6 +231,7 @@ pub struct CommittedRtFilter<'b> {
     transfer: TransferFunction,
     user_input_scale: Option<f32>,
     nan_to_zero: bool,
+    primaries: Primaries,
     has_color: bool,
     has_albedo: bool,
     has_normal: bool,
@@ -434,6 +447,7 @@ impl<'b> RtFilter<'b> {
             transfer: self.transfer_kind(has_color, has_normal),
             user_input_scale: self.user_input_scale,
             nan_to_zero: self.nan_to_zero,
+            primaries: self.primaries,
             has_color,
             has_albedo,
             has_normal,
@@ -563,6 +577,12 @@ impl<'b> CommittedRtFilter<'b> {
         self.nan_to_zero = v;
     }
 
+    /// Change the autoexposure primaries between passes; see
+    /// [`RtFilterBuilder::autoexposure_primaries`].
+    pub fn set_autoexposure_primaries(&mut self, p: Primaries) {
+        self.primaries = p;
+    }
+
     /// Override the autoexposure input scale at runtime. `None`
     /// reverts to OIDN's built-in autoexposure (recomputed each
     /// pass); `Some(s)` clamps it to a fixed value — the recommended
@@ -619,6 +639,7 @@ impl<'b> CommittedRtFilter<'b> {
                 signed: !self.has_color && self.has_normal,
                 input_scale: self.user_input_scale,
                 sanitize_nonfinite: self.nan_to_zero,
+                primaries: self.primaries,
                 output_channels: 3,
             },
             progress,
@@ -758,6 +779,7 @@ impl<'b> Filter for RtFilter<'b> {
             signed: !has_color && has_normal,
             input_scale: self.user_input_scale,
             sanitize_nonfinite: self.nan_to_zero,
+            primaries: self.primaries,
             output_channels: 3,
         };
 
