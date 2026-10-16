@@ -46,10 +46,7 @@ fn sample() -> TensorMap {
 }
 
 fn assert_same(a: &TensorMap, b: &TensorMap) {
-    assert_eq!(
-        a.keys().collect::<Vec<_>>(),
-        b.keys().collect::<Vec<_>>()
-    );
+    assert_eq!(a.keys().collect::<Vec<_>>(), b.keys().collect::<Vec<_>>());
     for (name, x) in a {
         let y = &b[name];
         assert_eq!(x.desc.dims, y.desc.dims, "{name}");
@@ -131,7 +128,10 @@ fn invalid_tensors_are_refused_before_writing() {
     let mut bytes = b"kept".to_vec();
     assert!(matches!(
         write(&map, &mut bytes),
-        Err(TzaError::DataLengthMismatch { expected: 12, got: 4 })
+        Err(TzaError::DataLengthMismatch {
+            expected: 12,
+            got: 4
+        })
     ));
     assert_eq!(bytes, b"kept");
 

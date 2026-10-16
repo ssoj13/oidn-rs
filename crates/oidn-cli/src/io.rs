@@ -99,7 +99,10 @@ fn save_exr(path: &Path, pixels: &[f32], w: usize, h: usize) -> Result<(), Error
 
     let window = Box2i {
         min: V2i { x: 0, y: 0 },
-        max: V2i { x: i32::try_from(w - 1)?, y: i32::try_from(h - 1)? },
+        max: V2i {
+            x: i32::try_from(w - 1)?,
+            y: i32::try_from(h - 1)?,
+        },
     };
     let plane = |c: usize| ChannelData::Float(pixels.iter().skip(c).step_by(3).copied().collect());
     Image::new(window)

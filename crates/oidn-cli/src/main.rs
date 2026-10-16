@@ -256,7 +256,10 @@ fn probe(path: &Path, json: bool) -> Result<(), Box<dyn std::error::Error>> {
         } else {
             println!(
                 "{:32} dims={:?} layout={} dtype={:?}",
-                name, t.desc.dims, t.desc.layout.as_str(), t.desc.dtype
+                name,
+                t.desc.dims,
+                t.desc.layout.as_str(),
+                t.desc.dtype
             );
         }
     }
