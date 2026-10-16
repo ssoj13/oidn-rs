@@ -63,7 +63,7 @@ fn rt_hdr_has_expected_layer_set() {
         vec![32, 3, 3, 3],
         "enc_conv0.weight shape mismatch"
     );
-    assert_eq!(w.desc.layout, oidn_tza::Layout::Oihw);
+    assert_eq!(w.desc.layout, oidn_tza::Layout::OIHW);
     assert_eq!(w.desc.dtype, oidn_tza::DType::Float16);
 
     let b = &map["enc_conv0.bias"];

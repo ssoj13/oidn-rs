@@ -56,7 +56,7 @@ fn into_param<const D: usize>(
     let (layout, layout_name) = if D == 1 {
         (Layout::X, "x")
     } else {
-        (Layout::Oihw, "oihw")
+        (Layout::OIHW, "oihw")
     };
     if src.desc.layout != layout {
         return Err(LoadError::BadLayout {

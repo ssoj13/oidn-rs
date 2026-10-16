@@ -9,7 +9,7 @@ The current repaired source map is at the end of this document and tracked in [p
 ```
 oidn-rs/                   workspace root
 ├── crates/
-│   ├── oidn-tza/          .tza weight-archive parser (host-only, no Burn)
+│   ├── oidn-tza/          .tza weight-archive parser + writer (host-only, no Burn)
 │   ├── oidn-model/        Burn U-Net (base + large variants) + loader
 │   ├── oidn-rs/           public façade: device, filter, color, autoexp, tile, gpu_ops, image
 │   └── oidn-cli/          thin binary: `denoise`, `bench`, `probe` subcommands
@@ -181,6 +181,7 @@ Base ordering is verified at `unet.rs:104-142` against reference `core/unet_filt
 - Host images support1/2/3-channel f16/f32 typed/byte representations and row strides (`image.rs:60-75,170-181,275-307`). Arbitrary pixel stride is not represented. Descriptor validation is incomplete; see `geometry_api.md` G2.
 - Burn numerical input contract is `[1,3,H,W]` per role; concatenated model input has3/6/9 channels. Public tensor/layout helpers do not consistently validate batch/channels in release; see `pipeline.md` P8.
 - TZA supports f16/f32 payloads; loaders convert into f32 at `oidn-model/src/loader.rs:64-68,93-97`. Public byte decoding needs fallible length/alignment/endian validation (`model_weights.md` MW3/MW4).
+- TZA is the one weight format of our networks (2026-10-15): `oidn_tza::write(&TensorMap, &mut Vec<u8>)` emits the archive `training/tza.py` writes (64-byte aligned payloads and table, version 2.0, name order; byte oracle in `oidn-tza/tests/roundtrip.rs`), and the ofx-rs ML store converts downloaded checkpoints into it. `Layout` is the archive's per-axis letter string (`Layout::X`, `Layout::OIHW`, any ASCII letters up to `Layout::MAX_NDIM` = 8, the empty rank-0 layout), not a closed enum: the parser accepts any such layout and each loader states the layout every named tensor must have (`oidn-model` requires `x` / `oihw`, as Intel's C++ reader does).
 - Tile job carries three rectangles (`tile.rs`) and two alignment offsets: `input` (src region), `output_src_in_tile` (which subrect of the tile-output tensor to keep), `output_dst` (where to write in the user image), plus `align_offset_x/y`.
 
 ---

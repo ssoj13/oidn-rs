@@ -249,14 +249,14 @@ fn probe(path: &Path, json: bool) -> Result<(), Box<dyn std::error::Error>> {
                 serde_json::json!({
                     "name": name,
                     "dims": t.desc.dims,
-                    "layout": format!("{:?}", t.desc.layout),
+                    "layout": t.desc.layout.as_str(),
                     "dtype": format!("{:?}", t.desc.dtype),
                 })
             );
         } else {
             println!(
-                "{:32} dims={:?} layout={:?} dtype={:?}",
-                name, t.desc.dims, t.desc.layout, t.desc.dtype
+                "{:32} dims={:?} layout={} dtype={:?}",
+                name, t.desc.dims, t.desc.layout.as_str(), t.desc.dtype
             );
         }
     }

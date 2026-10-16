@@ -254,7 +254,7 @@ fn kernel(map: &TensorMap, layer: &str) -> Result<[usize; 4], LoadError> {
     let tensor = map
         .get(&name)
         .ok_or_else(|| LoadError::MissingTensor(name.clone()))?;
-    if tensor.desc.layout != Layout::Oihw {
+    if tensor.desc.layout != Layout::OIHW {
         return Err(LoadError::BadLayout {
             name,
             expected: "oihw",

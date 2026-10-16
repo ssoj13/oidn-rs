@@ -10,7 +10,7 @@ homepage      = { workspace = true }
 readme        = { workspace = true }
 keywords      = ["denoising", "tza", "tensor-archive", "oidn"]
 categories    = ["parsing", "data-structures"]
-description   = "Parser for Intel OIDN's Tensor Archive (TZA) format"
+description   = "Parser and writer for Intel OIDN's Tensor Archive (TZA) format"
 
 [lib]
 path = "src/lib.rs"

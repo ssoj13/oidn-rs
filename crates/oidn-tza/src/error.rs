@@ -10,6 +10,8 @@ pub enum TzaError {
     InvalidOffset(u64),
     #[error("duplicate tensor name: {0:?}")]
     DuplicateName(String),
+    #[error("tensor name of {len} bytes exceeds the archive's u16 name length")]
+    NameTooLong { len: usize },
     #[error("tensor payload length mismatch: expected {expected}, got {got}")]
     DataLengthMismatch { expected: usize, got: usize },
     #[error("buffer too small at offset {offset}: need {need}, have {have}")]

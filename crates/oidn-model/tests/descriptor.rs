@@ -126,7 +126,7 @@ fn layer(map: &mut TensorMap, name: &str, input: usize, output: usize) {
         map,
         &format!("{name}.weight"),
         vec![output as u32, input as u32, 3, 3],
-        Layout::Oihw,
+        Layout::OIHW,
     );
     parameter(map, &format!("{name}.bias"), vec![output as u32], Layout::X);
 }

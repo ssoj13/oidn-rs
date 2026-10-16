@@ -3,16 +3,69 @@ use std::collections::BTreeMap;
 
 use crate::TzaError;
 
-/// Tensor memory layout — port of `_ref/oidn/core/tensor_layout.h`.
-/// We only support the subset that appears in shipped TZA files: `x` (1-D bias)
-/// and `oihw` (4-D conv kernels). Blocked GPU layouts are runtime-only and
-/// never appear in the archive.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Layout {
+/// A tensor's layout as the archive stores it: one ASCII letter per axis (`training/tza.py` writes the string as
+/// given, `ndim` bytes). Intel's shipped files use `x` (1-D bias) and `oihw` (4-D conv kernel); our converted
+/// networks also carry e.g. `oi` (a linear weight), `iohw` (a transposed-conv kernel) and the empty layout of a
+/// rank-0 scalar, so the layout is the string itself, not a closed set. Intel's C++ reader accepts only `x` / `oihw`;
+/// a loader states which layout each named tensor must have (as `oidn-model` does).
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Layout {
+    len: u8,
+    axes: [u8; Layout::MAX_NDIM],
+}
+
+impl Layout {
+    /// The highest rank a layout may name. TZA's `ndim` is a byte; no network of ours has a tensor above rank 8, so a
+    /// longer layout is refused instead of carried.
+    pub const MAX_NDIM: usize = 8;
     /// 1-D vector layout (used for biases).
-    X,
+    pub const X: Layout = Layout::from_ascii(b"x");
     /// 4-D conv weight: `[out_channels, in_channels, kernel_h, kernel_w]`.
-    Oihw,
+    pub const OIHW: Layout = Layout::from_ascii(b"oihw");
+
+    /// Copy a known-valid layout (the constants above); `new` validates.
+    const fn from_ascii(name: &[u8]) -> Layout {
+        let mut axes = [0u8; Layout::MAX_NDIM];
+        let mut i = 0;
+        while i < name.len() {
+            axes[i] = name[i];
+            i += 1;
+        }
+        Layout {
+            len: name.len() as u8,
+            axes,
+        }
+    }
+
+    /// The layout named `name`: ASCII letters, at most [`Self::MAX_NDIM`] of them (the empty name is a scalar's).
+    pub fn new(name: &str) -> Result<Layout, TzaError> {
+        if name.len() > Layout::MAX_NDIM || !name.bytes().all(|b| b.is_ascii_alphabetic()) {
+            return Err(TzaError::InvalidLayout {
+                got: name.to_owned(),
+            });
+        }
+        Ok(Layout::from_ascii(name.as_bytes()))
+    }
+
+    /// The layout string, one letter per axis.
+    pub fn as_str(&self) -> &str {
+        // Only `new` (ASCII-checked) and the ASCII constants build a `Layout`; the fallback is unreachable.
+        self.axes
+            .get(..usize::from(self.len))
+            .and_then(|axes| std::str::from_utf8(axes).ok())
+            .unwrap_or("")
+    }
+
+    /// The rank the layout names.
+    pub fn ndim(&self) -> usize {
+        usize::from(self.len)
+    }
+}
+
+impl std::fmt::Debug for Layout {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.as_str())
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -40,14 +93,10 @@ pub struct TensorDesc {
 impl TensorDesc {
     /// Validate the layout and dimensions and calculate their checked product.
     pub fn num_elements(&self) -> Result<usize, TzaError> {
-        let (layout, expected) = match self.layout {
-            Layout::X => ("x", 1),
-            Layout::Oihw => ("oihw", 4),
-        };
-        if self.dims.len() != expected {
+        if self.dims.len() != self.layout.ndim() {
             return Err(TzaError::LayoutNdimMismatch {
-                layout: layout.to_owned(),
-                expected,
+                layout: self.layout.as_str().to_owned(),
+                expected: self.layout.ndim(),
                 got: self.dims.len(),
             });
         }

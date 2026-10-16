@@ -3,8 +3,8 @@ use crate::types::{DType, Layout, Tensor, TensorDesc, TensorMap};
 use bytes::Bytes;
 use std::collections::BTreeMap;
 
-const MAGIC: u16 = 0x41D7;
-const SUPPORTED_MAJOR: u8 = 2;
+pub(crate) const MAGIC: u16 = 0x41D7;
+pub(crate) const SUPPORTED_MAJOR: u8 = 2;
 
 /// Cursor over the input buffer with bounds-checked reads.
 struct Cursor<'a> {
@@ -76,23 +76,6 @@ impl<'a> Cursor<'a> {
     }
 }
 
-fn decode_layout(s: &str) -> Result<Layout, TzaError> {
-    match s {
-        "x" => Ok(Layout::X),
-        "oihw" => Ok(Layout::Oihw),
-        other => Err(TzaError::InvalidLayout {
-            got: other.to_owned(),
-        }),
-    }
-}
-
-fn expected_ndim(layout: Layout) -> usize {
-    match layout {
-        Layout::X => 1,
-        Layout::Oihw => 4,
-    }
-}
-
 fn decode_dtype(c: char) -> Result<DType, TzaError> {
     match c {
         'f' => Ok(DType::Float32),
@@ -144,20 +127,13 @@ pub fn parse(bytes: &[u8]) -> Result<TensorMap, TzaError> {
             dims.push(cur.read_u32()?);
         }
 
-        // Layout (`ndim` chars)
+        // Layout (`ndim` letters, so its rank always equals `ndim`)
         let layout_bytes = cur.read_bytes(ndim)?;
         let layout_str =
             std::str::from_utf8(layout_bytes).map_err(|_| TzaError::InvalidLayout {
                 got: format!("{layout_bytes:?}"),
             })?;
-        let layout = decode_layout(layout_str)?;
-        if expected_ndim(layout) != ndim {
-            return Err(TzaError::LayoutNdimMismatch {
-                layout: layout_str.to_owned(),
-                expected: expected_ndim(layout),
-                got: ndim,
-            });
-        }
+        let layout = Layout::new(layout_str)?;
 
         // Dtype
         let dtype_byte = cur.read_u8()?;
