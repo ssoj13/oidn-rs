@@ -33,7 +33,7 @@
 //! [`crate::color::luminance`] stays on Rec.709 regardless.
 
 use crate::error::OidnError;
-use burn::tensor::{Bool, Int, Tensor, TensorData, module::avg_pool2d};
+use burn::tensor::{Bool, Int, Tensor, TensorData, module::avg_pool2d, ops::AvgPoolOptions};
 
 /// Bin geometry from `_ref/oidn/devices/gpu/gpu_autoexposure.h:21`.
 pub const MAX_BIN_SIZE: usize = 16;
@@ -182,11 +182,7 @@ pub fn compute_scale_tensor(rgb_chw: Tensor<4>, primaries: Primaries) -> Result<
         .mask_fill(col_padding, 0.0);
     let means = avg_pool2d(
         packed,
-        [MAX_BIN_SIZE; 2],
-        [MAX_BIN_SIZE; 2],
-        [0; 2],
-        false,
-        false,
+        AvgPoolOptions::new([MAX_BIN_SIZE; 2]).with_count_include_pad(false),
     );
     let mut corrections = Vec::with_capacity(bins_h * bins_w);
     for rh in row_lengths {

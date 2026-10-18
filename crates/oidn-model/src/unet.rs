@@ -156,7 +156,6 @@ pub(crate) fn upsample2x(x: Tensor<4>) -> Tensor<4> {
     let [_, _, h, w] = x.dims();
     interpolate(
         x,
-        [h * 2, w * 2],
-        InterpolateOptions::new(InterpolateMode::Nearest),
+        InterpolateOptions::new(InterpolateMode::Nearest).with_output_size([h * 2, w * 2]),
     )
 }
