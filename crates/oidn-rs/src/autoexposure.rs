@@ -201,8 +201,8 @@ pub fn compute_scale_tensor(rgb_chw: Tensor<4>, primaries: Primaries) -> Result<
         .log()
         .mask_fill(valid.clone().bool_not(), 0.0)
         .sum()
-        .into_scalar::<f32>();
-    let count = valid.float().sum().into_scalar::<f32>();
+        .try_into_scalar::<f32>()?;
+    let count = valid.float().sum().try_into_scalar::<f32>()?;
     Ok(if count < 0.5 {
         1.0
     } else {

@@ -44,6 +44,10 @@ pub enum OidnError {
     #[error("device init failed: {0}")]
     Device(String),
 
+    /// A backend read failed during execution (for example, exposure reduction).
+    #[error("tensor execution failed: {0}")]
+    Execution(#[from] burn::tensor::TensorReadError),
+
     #[error("execution cancelled by progress callback")]
     Cancelled,
 
