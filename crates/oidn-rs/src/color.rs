@@ -9,7 +9,7 @@
 //! Constants are reproduced verbatim from `color.h` to keep numerical drift
 //! against the reference at machine epsilon.
 
-#![allow(clippy::excessive_precision)]
+#![expect(clippy::excessive_precision, reason = "exact reference transfer function constants from upstream OIDN")]
 
 /// Maximum representable HDR luminance — equal to `half::MAX`, used for
 /// computing `normScale` so the PU range maps roughly into `[0, 1]`.

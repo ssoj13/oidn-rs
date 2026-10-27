@@ -16,7 +16,7 @@ fn unet_base_forward_shape() {
     // Sanity: forward on zero input must not produce NaN/Inf (only matters for
     // randomly initialised weights, but verifies no degenerate ops).
     let data = out.into_data();
-    let v: Vec<f32> = data.convert::<f32>().to_vec().unwrap();
+    let v: Vec<f32> = data.convert::<f32>().try_to_vec().unwrap();
     for x in &v {
         assert!(x.is_finite(), "non-finite value in output");
     }

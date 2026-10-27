@@ -38,7 +38,7 @@ fn load_rt_hdr_small() {
 
     let input = Tensor::<4>::ones([1, 3, 64, 64], &device) * 0.5;
     let out = unet.forward(input).into_data();
-    let v: Vec<f32> = out.convert::<f32>().to_vec().unwrap();
+    let v: Vec<f32> = out.convert::<f32>().try_to_vec().unwrap();
     for x in &v {
         assert!(x.is_finite());
     }

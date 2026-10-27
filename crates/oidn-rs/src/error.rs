@@ -1,3 +1,28 @@
+//! Error types and result definitions for OIDN operations.
+//!
+//! # What this module is
+//!
+//! Defines [`OidnError`], the crate-wide error enum for `oidn-rs`.
+//!
+//! # Why it exists
+//!
+//! Centralizes all error conditions — parameter validation, feature mismatches,
+//! I/O and weight deserialization, tensor runtime issues, and upstream C ABI
+//! parity codes — into a single zero-allocation, typed error hierarchy.
+//!
+//! # How it works
+//!
+//! Uses `thiserror::Error` to derive formatted display messages and `From`
+//! implementations for underlying errors (I/O, TZA parsing, model loading,
+//! backend runtime errors). Variants mirroring Intel OIDN C ABI error codes
+//! carry `&'static str` tags to preserve zero-allocation error reporting.
+//!
+//! # Where it is used
+//!
+//! Exposed at the crate root (`oidn::OidnError`) and returned by all fallible
+//! filter execution, weight loading, and buffer operations across `oidn-rs`
+//! and its consumer crates.
+
 use thiserror::Error;
 
 /// Crate-wide error type.

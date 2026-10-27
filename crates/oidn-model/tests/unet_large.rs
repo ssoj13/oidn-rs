@@ -51,7 +51,7 @@ fn load_rt_alb_large() {
 
     let input = Tensor::<4>::ones([1, 3, 64, 64], &device) * 0.5;
     let out = unet.forward(input).into_data();
-    let v: Vec<f32> = out.convert::<f32>().to_vec().unwrap();
+    let v: Vec<f32> = out.convert::<f32>().try_to_vec().unwrap();
     for x in &v {
         assert!(x.is_finite());
     }
@@ -88,7 +88,7 @@ fn load_rt_hdr_calb_cnrm_large_9ch() {
     let unet = oidn_model::load_tza_large(unet, &tensors, &device).unwrap();
     let input = Tensor::<4>::ones([1, 9, 64, 64], &device) * 0.25;
     let out = unet.forward(input).into_data();
-    let v: Vec<f32> = out.convert::<f32>().to_vec().unwrap();
+    let v: Vec<f32> = out.convert::<f32>().try_to_vec().unwrap();
     for x in &v {
         assert!(x.is_finite());
     }

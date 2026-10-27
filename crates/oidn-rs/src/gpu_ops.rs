@@ -222,14 +222,14 @@ mod tests {
         let tf = TransferState::new(TransferFunction::Linear);
         let result = preprocess_input(source, 2.0, false, true, &tf)
             .into_data()
-            .to_vec::<f32>()
+            .try_to_vec::<f32>()
             .unwrap();
         assert_eq!(result, [0.0, 0.0, 0.5, 1.0]);
         let output =
             Tensor::from_data(TensorData::new(vec![0.5, 1.5, 0.25], [1, 3, 1, 1]), &device);
         let result = postprocess_color(output, &tf, false, true, 2.0, 3)
             .into_data()
-            .to_vec::<f32>()
+            .try_to_vec::<f32>()
             .unwrap();
         assert_eq!(result, [0.0, 2.0, -1.0]);
     }
@@ -242,7 +242,7 @@ mod tests {
         let tf = TransferState::new(TransferFunction::Linear);
         let result = postprocess_color(output, &tf, false, false, 2.0, 1)
             .into_data()
-            .to_vec::<f32>()
+            .try_to_vec::<f32>()
             .unwrap();
         assert_eq!(result, [1.5; 3]);
     }
@@ -257,7 +257,7 @@ mod tests {
             (values.into_iter().map(color::srgb_inverse).sum::<f32>() / 3.0).min(1.0) * 0.5;
         let result = postprocess_color(output, &tf, false, false, 0.5, 1)
             .into_data()
-            .to_vec::<f32>()
+            .try_to_vec::<f32>()
             .unwrap();
         assert!(result.iter().all(|value| (value - expected).abs() < 1e-6));
     }
@@ -277,7 +277,7 @@ mod tests {
         let tf = TransferState::new(TransferFunction::PU);
         let fwd = apply_transfer_forward(t, &tf);
         let bwd = apply_transfer_inverse(fwd, &tf);
-        let result = bwd.into_data().convert::<f32>().to_vec::<f32>().unwrap();
+        let result = bwd.into_data().convert::<f32>().try_to_vec::<f32>().unwrap();
 
         for (orig, back) in samples.iter().zip(result.iter()) {
             let rel = (orig - back).abs() / orig.abs().max(1e-6);
@@ -300,7 +300,7 @@ mod tests {
         let tensor_fwd = apply_transfer_forward(t, &tf)
             .into_data()
             .convert::<f32>()
-            .to_vec::<f32>()
+            .try_to_vec::<f32>()
             .unwrap();
         for (s, got) in samples.iter().zip(tensor_fwd.iter()) {
             // CPU `forward` multiplies by input_scale (=1.0 by default); the
@@ -324,7 +324,7 @@ mod tests {
         let tensor_fwd = apply_transfer_forward(t, &tf)
             .into_data()
             .convert::<f32>()
-            .to_vec::<f32>()
+            .try_to_vec::<f32>()
             .unwrap();
         for (s, got) in samples.iter().zip(tensor_fwd.iter()) {
             let expected = color::srgb_forward(*s);

@@ -33,7 +33,7 @@ fn all_shipped_models_load_and_forward() {
             &device,
         ));
         assert_eq!(output.dims(), [1, 3, 16, 16]);
-        let values = output.into_data().to_vec::<f32>().unwrap();
+        let values = output.into_data().try_to_vec::<f32>().unwrap();
         assert!(
             values.iter().all(|x| x.is_finite()),
             "{path:?}: nonfinite output"

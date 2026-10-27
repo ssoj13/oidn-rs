@@ -33,7 +33,7 @@ fn load_rt_hdr_into_unet() {
     // should yield meaningful magnitude).
     let input = Tensor::<4>::ones([1, 3, 64, 64], &device) * 0.5;
     let out = unet.forward(input).into_data();
-    let v: Vec<f32> = out.convert::<f32>().to_vec().unwrap();
+    let v: Vec<f32> = out.convert::<f32>().try_to_vec().unwrap();
     let mean_abs: f32 = v.iter().map(|x| x.abs()).sum::<f32>() / v.len() as f32;
     for x in &v {
         assert!(x.is_finite(), "non-finite value");
@@ -61,7 +61,7 @@ fn load_rt_hdr_alb_nrm_into_unet_9ch() {
     // 9-channel input.
     let input = Tensor::<4>::ones([1, 9, 32, 32], &device) * 0.25;
     let out = unet.forward(input).into_data();
-    let v: Vec<f32> = out.convert::<f32>().to_vec().unwrap();
+    let v: Vec<f32> = out.convert::<f32>().try_to_vec().unwrap();
     for x in &v {
         assert!(x.is_finite());
     }

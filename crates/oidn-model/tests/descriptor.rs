@@ -229,7 +229,7 @@ fn xl_and_custom_widths_are_preserved() {
             &device,
         ))
         .into_data()
-        .to_vec::<f32>()
+        .try_to_vec::<f32>()
         .unwrap();
     let expected: Vec<f32> = samples.iter().map(|&v| v.max(0.0)).collect();
     assert_eq!(output, expected);

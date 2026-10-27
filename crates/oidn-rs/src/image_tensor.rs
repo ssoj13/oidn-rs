@@ -81,7 +81,7 @@ pub fn tensor_to_chw_vec(t: Tensor<4>) -> Result<(Vec<f32>, [usize; 4]), OidnErr
     let v = t
         .into_data()
         .convert::<f32>()
-        .to_vec::<f32>()
+        .try_to_vec::<f32>()
         .map_err(|_| OidnError::InvalidArgument("tensor data cannot be converted to f32"))?;
     if v.len() != validate_dimensions(dims[3], dims[2], dims[1])? {
         return Err(OidnError::Inconsistent("tensor data length"));

@@ -50,7 +50,10 @@ pub struct RunOptions {
 ///
 /// `output_w` / `output_h` must match the input tensor dimensions (and
 /// the tile plan's image size).
-#[allow(clippy::too_many_arguments)]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "tensor pipeline entry point takes model, device, buffers, and run options"
+)]
 pub fn run_tensors(
     net: &Net,
     device: &Device,
@@ -308,7 +311,10 @@ pub fn run_tensors(
 /// goes through [`run_tensors`] directly via the bridge in
 /// `pt-denoise-oidn` and the tensor-native API on
 /// [`RtFilter`](crate::filters::rt::RtFilter).
-#[allow(clippy::too_many_arguments)]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "image pipeline entry point takes model, device, image buffers, and run options"
+)]
 pub fn run(
     net: &Net,
     device: &Device,
@@ -406,7 +412,7 @@ fn tensor_diagnostics_enabled() -> bool {
 
 fn log_tensor_stats(label: &str, tensor: &Tensor<4>) {
     let dims = tensor.dims();
-    match tensor.clone().into_data().convert::<f32>().to_vec::<f32>() {
+    match tensor.clone().into_data().convert::<f32>().try_to_vec::<f32>() {
         Ok(data) => {
             let stats = TensorStats::from_slice(&data);
             log::trace!(

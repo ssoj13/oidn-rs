@@ -37,7 +37,6 @@ impl ModelKey {
 ///
 /// Anything else with no recognised mapping falls through to
 /// [`OidnError::UnsupportedFeatures`].
-#[allow(clippy::too_many_arguments)]
 pub fn select_rt(
     has_color: bool,
     has_albedo: bool,

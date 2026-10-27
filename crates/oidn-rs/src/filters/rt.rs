@@ -427,7 +427,6 @@ impl<'b> RtFilter<'b> {
     /// color/albedo/normal/output tensor handles between calls. This preserves
     /// the expensive committed model and tile plan without carrying mutable
     /// per-pass state across GPU submissions.
-    #[allow(clippy::too_many_arguments)]
     pub fn commit_tensor_model(
         &self,
         width: usize,
