@@ -182,6 +182,7 @@ struct DenoiseArgs {
 }
 
 fn main() -> ExitCode {
+    let _crash_guard = crashdump::init!();
     // Verbose flag (if present on the denoise subcommand) overrides the
     // default RUST_LOG; we parse the CLI first to peek at it before init.
     let cli = Cli::parse();
