@@ -1276,6 +1276,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "crashdump-rs"
+version = "0.1.0"
+source = "git+ssh://git@github.com/ssoj13/crashdump-rs.git?branch=main#9ae33dca9ea5c9a4bba9ea9562eff2d1a1c534a5"
+dependencies = [
+ "backtrace",
+ "libc",
+ "serde",
+ "serde_json",
+ "tracing",
+ "tracing-subscriber",
+ "windows-sys 0.52.0",
+]
+
+[[package]]
 name = "crc32c"
 version = "0.6.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4141,6 +4155,7 @@ version = "0.1.0"
 dependencies = [
  "burn",
  "clap",
+ "crashdump-rs",
  "exr-core",
  "exr-image",
  "half",

@@ -105,9 +105,8 @@ pub fn run_tensors(
     // Kernel-local native NaN-only sanitation after scale remains mandatory.
     let sanitize = |t: Tensor<4>| -> Tensor<4> {
         if nan_to_zero {
-            let finite_mask = t.clone().is_finite();
-            let zeros: Tensor<4> = Tensor::zeros(t.dims(), &t.device());
-            t.mask_where(finite_mask.bool_not(), zeros)
+            let not_finite = t.clone().is_finite().bool_not();
+            t.mask_fill(not_finite, 0.0_f32)
         } else {
             t
         }

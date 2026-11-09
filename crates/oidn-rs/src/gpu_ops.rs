@@ -17,7 +17,7 @@ use burn::tensor::Tensor;
 
 use crate::color::{
     PU_A, PU_B, PU_C, PU_D, PU_E, PU_F, PU_G, PU_X0, PU_X1, PU_Y0, PU_Y1, SRGB_A, SRGB_B, SRGB_C,
-    SRGB_D, SRGB_X0, SRGB_Y0, TransferFunction, TransferState,
+    SRGB_D, SRGB_X0, SRGB_Y0, TransferFunction, TransferState, Y_MAX,
 };
 
 // ---------- preprocess / postprocess wrappers ----------
@@ -53,6 +53,18 @@ pub(crate) fn preprocess_input(
     // Primary normals and directional lightmaps use signed normalized input.
     let t = if snorm {
         t.mul_scalar(0.5_f32).add_scalar(0.5_f32)
+    } else if hdr {
+        // Post-exposure white-floor-preserving, hue-conserving ceiling compression
+        // into `[0, Y_MAX]` across the channel axis (`dim = 1` of `[N, 3, H, W]`),
+        // keeping `PU(y) * norm_scale` / `Log(y) * norm_scale` inside `[0, 1]`.
+        let white = t.clone().min_dim(1);
+        let white_clamped = white.clamp_max(Y_MAX);
+        let max_c = t.clone().max_dim(1);
+        let chroma = t - white_clamped.clone();
+        let chroma_max = (max_c - white_clamped.clone()).clamp_min(1e-6_f32);
+        let headroom = (Y_MAX - white_clamped.clone()).clamp_min(0.0_f32);
+        let scale = headroom.div(chroma_max).clamp(0.0_f32, 1.0_f32);
+        (white_clamped + chroma * scale).clamp(0.0_f32, Y_MAX)
     } else {
         t
     };
@@ -96,7 +108,12 @@ pub(crate) fn postprocess_color(
         t
     };
     let t = if !hdr { t.clamp_max(1.0_f32) } else { t };
-    t.mul_scalar(output_scale)
+    let t = nan_to_zero(t.mul_scalar(output_scale));
+    if snorm && !hdr {
+        t.clamp(-f32::MAX, f32::MAX)
+    } else {
+        t.clamp(0.0_f32, f32::MAX)
+    }
 }
 
 // ---------- transfer functions (tensor-vectorised) ----------
@@ -120,7 +137,11 @@ pub fn apply_transfer_inverse(x: Tensor<4>, state: &TransferState) -> Tensor<4> 
         TransferFunction::Linear => x,
         TransferFunction::SRGB => srgb_inverse_tensor(x),
         TransferFunction::PU => pu_inverse_tensor(x.mul_scalar(state.rcp_norm_scale)),
-        TransferFunction::Log => x.mul_scalar(state.rcp_norm_scale).exp().sub_scalar(1.0_f32),
+        TransferFunction::Log => x
+            .mul_scalar(state.rcp_norm_scale)
+            .clamp_max(88.0_f32)
+            .exp()
+            .sub_scalar(1.0_f32),
     }
 }
 
@@ -190,7 +211,14 @@ fn pu_inverse_tensor(x: Tensor<4>) -> Tensor<4> {
         .div_scalar(PU_B)
         .clamp_min(0.0)
         .powf_scalar(1.0_f32 / PU_C);
-    let b_high = x.sub_scalar(PU_G).div_scalar(PU_E).exp().sub_scalar(PU_F);
+    // Clamp exponent argument below `ln(f32::MAX) ≈ 88.72` so anomalous U-Net
+    // activations (`>= 5.78` normalized) never overflow `f32::exp` to `+Inf`.
+    let b_high = x
+        .sub_scalar(PU_G)
+        .div_scalar(PU_E)
+        .clamp_max(88.0_f32)
+        .exp()
+        .sub_scalar(PU_F);
     b_high
         .mask_where(mid_mask, b_mid)
         .mask_where(low_mask, b_low)
@@ -333,6 +361,146 @@ mod tests {
                 rel < 1e-4,
                 "sRGB forward drift @ y={s}: cpu={expected} gpu={got} rel={rel}"
             );
+        }
+    }
+
+    #[test]
+    fn hdr_post_exposure_preserves_scaled_values_above_raw_ymax() {
+        let device = Device::ndarray();
+        let raw = [200_000.0_f32, 180_000.0, 100_000.0];
+        let color = Tensor::<4>::from_data(TensorData::new(raw.to_vec(), [1, 3, 1, 1]), &device);
+        let mut tf = TransferState::new(TransferFunction::PU);
+        tf.set_input_scale(0.01);
+
+        let encoded = preprocess_input(color, tf.input_scale, true, false, &tf);
+        let enc_vals = encoded.clone().into_data().try_to_vec::<f32>().unwrap();
+        assert!(
+            enc_vals.iter().all(|&v| v.is_finite() && (0.0..=1.0).contains(&v)),
+            "encoded PU input must remain within [0, 1]: {enc_vals:?}"
+        );
+
+        let decoded = postprocess_color(encoded, &tf, true, false, tf.output_scale, 3)
+            .into_data()
+            .try_to_vec::<f32>()
+            .unwrap();
+        for (expected, actual) in raw.iter().zip(decoded.iter()) {
+            let rel = (expected - actual).abs() / expected;
+            assert!(
+                rel < 1e-4,
+                "post-exposure HDR values <= Y_MAX must round-trip uncrushed: expected={expected} actual={actual} rel={rel}"
+            );
+        }
+    }
+
+    #[test]
+    fn hdr_post_exposure_compresses_above_ymax_preserving_hue_and_white() {
+        let device = Device::ndarray();
+        let tf = TransferState::new(TransferFunction::PU);
+
+        // Chromatic highlight `[0, 90_000, 100_000]` -> `[0, 58_953.6, 65_504.0]` (exact 0:9:10 ratio).
+        let chromatic = Tensor::<4>::from_data(
+            TensorData::new(vec![0.0_f32, 90_000.0, 100_000.0], [1, 3, 1, 1]),
+            &device,
+        );
+        let enc_chroma = preprocess_input(chromatic, 1.0, true, false, &tf);
+        let enc_chroma_vals = enc_chroma.clone().into_data().try_to_vec::<f32>().unwrap();
+        assert!(
+            enc_chroma_vals
+                .iter()
+                .all(|&v| v.is_finite() && (0.0..=1.0).contains(&v)),
+            "compressed PU input must stay in [0, 1]: {enc_chroma_vals:?}"
+        );
+        let dec_chroma = postprocess_color(enc_chroma, &tf, true, false, 1.0, 3)
+            .into_data()
+            .try_to_vec::<f32>()
+            .unwrap();
+        assert!(dec_chroma[0].abs() < 1e-5, "zero channel drifted: {}", dec_chroma[0]);
+        assert!(
+            (dec_chroma[2] - Y_MAX).abs() / Y_MAX < 1e-4,
+            "peak channel must land at Y_MAX: {}",
+            dec_chroma[2]
+        );
+        assert!(
+            (dec_chroma[1] / dec_chroma[2] - 0.9).abs() < 1e-4,
+            "0:9:10 hue ratio was not preserved: {dec_chroma:?}"
+        );
+
+        // Pure white highlight `[100_000; 3]` -> `[65_504; 3]` with zero 0/0 NaNs.
+        let white =
+            Tensor::<4>::from_data(TensorData::new(vec![100_000.0_f32; 3], [1, 3, 1, 1]), &device);
+        let enc_white = preprocess_input(white, 1.0, true, false, &tf);
+        let enc_white_vals = enc_white.clone().into_data().try_to_vec::<f32>().unwrap();
+        assert!(
+            enc_white_vals
+                .iter()
+                .all(|&v| v.is_finite() && (0.0..=1.0).contains(&v)),
+            "compressed white PU input must stay in [0, 1]: {enc_white_vals:?}"
+        );
+        let dec_white = postprocess_color(enc_white, &tf, true, false, 1.0, 3)
+            .into_data()
+            .try_to_vec::<f32>()
+            .unwrap();
+        for &c in &dec_white {
+            assert!(
+                c.is_finite() && (c - Y_MAX).abs() / Y_MAX < 1e-4,
+                "pure white must compress to Y_MAX without NaN: {dec_white:?}"
+            );
+        }
+
+        // White floor + excess chroma `[10_000, 55_000, 100_000]` -> `[10_000, 37_752, 65_504]`.
+        let pastel = Tensor::<4>::from_data(
+            TensorData::new(vec![10_000.0_f32, 55_000.0, 100_000.0], [1, 3, 1, 1]),
+            &device,
+        );
+        let enc_pastel = preprocess_input(pastel, 1.0, true, false, &tf);
+        let dec_pastel = postprocess_color(enc_pastel, &tf, true, false, 1.0, 3)
+            .into_data()
+            .try_to_vec::<f32>()
+            .unwrap();
+        let expected_pastel = [10_000.0_f32, 37_752.0, Y_MAX];
+        for (expected, actual) in expected_pastel.iter().zip(dec_pastel.iter()) {
+            let rel = (expected - actual).abs() / expected;
+            assert!(
+                rel < 1e-4,
+                "white-floor chroma compression mismatch: expected={expected} actual={actual} rel={rel}"
+            );
+        }
+    }
+
+    #[test]
+    fn pu_inverse_and_postprocess_stay_finite_on_extreme_activations() {
+        let device = Device::ndarray();
+        let mut tf = TransferState::new(TransferFunction::PU);
+        tf.set_input_scale(0.01); // output_scale = 100.0
+
+        let extreme_unnorm =
+            Tensor::<4>::from_data(TensorData::new(vec![10.0 * tf.rcp_norm_scale], [1, 1, 1, 1]), &device);
+        let inv = pu_inverse_tensor(extreme_unnorm)
+            .into_data()
+            .try_to_vec::<f32>()
+            .unwrap();
+        assert!(
+            inv[0].is_finite() && inv[0] > Y_MAX,
+            "pu_inverse_tensor must clamp exp argument and remain finite: {}",
+            inv[0]
+        );
+
+        for output_scale in [1.0_f32, tf.output_scale] {
+            let net_out = Tensor::<4>::from_data(
+                TensorData::new(vec![10.0_f32, -5.0, f32::NAN], [1, 3, 1, 1]),
+                &device,
+            );
+            let post = postprocess_color(net_out, &tf, true, false, output_scale, 3)
+                .into_data()
+                .try_to_vec::<f32>()
+                .unwrap();
+            assert!(
+                post.iter().all(|v| v.is_finite() && *v >= 0.0),
+                "HDR postprocess_color must sanitize non-finites/negatives at scale={output_scale}: {post:?}"
+            );
+            assert!(post[0] > Y_MAX);
+            assert_eq!(post[1], 0.0);
+            assert_eq!(post[2], 0.0);
         }
     }
 }
